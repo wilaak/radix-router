@@ -37,7 +37,7 @@ use Wilaak\Http\RadixRouter;
 
 $router = new RadixRouter();
 
-$router->add(['GET'], '/', function ($world) {
+$router->add(['GET'], '/', function () {
     echo "Hello, World!";
 });
 
