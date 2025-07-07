@@ -120,7 +120,7 @@ According to the HTTP specification, any route that handles a GET request should
 
 ## Performance
 
-You can expect perfomance similar to [FastRoute](https://github.com/nikic/FastRoute), in some cases its much faster e.g large segments, in some cases its slower e.g deep static segments. But FastRoute is much more featured, supporing regex matching, inline parameters, wildcards and more. If there was a router that I would choose it would probably be FastRoute.
+You can expect perfomance similar to [FastRoute](https://github.com/nikic/FastRoute), in some cases its much faster e.g large segments, in some cases its slower e.g deep static segments. But FastRoute is much more featured, supporting regex matching, inline parameters, wildcards and more. If there was a router that I would choose it would probably be FastRoute.
 
 This router is about as fast as you can make in pure PHP (prove me wrong!). Routers like FastRoute leverage PHP's built-in regular expression engine, which is implemented in the C programming language, making it very fast.
 
