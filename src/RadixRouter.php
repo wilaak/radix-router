@@ -49,7 +49,7 @@ class RadixRouter
         // Store the handler at the current node
         foreach ($methods as $method) {
             if (isset($node["/$method"])) {
-                throw new InvalidArgumentException("Route for method $method already for pattern $pattern");
+                throw new InvalidArgumentException("Route $method $pattern conflicts with existing route.");
             }
             $node["/$method"] = $handler;
         }
