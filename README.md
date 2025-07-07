@@ -118,6 +118,25 @@ By storing your routes in a PHP file, you let PHP’s OPcache handle the heavy l
 
 According to the HTTP specification, any route that handles a GET request should also support HEAD requests. RadixRouter does not automatically add this behavior. If you are running outside a standard web server environment (such as in a custom server), ensure that your GET routes also respond appropriately to HEAD requests. Responses to HEAD requests must not include a message body.
 
+## Performance
+
+The router is most likely never going to be the bottleneck of your application and you are probably wasting too much time on this :-)
+
+You can expect perfomance similar to [FastRoute](https://github.com/nikic/FastRoute), in some cases its much faster e.g large segments, in some cases its slower e.g deep static segments. But FastRoute is much more featured, supporing regex matching, inline parameters and wildcards. If there was a router that I would choose it would probably be FastRoute.
+
+This router is about as fast as you can make in pure PHP (prove me wrong!). Routers like FastRoute leverage PHP's built-in regular expression engine, which is implemented in the C programming language, making it very fast.
+
+### Benchmark
+
+Here is a simple, single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli):
+
+| Router      | Route Lookups per Second |
+|-------------|-------------------------:|
+| RadixRouter |         2,523,513.48     |
+| FastRoute   |         2,377,352.74     |
+
+You can see the benchmark setup and scripts in the `benchmarks` folder.
+
 ## License
 
 This library is licensed under the **WTFPL-2.0**. Do whatever you want with it.
