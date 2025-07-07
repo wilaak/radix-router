@@ -72,7 +72,7 @@ class RadixRouter
      * @return array{
      *     code: int, // 200 (found), 404 (not found), or 405 (method not allowed)
      *     handler?: callable, // Present if code is 200
-     *     params?: array<int, string>, // Present if code is 200 and route has dynamic segments
+     *     params?: array<int, string>, // Present if code is 200
      *     allowed_methods?: array<int, string> // Present if code is 405
      * }
      */
