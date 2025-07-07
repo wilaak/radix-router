@@ -4,7 +4,7 @@ Simple implementation of a radix tree based router for PHP.
 
 ## How does it work?
 
-A radix tree data structure allows for highly efficient lookups by minimizing redundant comparisons and grouping common prefixes together. As a result, route matching is performed in O(k) time, where k is the length of the path, rather than the number of registered routes:
+A radix tree data structure (also known as a *compact prefix tree* or *Patricia trie*) allows for highly efficient lookups by minimizing redundant comparisons and grouping common prefixes together. As a result, route matching is performed in O(k) time, where k is the length of the path, rather than the number of registered routes:
 
 ```
 (root)
