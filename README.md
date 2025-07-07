@@ -52,7 +52,7 @@ $info = $router->lookup($method, $path);
 
 switch ($info['code']) {
     case 200:
-        $info['handler']($info['params']);
+        $info['handler'](...$info['params']);
         break;
 
     case 404:
