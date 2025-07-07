@@ -131,7 +131,7 @@ Here is a simple, single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli):
 | Router      | Route Lookups per Second |
 |-------------|-------------------------:|
 | RadixRouter |         2,523,513.48     |
-| FastRoute   |         2,377,352.74     |
+| FastRoute v1   |         2,377,352.74     |
 
 You can see the benchmark setup and scripts in the `benchmarks` folder.
 
