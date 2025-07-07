@@ -1,0 +1,29 @@
+{
+    "name": "wilaak/radix-router",
+    "description": "Simple implementation of a radix tree based router for PHP.",
+    "type": "library",
+    "license": "WTFPL",
+    "authors": [
+        {
+            "name": "William",
+            "email": "54738571+Wilaak@users.noreply.github.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": {
+            "Wilaak\\Http\\": "src/"
+        }
+    },
+    "keywords": [
+        "router",
+        "radix tree",
+        "high performance",
+        "routing"
+    ],
+    "homepage": "https://github.com/Wilaak/RadixRouter",
+    "support": {
+        "issues": "https://github.com/Wilaak/RadixRouter/issues",
+        "source": "https://github.com/Wilaak/RadixRouter"
+    }
+}
