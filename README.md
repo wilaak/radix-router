@@ -37,7 +37,7 @@ use Wilaak\Http\RadixRouter;
 
 $router = new RadixRouter();
 
-$router->add(['GET'], '/', function () {
+$router->add(['GET'], '/', function ($world) {
     echo "Hello, World!";
 });
 
@@ -52,7 +52,7 @@ $info = $router->lookup($method, $path);
 
 switch ($info['code']) {
     case 200:
-        $info['handler'](...$info['params']);
+        $info['handler']($info['params']);
         break;
 
     case 404:
@@ -120,7 +120,7 @@ According to the HTTP specification, any route that handles a GET request should
 
 ## Performance
 
-You can expect perfomance similar to [FastRoute](https://github.com/nikic/FastRoute), in some cases its much faster e.g large segments, in some cases its slower e.g deep static segments. But FastRoute is much more featured, supporing regex matching, inline parameters and wildcards. If there was a router that I would choose it would probably be FastRoute.
+You can expect perfomance similar to [FastRoute](https://github.com/nikic/FastRoute), in some cases its much faster e.g large segments, in some cases its slower e.g deep static segments. But FastRoute is much more featured, supporing regex matching, inline parameters, wildcards and more. If there was a router that I would choose it would probably be FastRoute.
 
 This router is about as fast as you can make in pure PHP (prove me wrong!). Routers like FastRoute leverage PHP's built-in regular expression engine, which is implemented in the C programming language, making it very fast.
 
@@ -131,7 +131,7 @@ Here is a simple, single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli):
 | Router      | Route Lookups per Second |
 |-------------|-------------------------:|
 | RadixRouter |         2,523,513.48     |
-| FastRoute v1   |         2,377,352.74     |
+| FastRoute v1 |         2,377,352.74     |
 
 You can see the benchmark setup and scripts in the `benchmarks` folder.
 
