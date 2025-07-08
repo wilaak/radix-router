@@ -11,7 +11,7 @@ class RadixRouter
 {
     public array $routes = [];
 
-    private const ALLOWED_METHODS = [
+    public array $allowedMethods = [
         'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'
     ];
 
@@ -36,7 +36,7 @@ class RadixRouter
                 throw new InvalidArgumentException('Method must be a non-empty string.');
             }
             $method = strtoupper($method);
-            if (!in_array($method, self::ALLOWED_METHODS, true)) {
+            if (!in_array($method, $this->allowedMethods, true)) {
                 throw new InvalidArgumentException("Invalid HTTP method: $method");
             }
         }
