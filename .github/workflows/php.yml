@@ -18,7 +18,5 @@ jobs:
           coverage: xdebug
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
-        working-directory: ./RadixRouter
       - name: Run tests
         run: vendor/bin/phpunit --testdox --coverage-text
-        working-directory: ./RadixRouter
