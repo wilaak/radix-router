@@ -1,6 +1,6 @@
 # RadixRouter
 
-Simple implementation of a radix tree based router for PHP.
+Simple implementation of a radix tree based router for PHP
 
 ## How does it work?
 
@@ -20,20 +20,6 @@ A radix tree data structure (also known as a *compact prefix tree* or *Patricia 
          └── edit
 ```
 
-## Table of contents
-
-- [Install](#install)
-- [Usage example](#usage-example)
-- [Defining Routes](#defining-routes)
-    - [Optional Parameters](#optional-parameters)
-    - [Wildcard Parameters](#wildcard-parameters)
-- [How to Cache Routes](#how-to-cache-routes)
-- [Note on HEAD Requests](#note-on-head-requests)
-- [Performance](#performance)
-    - [Benchmark](#benchmark)
-- [License](#license)
-
-
 ## Install
 
 Install with composer:
@@ -51,7 +37,7 @@ use Wilaak\Http\RadixRouter;
 
 $router = new RadixRouter();
 
-$router->add(['GET'], '/', function () {
+$router->add('GET', '/', function () {
     echo "Hello, World!";
 });
 
@@ -84,10 +70,7 @@ switch ($info['code']) {
 
 ## Defining Routes
 
-You can define routes by using the `add()` method.
-
-> **Note:**  
-> For performance and predictability, routes are prioritized as follows: static routes first, then parameterized routes, and finally wildcards.
+Routes are defined using the `add()` method. You can assign any value as the handler.
 
 ```php
 // Matches only "/about"
@@ -95,7 +78,11 @@ $router->add('GET', '/about', 'handler');
 
 // Matches both GET and POST requests to "/auth/login"
 $router->add(['GET', 'POST'], '/auth/login', 'handler');
+```
 
+You can define route parameters by using the colon (`:`) prefix. The order or route matching is: static > parameter > wildcard.
+
+```php
 // Matches "/user/123" (captures "123"), but NOT "/user/"
 $router->add('GET', '/user/:id', 'handler');
 
@@ -103,24 +90,19 @@ $router->add('GET', '/user/:id', 'handler');
 $router->add('GET', '/posts/:post/comments/:comment', 'handler');
 ```
 
-### Optional Parameters
+### Optional & Wildcards
 
-Add a `?` to the end of a parameter name to make it optional. Optional parameters are only allowed as the last segment of the route.
+These are only allowed as the last segment of the route. 
 
 ```php
 // Matches "/posts/abc" (captures "abc") and "/posts/" (provides no parameter)
 $router->add('GET', '/posts/:id?', 'handler');
 ```
-
-### Wildcard Parameters
-
-Add a `*` to the end of a parameter name to match the rest of the path. Wildcard parameters are only allowed as the last segment of the route.
-
-> **Note:**  
-> Overlapping patterns will not fall back to wildcards. If you register a route like `/files/foo` and a wildcard route like `/files/:path*`, requests to `/files/foo/bar.txt` will result in a 404 Not Found error
+> **Note:**
+> Overlapping patterns will not fall back to wildcards. If you register a route like `/files/foo` and a wildcard route like `/files/:path*`, requests to `/files/foo/bar.txt` will result in a 404 Not Found error.
 
 ```php
-// Matches "/files/static/dog.jpg" (captures "static/dog.jpg") and "/files/ (captures empty string)"
+// Matches "/files/static/dog.jpg" (captures "static/dog.jpg") and "/files/" (captures empty string)
 $router->add('GET', '/files/:path*', 'handler');
 ```
 
@@ -128,10 +110,17 @@ $router->add('GET', '/files/:path*', 'handler');
 
 Rebuilding the route tree on every request or application startup can slow down performance.
 
-> **Note:**  
+> **Note:**
 > Anonymous functions (closures) are **not supported** for route caching because they cannot be serialized.
+> 
+> Other values that cannot be cached in PHP include:
+> - Resources (such as file handles, database connections)
+> - Objects that are not serializable
+> - References to external state (like open sockets)
+> 
+> When caching routes, only use handlers and parameters that can be safely represented as strings, arrays, or serializable objects.
 
-> **Note:**  
+> **Note:**
 > When implementing route caching, care should be taken to avoid race conditions when rebuilding the cache file. Ensure that the cache is written atomically so that each request can always fully load a valid cache file without errors or partial data.
 
 Here is a simple cache implementation:
@@ -157,7 +146,7 @@ According to the HTTP specification, any route that handles a GET request should
 
 ## Performance
 
-You can expect perfomance similar to [FastRoute](https://github.com/nikic/FastRoute). However FastRoute is much more featured, supporting regex matching, inline parameters, wildcard fallbacks and more. If there was a router that I would choose it would probably be FastRoute.
+You can expect performance similar to [FastRoute](https://github.com/nikic/FastRoute). However FastRoute is much more featured, supporting regex matching, inline parameters, wildcard fallbacks and more. If there was a router that I would choose it would probably be FastRoute.
 
 This router is about as fast as you can make in pure PHP supporting dynamic segments (prove me wrong!). Routers like FastRoute leverage PHP's built-in regular expression engine, which is implemented in the C programming language.
 
