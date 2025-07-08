@@ -42,7 +42,7 @@ Install with composer:
 
     composer require wilaak/radix-router
 
-Requires PHP 8.1 or newer.
+Requires PHP 8.3 or newer.
 
 ## Usage example
 
