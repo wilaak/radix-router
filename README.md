@@ -20,6 +20,22 @@ A radix tree data structure (also known as a *compact prefix tree* or *Patricia 
          └── edit
 ```
 
+## Table of contents
+
+- [Install](#install)
+- [Usage example](#usage-example)
+- [Defining Routes](#defining-routes)
+    - [Static Routes](#static-routes)
+    - [Parameterized Routes](#parameterized-routes)
+    - [Optional Parameters](#optional-parameters)
+    - [Wildcard Parameters](#wildcard-parameters)
+- [How to Cache Routes](#how-to-cache-routes)
+- [Note on HEAD Requests](#note-on-head-requests)
+- [Performance](#performance)
+    - [Benchmark](#benchmark)
+- [License](#license)
+
+
 ## Install
 
 Install with composer:
@@ -28,7 +44,7 @@ Install with composer:
 
 Requires PHP 8.1 or newer.
 
-## Usage
+## Usage example
 
 Here's a basic usage example:
 
@@ -68,36 +84,58 @@ switch ($info['code']) {
 }
 ```
 
-### Defining routes
+## Defining Routes
 
-Define routes using the `add()` method.
+You can define routes using the `add()` method.
+
+For performance and predictability, routes are prioritized as follows: static routes first, then parameterized routes, and finally wildcards.
+
+### Static Routes
+
+Match a specific path exactly:
 
 ```php
-// Static route: matches only "/about"
-$router->add(['GET'], '/about', 'handler');
+// Matches only "/about"
+$router->add('GET', '/about', 'handler');
 
-// Parameterized route: matches "/user/123" but NOT "/user/"
-$router->add(['GET'], '/user/:id', 'handler');
-
-// Optional parameter: matches "/posts/abc" and "/posts/"
-// Note: Only allowed as the last segment.
-$router->add(['GET'], '/posts/:id?', 'handler');
-
-// Wildcard parameter: matches "/files/static/dog.jpg" and "/files/"
-// Note: Only allowed as the last segment and can be shadowed by more specific routes.
-// For example, if you register both "/files/:path*" and "/files/foo", "/files/foo/bar.txt" will not match the wildcard.
-$router->add(['GET'], '/files/:path*', 'handler');
-
-// Multiple parameters: matches "/posts/42/comments/7"
-$router->add(['GET'], '/posts/:post/comments/:comment', 'handler');
-
-// Multiple methods: matches both GET and POST requests to "/login"
-$router->add(['GET', 'POST'], '/login', 'handler');
+// Matches both GET and POST requests to "/auth/login"
+$router->add(['GET', 'POST'], '/auth/login', 'handler');
 ```
 
-Routes are matched in order: static routes first, parameterized next and wildcards last.
+### Parameterized Routes
 
-### How to Cache Routes
+Use a colon (`:`) to define dynamic segments:
+
+```php
+// Matches "/user/123" (captures "123"), but NOT "/user/"
+$router->add('GET', '/user/:id', 'handler');
+
+// Matches "/posts/42/comments/7" (captures "42" and "7")
+$router->add('GET', '/posts/:post/comments/:comment', 'handler');
+```
+
+### Optional Parameters
+
+Add a `?` to the end of a parameter name to make it optional. Optional parameters are only allowed as the last segment of the route.
+
+```php
+// Matches "/posts/abc" (captures "abc") and "/posts/" (provides no parameter)
+$router->add('GET', '/posts/:id?', 'handler');
+```
+
+### Wildcard Parameters
+
+Add a `*` to the end of a parameter name to match the rest of the path. Wildcard parameters are only allowed as the last segment of the route.
+
+> **Note:**  
+> Wildcard fallbacks are not supported. If you register both a static route like `/files/foo` and a wildcard route like `/files/:path*`, requests to `/files/foo/bar.txt` will result in a 404 Not Found error. Overlapping patterns do not fall back to wildcards.
+
+```php
+// Matches "/files/static/dog.jpg" (captures "static/dog.jpg") and "/files/ (captures empty string)"
+$router->add('GET', '/files/:path*', 'handler');
+```
+
+## How to Cache Routes
 
 Rebuilding the route tree on every request or application startup can slow down performance.
 
@@ -124,13 +162,13 @@ if (!file_exists($cacheFile)) {
 
 By storing your routes in a PHP file, you let PHP’s OPcache handle the heavy lifting, making startup times nearly instantaneous.
 
-### Note on HEAD Requests
+## Note on HEAD Requests
 
 According to the HTTP specification, any route that handles a GET request should also support HEAD requests. RadixRouter does not automatically add this behavior. If you are running outside a standard web server environment (such as in a custom server), ensure that your GET routes also respond appropriately to HEAD requests. Responses to HEAD requests must not include a message body.
 
 ## Performance
 
-You can expect perfomance similar to [FastRoute](https://github.com/nikic/FastRoute), in some cases its faster e.g large segments, in some cases its slower e.g wilcards and deep static routes. However FastRoute is much more featured, supporting regex matching, inline parameters, wildcard fallbacks and more. If there was a router that I would choose it would probably be FastRoute.
+You can expect perfomance similar to [FastRoute](https://github.com/nikic/FastRoute). However FastRoute is much more featured, supporting regex matching, inline parameters, wildcard fallbacks and more. If there was a router that I would choose it would probably be FastRoute.
 
 This router is about as fast as you can make in pure PHP supporting dynamic segments (prove me wrong!). Routers like FastRoute leverage PHP's built-in regular expression engine, which is implemented in the C programming language.
 
