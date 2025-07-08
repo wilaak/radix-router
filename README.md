@@ -25,8 +25,6 @@ A radix tree data structure (also known as a *compact prefix tree* or *Patricia 
 - [Install](#install)
 - [Usage example](#usage-example)
 - [Defining Routes](#defining-routes)
-    - [Static Routes](#static-routes)
-    - [Parameterized Routes](#parameterized-routes)
     - [Optional Parameters](#optional-parameters)
     - [Wildcard Parameters](#wildcard-parameters)
 - [How to Cache Routes](#how-to-cache-routes)
@@ -86,13 +84,10 @@ switch ($info['code']) {
 
 ## Defining Routes
 
-You can define routes using the `add()` method.
+You can define routes by using the `add()` method.
 
-For performance and predictability, routes are prioritized as follows: static routes first, then parameterized routes, and finally wildcards.
-
-### Static Routes
-
-Match a specific path exactly:
+> **Note:**  
+> For performance and predictability, routes are prioritized as follows: static routes first, then parameterized routes, and finally wildcards.
 
 ```php
 // Matches only "/about"
@@ -100,13 +95,7 @@ $router->add('GET', '/about', 'handler');
 
 // Matches both GET and POST requests to "/auth/login"
 $router->add(['GET', 'POST'], '/auth/login', 'handler');
-```
 
-### Parameterized Routes
-
-Use a colon (`:`) to define dynamic segments:
-
-```php
 // Matches "/user/123" (captures "123"), but NOT "/user/"
 $router->add('GET', '/user/:id', 'handler');
 
@@ -128,7 +117,7 @@ $router->add('GET', '/posts/:id?', 'handler');
 Add a `*` to the end of a parameter name to match the rest of the path. Wildcard parameters are only allowed as the last segment of the route.
 
 > **Note:**  
-> Wildcard fallbacks are not supported. If you register both a static route like `/files/foo` and a wildcard route like `/files/:path*`, requests to `/files/foo/bar.txt` will result in a 404 Not Found error. Overlapping patterns do not fall back to wildcards.
+> Overlapping patterns will not fall back to wildcards. If you register a route like `/files/foo` and a wildcard route like `/files/:path*`, requests to `/files/foo/bar.txt` will result in a 404 Not Found error
 
 ```php
 // Matches "/files/static/dog.jpg" (captures "static/dog.jpg") and "/files/ (captures empty string)"
