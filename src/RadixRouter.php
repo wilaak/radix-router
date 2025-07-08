@@ -11,24 +11,32 @@ class RadixRouter
 {
     public array $routes = [];
 
+    private const ALLOWED_METHODS = [
+        'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'
+    ];
+
     /**
      * Adds a route for given HTTP methods and pattern.
      *
-     * @param array<int, string> $methods HTTP methods (e.g., ['GET', 'POST']).
+     * @param string|array<int, string> $methods HTTP method(s) (e.g., 'GET' or ['GET', 'POST']).
      * @param string $pattern Route pattern (e.g., '/users/:id', '/files/*', '/users/:id?').
      * @param mixed $handler Handler for the route.
      * @return self
      *
      * @throws InvalidArgumentException If a method is invalid or the route conflicts.
      */
-    public function add(array $methods, string $pattern, mixed $handler): self
+    public function add(string|array $methods, string $pattern, mixed $handler): self
     {
+        if (is_string($methods)) {
+            $methods = [$methods];
+        }
+
         foreach ($methods as &$method) {
             if (!is_string($method) || empty($method)) {
                 throw new InvalidArgumentException('Method must be a non-empty string.');
             }
             $method = strtoupper($method);
-            if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'])) {
+            if (!in_array($method, self::ALLOWED_METHODS, true)) {
                 throw new InvalidArgumentException("Invalid HTTP method: $method");
             }
         }
