@@ -19,11 +19,16 @@
         "router",
         "radix tree",
         "high performance",
-        "routing"
+        "routing",
+        "minimal",
+        "lightweight"
     ],
     "homepage": "https://github.com/Wilaak/RadixRouter",
     "support": {
         "issues": "https://github.com/Wilaak/RadixRouter/issues",
         "source": "https://github.com/Wilaak/RadixRouter"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12.2"
     }
 }
