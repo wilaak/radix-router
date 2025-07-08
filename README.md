@@ -26,6 +26,12 @@ Install with composer:
 
     composer require wilaak/radix-router
 
+Or simply include it in your project:
+
+```PHP
+require '/path/to/RadixRouter.php'
+```
+
 Requires PHP 8.3 or newer.
 
 ## Usage example
@@ -157,13 +163,13 @@ This router is about as fast as you can make in pure PHP supporting dynamic segm
 
 Here is a simple, single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli):
 
-| Metric                        | FastRoute v1      | RadixRouter      |
-|-------------------------------|------------------:|-----------------:|
-| Route lookups per second      | 2,420,439.87      | 2,441,495.67     |
-| Memory usage                  | 643.23 KB         | 489.06 KB        |
-| Peak memory usage             | 680.77 KB         | 507.34 KB        |
+| Metric                        | FastRoute v1      | RadixRouter      | SymfonyRouter    |
+|-------------------------------|------------------:|-----------------:|-----------------:|
+| Route lookups per second      | 2,420,439.87      | 2,441,495.67     |   107,730.37     |
+| Memory usage                  | 643.23 KB         | 489.06 KB        | 1,638.11 KB      |
+| Peak memory usage             | 680.77 KB         | 507.34 KB        | 1,882.23 KB      |
 
-The benchmark used 71 registered routes and tested 39 different paths. The benchmark consists mostly of dynamic routes, which favors RadixRouter. You can see the benchmark setup in the `benchmarks` folder.
+The benchmark used 71 registered routes and tested 39 different paths. The benchmark consists mostly of dynamic routes, which favors RadixRouter. You can see the benchmark setup in the `benchmark` folder.
 
 ## License
 
