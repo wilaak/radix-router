@@ -165,9 +165,9 @@ Here is a simple, single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli):
 
 | Metric                        | FastRoute v1      | RadixRouter      | SymfonyRouter    |
 |-------------------------------|------------------:|-----------------:|-----------------:|
-| Route lookups per second      | 2,420,439.87      | 2,441,495.67     |   107,730.37     |
-| Memory usage                  | 643.23 KB         | 489.06 KB        | 1,638.11 KB      |
-| Peak memory usage             | 680.77 KB         | 507.34 KB        | 1,882.23 KB      |
+| Route lookups per second      | 2,420,439.87      | 2,441,495.67     |   1,053,127.09   |
+| Memory usage                  | 643.23 KB         | 489.06 KB        | 1,929.10 KB      |
+| Peak memory usage             | 680.77 KB         | 507.34 KB        | 1,995.07 KB      |
 
 The benchmark used 71 registered routes and tested 39 different paths. The benchmark consists mostly of dynamic routes, which favors RadixRouter. You can see the benchmark setup in the `benchmark` folder.
 

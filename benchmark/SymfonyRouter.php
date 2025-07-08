@@ -4,7 +4,8 @@ require 'vendor/autoload.php';
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\RequestContext;
-use Symfony\Component\Routing\Matcher\UrlMatcher;
+use Symfony\Component\Routing\Matcher\CompiledUrlMatcher;
+use Symfony\Component\Routing\Matcher\Dumper\CompiledUrlMatcherDumper;
 
 // Simulate a real-world set of routes
 $routes = [
@@ -135,7 +136,11 @@ foreach ($routes as $i => [$method, $path, $handler]) {
 }
 
 $context = new RequestContext();
-$matcher = new UrlMatcher($routeCollection, $context);
+
+// Dump the compiled matcher
+$dumper = new CompiledUrlMatcherDumper($routeCollection);
+$compiledRoutes = $dumper->getCompiledRoutes();
+$compiledMatcher = new CompiledUrlMatcher($compiledRoutes, $context);
 
 $iterations = 2000000;
 $start = microtime(true);
@@ -145,7 +150,7 @@ for ($i = 0; $i < $iterations; $i++) {
     [$method, $path] = $testPaths[$index];
     $context->setMethod($method);
     try {
-        $matcher->match($path);
+        $compiledMatcher->match($path);
     } catch (\Symfony\Component\Routing\Exception\ResourceNotFoundException $e) {
         // Ignore not found
     } catch (\Symfony\Component\Routing\Exception\MethodNotAllowedException $e) {
