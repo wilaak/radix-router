@@ -72,6 +72,8 @@ switch ($info['code']) {
 
 Routes are defined using the `add()` method. You can assign any value as the handler.
 
+The order or route matching is: static > parameter > wildcard.
+
 ```php
 // Matches only "/about"
 $router->add('GET', '/about', 'handler');
@@ -80,7 +82,9 @@ $router->add('GET', '/about', 'handler');
 $router->add(['GET', 'POST'], '/auth/login', 'handler');
 ```
 
-You can define route parameters by using the colon (`:`) prefix. The order or route matching is: static > parameter > wildcard.
+**Required Parameters:**
+
+Parameters are defined usding the colon prefix:
 
 ```php
 // Matches "/user/123" (captures "123"), but NOT "/user/"
@@ -90,7 +94,7 @@ $router->add('GET', '/user/:id', 'handler');
 $router->add('GET', '/posts/:post/comments/:comment', 'handler');
 ```
 
-### Optional & Wildcards
+**Optional Parameters:**
 
 These are only allowed as the last segment of the route. 
 
@@ -98,6 +102,11 @@ These are only allowed as the last segment of the route.
 // Matches "/posts/abc" (captures "abc") and "/posts/" (provides no parameter)
 $router->add('GET', '/posts/:id?', 'handler');
 ```
+
+**Wildcard Parameters:**
+
+These are only allowed as the last segment of the route. 
+
 > **Note:**
 > Overlapping patterns will not fall back to wildcards. If you register a route like `/files/foo` and a wildcard route like `/files/:path*`, requests to `/files/foo/bar.txt` will result in a 404 Not Found error.
 
