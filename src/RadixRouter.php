@@ -93,7 +93,7 @@ class RadixRouter
      *     allowed_methods?: array<int, string> // Present if code is 405
      * }
      */
-    public function lookup(string $method, string $path): mixed
+    public function lookup(string $method, string $path): array
     {
         $params = [];
         $node = $this->routes;
