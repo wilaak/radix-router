@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/vendor/autoload.php';
+require 'vendor/autoload.php';
 
 use FastRoute\RouteCollector;
 use function FastRoute\simpleDispatcher;
@@ -130,7 +130,7 @@ $dispatcher = simpleDispatcher(function(RouteCollector $r) use ($routes) {
     }
 });
 
-$iterations = 1000000;
+$iterations = 2000000;
 $start = microtime(true);
 
 for ($i = 0; $i < $iterations; $i++) {
@@ -145,3 +145,9 @@ $duration = $end - $start;
 $lookupsPerSecond = $iterations / $duration;
 
 echo "Route lookups per second: " . number_format($lookupsPerSecond, 2) . PHP_EOL;
+echo "Total time for $iterations lookups: " . number_format($duration, 6) . " seconds" . PHP_EOL;
+echo "Average time per lookup: " . number_format(($duration / $iterations) * 1e6, 4) . " microseconds" . PHP_EOL;
+echo "Memory usage: " . number_format(memory_get_usage() / 1024, 2) . " KB" . PHP_EOL;
+echo "Peak memory usage: " . number_format(memory_get_peak_usage() / 1024, 2) . " KB" . PHP_EOL;
+echo "Registered routes: " . count($routes) . PHP_EOL;
+echo "Tested paths: " . count($testPaths) . PHP_EOL;

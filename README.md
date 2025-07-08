@@ -73,11 +73,20 @@ switch ($info['code']) {
 Define routes using the `add()` method.
 
 ```php
-// Static: matches only "/about"
+// Static route: matches only "/about"
 $router->add(['GET'], '/about', 'handler');
 
-// Parameter: matches "/user/123", "/user/abc", but NOT "/user/"
+// Parameterized route: matches "/user/123" but NOT "/user/"
 $router->add(['GET'], '/user/:id', 'handler');
+
+// Optional parameter: matches "/posts/abc" and "/posts/"
+// Note: Only allowed as the last segment.
+$router->add(['GET'], '/posts/:id?', 'handler');
+
+// Wildcard parameter: matches "/files/static/dog.jpg" and "/files/"
+// Note: Only allowed as the last segment and can be shadowed by more specific routes.
+// For example, if you register both "/files/:path*" and "/files/foo", "/files/foo/bar.txt" will not match the wildcard.
+$router->add(['GET'], '/files/:path*', 'handler');
 
 // Multiple parameters: matches "/posts/42/comments/7"
 $router->add(['GET'], '/posts/:post/comments/:comment', 'handler');
@@ -85,7 +94,8 @@ $router->add(['GET'], '/posts/:post/comments/:comment', 'handler');
 // Multiple methods: matches both GET and POST requests to "/login"
 $router->add(['GET', 'POST'], '/login', 'handler');
 ```
-Routes are matched in order: static routes first, then parameterized routes.
+
+Routes are matched in order: static routes first, parameterized next and wildcards last.
 
 ### How to Cache Routes
 
@@ -120,21 +130,21 @@ According to the HTTP specification, any route that handles a GET request should
 
 ## Performance
 
-You can expect perfomance similar to [FastRoute](https://github.com/nikic/FastRoute), in some cases its much faster e.g large segments, in some cases its slower e.g deep static paths. However FastRoute is much more featured, supporting regex matching, inline parameters, wildcards and more. If there was a router that I would choose it would probably be FastRoute.
+You can expect perfomance similar to [FastRoute](https://github.com/nikic/FastRoute), in some cases its faster e.g large segments, in some cases its slower e.g wilcards and deep static routes. However FastRoute is much more featured, supporting regex matching, inline parameters, wildcard fallbacks and more. If there was a router that I would choose it would probably be FastRoute.
 
-This router is about as fast as you can make in pure PHP supporting dynamic segments (prove me wrong!). Routers like FastRoute leverage PHP's built-in regular expression engine, which is implemented in the C programming language, making it very fast.
+This router is about as fast as you can make in pure PHP supporting dynamic segments (prove me wrong!). Routers like FastRoute leverage PHP's built-in regular expression engine, which is implemented in the C programming language.
 
 ### Benchmark
 
 Here is a simple, single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli):
 
-| Router        | Route Lookups per Second |
-|---------------|-------------------------:|
-| RadixRouter   |         2,523,513.48     |
-| FastRoute v1  |         2,377,352.74     |
+| Metric                        | FastRoute v1      | RadixRouter      |
+|-------------------------------|------------------:|-----------------:|
+| Route lookups per second      | 2,420,439.87      | 2,441,495.67     |
+| Memory usage                  | 643.23 KB         | 489.06 KB        |
+| Peak memory usage             | 680.77 KB         | 507.34 KB        |
 
-
-The benchmark consists mostly of dynamic routes, which favors RadixRouter. You can see the benchmark setup and scripts in the `benchmarks` folder.
+The benchmark used 71 registered routes and tested 39 different paths. The benchmark consists mostly of dynamic routes, which favors RadixRouter. You can see the benchmark setup in the `benchmarks` folder.
 
 ## License
 

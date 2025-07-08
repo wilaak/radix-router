@@ -35,10 +35,23 @@ class RadixRouter
         // Rename dynamic segments
         foreach ($segments as &$segment) {
             if (str_starts_with($segment, ':')) {
-                $segment = '/dynamic_node';
+                $segment = '/parameter_node';
             }
         }
         unset($segment); // Break reference
+
+        // Handle optional segment (pattern ends with '?')
+        if (str_ends_with($pattern, '?')) {
+            // Add a route for the pattern without the parameter segment
+            $optionalPattern = implode('/', array_slice($segments, 0, -1)) . '/';
+            $this->add($methods, $optionalPattern, $handler);
+        }
+
+        // Handle wildcard segment (pattern ends with '*')
+        if (str_ends_with($pattern, '*')) {
+            // Replace the last segment with a wildcard node marker
+            $segments[count($segments) - 1] = '/wildcard_node';
+        }
 
         // Build the route tree
         $node = &$this->routes;
@@ -81,20 +94,33 @@ class RadixRouter
         // Holds parameters for dynamic segments
         $params = [];
 
-        // Traverse the route tree
+        // Start at the root of the route tree
         $node = $this->routes;
-        foreach (explode('/', $path) as $segment) {
+
+        // Split the path into segments
+        $segments = explode('/', $path);
+
+        // Traverse the route tree segment by segment
+        foreach ($segments as $depth => $segment) {
+            // Exact match for the segment
             if (isset($node[$segment])) {
                 $node = $node[$segment];
                 continue;
             }
-
-            if ($segment !== '' && isset($node['/dynamic_node'])) {
-                $node = $node['/dynamic_node'];
+            // Match dynamic segment (e.g., :id)
+            if ($segment !== '' && isset($node['/parameter_node'])) {
+                $node = $node['/parameter_node'];
                 $params[] = $segment;
                 continue;
             }
-
+            // Match wildcard segment (e.g., :rest*)
+            if (isset($node["/wildcard_node"])) {
+                $node = $node["/wildcard_node"];
+                // Capture the rest of the path as a single parameter
+                $params[] = implode('/', array_slice($segments, $depth));
+                break;
+            }
+            // No matching route found
             return ['code' => 404];
         }
 
@@ -106,9 +132,13 @@ class RadixRouter
                 'params' => $params,
             ];
         }
+
+        // If no handler for this method, check allowed methods
         if (empty($node['/allowed_methods'])) {
             return ['code' => 404];
         }
+
+        // Method not allowed for this route
         return [
             'code' => 405,
             'allowed_methods' => $node['/allowed_methods'],
