@@ -4,9 +4,6 @@ namespace Wilaak\Http;
 
 use \InvalidArgumentException;
 
-/**
- * High peformance request router using a radix tree structure.
- */
 class RadixRouter
 {
     public array $routes = [];
@@ -54,9 +51,7 @@ class RadixRouter
         if (str_ends_with($pattern, '?')) {
             $optionalPattern = implode('/', array_slice($segments, 0, -1)) . '/';
             $this->add($methods, $optionalPattern, $handler);
-        }
-
-        if (str_ends_with($pattern, '*')) {
+        } else if (str_ends_with($pattern, '*')) {
             $segments[count($segments) - 1] = '/wildcard_node';
         }
 
