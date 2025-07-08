@@ -127,7 +127,7 @@ Rebuilding the route tree on every request or application startup can slow down 
 > - Objects that are not serializable
 > - References to external state (like open sockets)
 > 
-> When caching routes, only use handlers and parameters that can be safely represented as strings, arrays, or serializable objects.
+> When caching routes, only use handlers that can be safely represented as strings, arrays, or serializable objects.
 
 > **Note:**
 > When implementing route caching, care should be taken to avoid race conditions when rebuilding the cache file. Ensure that the cache is written atomically so that each request can always fully load a valid cache file without errors or partial data.
