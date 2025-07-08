@@ -80,13 +80,7 @@ $router->add('GET', '/about', 'handler');
 
 // Matches both GET and POST requests to "/auth/login"
 $router->add(['GET', 'POST'], '/auth/login', 'handler');
-```
 
-**Required Parameters:**
-
-Parameters are defined usding the colon prefix:
-
-```php
 // Matches "/user/123" (captures "123"), but NOT "/user/"
 $router->add('GET', '/user/:id', 'handler');
 
