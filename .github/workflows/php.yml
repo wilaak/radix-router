@@ -15,8 +15,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          coverage: xdebug
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
       - name: Run tests
-        run: vendor/bin/phpunit --testdox --coverage-text
+        run: vendor/bin/phpunit --testdox tests/
