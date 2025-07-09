@@ -6,7 +6,8 @@ use \InvalidArgumentException;
 
 class RadixRouter
 {
-    public array $routes = [];
+    public array $tree = [];
+    public array $static = [];
 
     public array $allowedMethods = [
         'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'
@@ -58,25 +59,30 @@ class RadixRouter
                 $segments[count($segments) - 1] = '/wildcard_node';
             }
 
-            $node = &$this->routes;
+            $node = &$this->tree;
             foreach ($segments as $segment) {
                 $node = &$node[$segment];
             }
-        } else {
-            $node = &$this->routes['/static'][$pattern];
-        }
 
-        foreach ($methods as $method) {
-            if (isset($node["/$method"])) {
-                throw new InvalidArgumentException("Route $method $pattern conflicts with existing route.");
+            foreach ($methods as $method) {
+                if (isset($node["/$method"])) {
+                    throw new InvalidArgumentException("Route $method $pattern conflicts with existing route.");
+                }
+                $node["/$method"] = $handler;
             }
-            $node["/$method"] = $handler;
-        }
 
-        if (isset($node['/allowed_methods'])) {
-            $node['/allowed_methods'] = array_unique(array_merge($node['/allowed_methods'], $methods));
+            if (isset($node['/allowed_methods'])) {
+                $node['/allowed_methods'] = array_unique(array_merge($node['/allowed_methods'], $methods));
+            } else {
+                $node['/allowed_methods'] = $methods;
+            }
         } else {
-            $node['/allowed_methods'] = $methods;
+            foreach ($methods as $method) {
+                if (isset($this->static[$pattern][$method])) {
+                    throw new InvalidArgumentException("Route $method $pattern conflicts with existing route.");
+                }
+                $this->static[$pattern][$method] = $handler;
+            }
         }
 
         return $this;
@@ -96,22 +102,22 @@ class RadixRouter
      */
     public function lookup(string $method, string $path): array
     {
-        if (isset($this->routes['/static'][$path])) {
-            if (isset($this->routes['/static'][$path]["/$method"])) {
+        if (isset($this->static[$path])) {
+            if (isset($this->static[$path][$method])) {
                 return [
                     'code' => 200,
-                    'handler' => $this->routes['/static'][$path]["/$method"],
+                    'handler' => $this->static[$path][$method],
                     'params' => [],
                 ];
             }
             return [
                 'code' => 405,
-                'allowed_methods' => $this->routes['/static'][$path]['/allowed_methods'],
+                'allowed_methods' => array_keys($this->static[$path]),
             ];
         }
 
         $params = [];
-        $node = $this->routes;
+        $node = $this->tree;
         $segments = explode('/', $path);
 
         foreach ($segments as $depth => $segment) {
