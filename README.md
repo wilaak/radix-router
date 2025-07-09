@@ -9,17 +9,18 @@ As the name suggests, RadixRouter utilizes a radix tree (also called a *compact 
 Here's a simplified visualization of how routes are stored:
 
 ```
-(root)
- ├── /
- ├── about
- ├── user
- │   └── :id
- │        └── profile
- └── posts
-    └── :post
-        ├── comments
-        │    └── :comment
-        └── edit
+/
+├── (root) [GET] → home_handler
+├── about [GET] → about_handler
+├── user
+│   └── :id
+│       ├── profile [GET] → profile_handler
+│       └── update [POST] → update_handler
+└── posts
+    ├── :post [GET] → post_handler
+    │   └── comments
+    │       └── :comment [GET] → comment_handler
+    └── create [POST] → create_post_handler
 ```
 
 - Static segments (like `/about` or `/posts/edit`) are direct branches.
