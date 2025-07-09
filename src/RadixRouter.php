@@ -106,7 +106,7 @@ class RadixRouter
             }
             return [
                 'code' => 405,
-                'allowed_methods' => $this->routes['/static'][$path]['/allowed_methods'] ?? [],
+                'allowed_methods' => $this->routes['/static'][$path]['/allowed_methods'],
             ];
         }
 
