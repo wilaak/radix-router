@@ -1,6 +1,6 @@
 # RadixRouter
 
-A very simple, high-performance (see [benchmarks](#benchmark)) router built on a radix tree. Having only 153 lines of code, RadixRouter is easy to read, understand, and integrate into any project. Its a single file, dependency free (without tests) routing solution, intended as a foundation for building more featureful routers.
+A very simple, high-performance (see [benchmarks](#benchmark)) router built on a radix tree. Having only 158 lines of code, RadixRouter is easy to read, understand, and integrate into any project. Its a single file, dependency free (without tests) routing solution, intended as a foundation for building more featureful routers.
 
 ### Overview
 
