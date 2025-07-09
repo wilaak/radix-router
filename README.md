@@ -1,12 +1,12 @@
 # RadixRouter
 
-A very simple, high-performance (see [benchmarks](#benchmark)) router built on a radix tree. Having only 158 lines of code, RadixRouter is easy to read, understand, and integrate into any project. Its a single file, dependency free (without tests) routing solution, intended as a foundation for building more featureful routers.
+Minimal high-performance (see [benchmarks](#benchmark)) router built on a radix tree. Only 158 lines of code, easy to read, understand, and integrate into any project. Its a single file, dependency free (without tests) routing solution, intended as a foundation for building more featureful routers.
 
 ### Overview
 
 - High-performance O(k) dynamic route matching, where *k* is the number of segments in the path.
 - Supports parameters, including wildcard and optional segments for flexible route definitions.
-- Static routes are stored separately from the route tree for faster direct lookups.
+- Static routes are stored in a hash map providing near instant minimal allocation lookups for exact path matches.
 
 ## How does it work?
 
