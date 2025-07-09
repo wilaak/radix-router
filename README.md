@@ -93,7 +93,7 @@ switch ($info['code']) {
 
 Routes are defined using the `add()` method. You can assign any value as the handler.
 
-The order or route matching is: static > parameter > wildcard.
+The order of route matching is: static > parameter > wildcard.
 
 ```php
 // Matches only "/about"
