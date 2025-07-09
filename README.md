@@ -153,12 +153,18 @@ Here is a simple cache implementation:
 $cacheFile = __DIR__ . '/routes.cache.php';
 if (!file_exists($cacheFile)) {
     // Build routes here
-    $router->add(['GET'], '/', 'handler');
-    // Export generated routes 
-    file_put_contents($cacheFile, '<?php return ' . var_export($router->routes, true) . ';');
+    $router->add('GET', '/', 'handler');
+    // Export generated tree and static routes
+    $routes = [
+        'tree' => $router->tree,
+        'static' => $router->static,
+    ];
+    file_put_contents($cacheFile, '<?php return ' . var_export($routes, true) . ';');
 } else {
-    // Load routes from cache
-    $router->routes = require $cacheFile;
+    // Load tree and static routes from cache
+    $routes = require $cacheFile;
+    $router->tree = $routes['tree'];
+    $router->static = $routes['static'];
 }
 ```
 
@@ -172,17 +178,15 @@ According to the HTTP specification, any route that handles a GET request should
 
 This router is about as fast as you can make in pure PHP supporting dynamic segments (prove me wrong!). Routers like [FastRoute](https://github.com/nikic/FastRoute) leverage PHP's built-in regular expression engine, which is implemented in the C programming language.
 
-You can expect performance similar to FastRoute. However FastRoute is much more featured, supporting regex matching, inline parameters, wildcard fallbacks and more. If there was a router that I would choose it would probably be FastRoute.
-
 ### Benchmark
 
 Here is a simple, single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli):
 
 | Metric                        | RadixRouter      | FastRoute v1      | SymfonyRouter    |
 |-------------------------------|-----------------:|------------------:|-----------------:|
-| Route lookups per second      | 2,431,992        | 2,387,646         | 1,053,127        |
-| Memory usage                  | 489 KB           | 1,386 KB          | 1,929 KB         |
-| Peak memory usage             | 507 KB           | 1,876 KB          | 1,995 KB         |
+| Route lookups per second      | 2,739,667        | 2,387,646         | 1,053,127        |
+| Memory usage                  | 486 KB           | 1,386 KB          | 1,929 KB         |
+| Peak memory usage             | 508 KB           | 1,876 KB          | 1,995 KB         |
 
 The benchmark used 71 registered routes and tested 39 different paths. You can see the benchmark setup in the `benchmark` folder.
 
