@@ -1,6 +1,12 @@
 # RadixRouter
 
-A very simple, high-performance (see [benchmarks](#benchmark)) router built on a radix tree. Only 138 lines of code, RadixRouter is easy to read, understand, and integrate into any project. Its a single file, dependency free (without tests) routing solution, intended as a foundation for building more featureful routers.
+A very simple, high-performance (see [benchmarks](#benchmark)) router built on a radix tree. Having only 153 lines of code, RadixRouter is easy to read, understand, and integrate into any project. Its a single file, dependency free (without tests) routing solution, intended as a foundation for building more featureful routers.
+
+### Overview
+
+- High-performance O(k) dynamic route matching, where *k* is the number of segments in the path.
+- Supports parameters, including wildcard and optional segments for flexible route definitions.
+- Static routes are stored separately from the route tree for faster direct lookups.
 
 ## How does it work?
 
@@ -10,22 +16,24 @@ Here's a simplified visualization of how routes are stored:
 
 ```
 /
-├── (root) [GET] → home_handler
-├── about [GET] → about_handler
 ├── user
 │   └── :id
-│       ├── profile [GET] → profile_handler
+│       ├── profile [GET, POST] → profile_handler
 │       └── update [POST] → update_handler
-└── posts
-    ├── :post [GET] → post_handler
-    │   └── comments
-    │       └── :comment [GET] → comment_handler
-    └── create [POST] → create_post_handler
+├── posts
+│   └── :post
+│       ├── [GET, POST] → post_handler
+│       ├── edit [PUT] → edit_post_handler
+│       └── comments
+│           └── :comment [GET, DELETE] → comment_handler
+├── category
+│   └── :category
+│       └── :item [GET] → category_item_handler
+├── files
+│   └── :path* [GET] → file_handler
+└── search
+    └── :query? [GET, POST] → search_handler
 ```
-
-- Static segments (like `/about` or `/posts/edit`) are direct branches.
-- Parameter segments (like `:id` or `:post`) are special nodes that match any value in that position.
-- Each node can have further static or parameter children, allowing for deeply nested and dynamic routes.
 
 ## Install
 
@@ -170,11 +178,11 @@ You can expect performance similar to FastRoute. However FastRoute is much more 
 
 Here is a simple, single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli):
 
-| Metric                        | FastRoute v1      | RadixRouter      | SymfonyRouter    |
-|-------------------------------|------------------:|-----------------:|-----------------:|
-| Route lookups per second      | 2,420,439.87      | 2,441,495.67     |   1,053,127.09   |
-| Memory usage                  | 643.23 KB         | 489.06 KB        | 1,929.10 KB      |
-| Peak memory usage             | 680.77 KB         | 507.34 KB        | 1,995.07 KB      |
+| Metric                        | RadixRouter      | FastRoute v1      | SymfonyRouter    |
+|-------------------------------|-----------------:|------------------:|-----------------:|
+| Route lookups per second      | 2,431,992        | 2,387,646         | 1,053,127        |
+| Memory usage                  | 489 KB           | 1,386 KB          | 1,929 KB         |
+| Peak memory usage             | 507 KB           | 1,876 KB          | 1,995 KB         |
 
 The benchmark used 71 registered routes and tested 39 different paths. You can see the benchmark setup in the `benchmark` folder.
 
