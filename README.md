@@ -1,24 +1,30 @@
 # RadixRouter
 
-Simple implementation of a radix tree based router for PHP
+A very simple, high-performance (see [benchmarks](#benchmark)) router built on a radix tree. Only 138 lines of code, RadixRouter is easy to read, understand, and integrate into any project. Its a single file, dependency free (without tests) routing solution, intended as a foundation for building more featureful routers.
 
 ## How does it work?
 
-A radix tree data structure (also known as a *compact prefix tree* or *Patricia trie*) allows for highly efficient lookups by minimizing redundant comparisons and grouping common prefixes together. As a result, route matching is performed in O(k) time, where k is the length of the path, rather than the number of registered routes:
+As the name suggests, RadixRouter utilizes a radix tree (also called a *compact prefix tree* or *Patricia trie*) to organize routes by their common prefixes. This structure enables extremely fast lookups, since each segment of the path is only compared once as the tree is traversed. Instead of checking every registered route, the router follows the path through the tree, making route matching O(k), where *k* is the number of segments in the path.
+
+Here's a simplified visualization of how routes are stored:
 
 ```
 (root)
  ├── /
  ├── about
  ├── user
- │    └── :x
- │         └── profile
+ │   └── :id
+ │        └── profile
  └── posts
-    └── :x
-         ├── comments
-         │    └── :x
-         └── edit
+    └── :post
+        ├── comments
+        │    └── :comment
+        └── edit
 ```
+
+- Static segments (like `/about` or `/posts/edit`) are direct branches.
+- Parameter segments (like `:id` or `:post`) are special nodes that match any value in that position.
+- Each node can have further static or parameter children, allowing for deeply nested and dynamic routes.
 
 ## Install
 
@@ -155,9 +161,9 @@ According to the HTTP specification, any route that handles a GET request should
 
 ## Performance
 
-You can expect performance similar to [FastRoute](https://github.com/nikic/FastRoute). However FastRoute is much more featured, supporting regex matching, inline parameters, wildcard fallbacks and more. If there was a router that I would choose it would probably be FastRoute.
+This router is about as fast as you can make in pure PHP supporting dynamic segments (prove me wrong!). Routers like [FastRoute](https://github.com/nikic/FastRoute) leverage PHP's built-in regular expression engine, which is implemented in the C programming language.
 
-This router is about as fast as you can make in pure PHP supporting dynamic segments (prove me wrong!). Routers like FastRoute leverage PHP's built-in regular expression engine, which is implemented in the C programming language.
+You can expect performance similar to FastRoute. However FastRoute is much more featured, supporting regex matching, inline parameters, wildcard fallbacks and more. If there was a router that I would choose it would probably be FastRoute.
 
 ### Benchmark
 
@@ -169,7 +175,7 @@ Here is a simple, single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli):
 | Memory usage                  | 643.23 KB         | 489.06 KB        | 1,929.10 KB      |
 | Peak memory usage             | 680.77 KB         | 507.34 KB        | 1,995.07 KB      |
 
-The benchmark used 71 registered routes and tested 39 different paths. The benchmark consists mostly of dynamic routes, which favors RadixRouter. You can see the benchmark setup in the `benchmark` folder.
+The benchmark used 71 registered routes and tested 39 different paths. You can see the benchmark setup in the `benchmark` folder.
 
 ## License
 
