@@ -41,23 +41,29 @@ class RadixRouter
 
         $segments = explode('/', $pattern);
 
+        $hasParameter = false;
         foreach ($segments as &$segment) {
             if (str_starts_with($segment, ':')) {
                 $segment = '/parameter_node';
+                $hasParameter = true;
             }
         }
         unset($segment);
 
-        if (str_ends_with($pattern, '?')) {
-            $optionalPattern = implode('/', array_slice($segments, 0, -1)) . '/';
-            $this->add($methods, $optionalPattern, $handler);
-        } else if (str_ends_with($pattern, '*')) {
-            $segments[count($segments) - 1] = '/wildcard_node';
-        }
+        if ($hasParameter) {
+            if (str_ends_with($pattern, '?')) {
+                $optionalPattern = implode('/', array_slice($segments, 0, -1)) . '/';
+                $this->add($methods, $optionalPattern, $handler);
+            } else if (str_ends_with($pattern, '*')) {
+                $segments[count($segments) - 1] = '/wildcard_node';
+            }
 
-        $node = &$this->routes;
-        foreach ($segments as $segment) {
-            $node = &$node[$segment];
+            $node = &$this->routes;
+            foreach ($segments as $segment) {
+                $node = &$node[$segment];
+            }
+        } else {
+            $node = &$this->routes['/static'][$pattern];
         }
 
         foreach ($methods as $method) {
@@ -90,6 +96,20 @@ class RadixRouter
      */
     public function lookup(string $method, string $path): array
     {
+        if (isset($this->routes['/static'][$path])) {
+            if (isset($this->routes['/static'][$path]["/$method"])) {
+                return [
+                    'code' => 200,
+                    'handler' => $this->routes['/static'][$path]["/$method"],
+                    'params' => [],
+                ];
+            }
+            return [
+                'code' => 405,
+                'allowed_methods' => $this->routes['/static'][$path]['/allowed_methods'] ?? [],
+            ];
+        }
+
         $params = [];
         $node = $this->routes;
         $segments = explode('/', $path);
