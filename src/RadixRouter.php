@@ -65,16 +65,10 @@ class RadixRouter
             }
 
             foreach ($methods as $method) {
-                if (isset($node["/$method"])) {
+                if (isset($node[$method])) {
                     throw new InvalidArgumentException("Route $method $pattern conflicts with existing route.");
                 }
-                $node["/$method"] = $handler;
-            }
-
-            if (isset($node['/allowed_methods'])) {
-                $node['/allowed_methods'] = array_unique(array_merge($node['/allowed_methods'], $methods));
-            } else {
-                $node['/allowed_methods'] = $methods;
+                $node['/routes_node'][$method] = $handler;
             }
         } else {
             foreach ($methods as $method) {
@@ -138,21 +132,21 @@ class RadixRouter
             return ['code' => 404];
         }
 
-        if (isset($node["/$method"])) {
+        if (isset($node['/routes_node'][$method])) {
             return [
                 'code' => 200,
-                'handler' => $node["/$method"],
+                'handler' => $node['/routes_node'][$method],
                 'params' => $params,
             ];
         }
 
-        if (empty($node['/allowed_methods'])) {
+        if (!isset($node['/routes_node'])) {
             return ['code' => 404];
         }
 
         return [
             'code' => 405,
-            'allowed_methods' => $node['/allowed_methods'],
+            'allowed_methods' => array_keys($node['/routes_node']),
         ];
     }
 }
