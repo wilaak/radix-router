@@ -180,13 +180,13 @@ This router is about as fast as you can make in pure PHP supporting dynamic segm
 
 ### Benchmark
 
-Here is a simple, single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli):
+Here is a simple, single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
 | Metric                        | RadixRouter      | FastRoute v1      | SymfonyRouter    |
 |-------------------------------|-----------------:|------------------:|-----------------:|
-| Route lookups per second      | 2,739,667        | 2,387,646         | 1,053,127        |
-| Memory usage                  | 486 KB           | 1,386 KB          | 1,929 KB         |
-| Peak memory usage             | 508 KB           | 1,876 KB          | 1,995 KB         |
+| Route lookups per second      | 3,022,212        | 2,569,868         | 1,183,865        |
+| Memory usage                  | 381.46 KB        | 447.32 KB         | 708.73 KB        |
+| Peak memory usage             | 468.48 KB        | 1,333.23 KB       | 1,333.36 KB      |
 
 The benchmark used 71 registered routes and tested 39 different paths. You can see the benchmark setup in the `benchmark` folder.
 
