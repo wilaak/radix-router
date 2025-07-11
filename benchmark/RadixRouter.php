@@ -12,9 +12,8 @@ unset($path);
 
 use Wilaak\Http\RadixRouter;
 
-$r = new RadixRouter();
-
 $registrationStart = microtime(true);
+$r = new RadixRouter();
 foreach ($routes as $path) {
     $r->add('GET', $path, 'handler');
 }
