@@ -1,6 +1,6 @@
 # RadixRouter
 
-Simple implementation of a radix tree based router for PHP. Minimal and high-performance (see [benchmarks](#benchmark)). Small codebase, easy to read and integrate into any project. Its a single file, dependency free (without tests) routing solution, intended as a foundation for building more featureful routers.
+Simple implementation of a radix tree based router for PHP. Minimal and high-performance (see [benchmarks](#benchmark)).
 
 ### Overview
 
