@@ -12,28 +12,7 @@ Simple implementation of a radix tree based router for PHP. Minimal and high-per
 
 As the name suggests, RadixRouter utilizes a radix tree (also called a *compact prefix tree* or *Patricia trie*) to organize routes by their common prefixes. This structure enables extremely fast lookups, since each segment of the path is only compared once as the tree is traversed. Instead of checking every registered route, the router follows the path through the tree.
 
-Here's a simplified visualization of how routes are stored:
-
-```
-/
-├── user
-│   └── :id
-│       ├── profile [GET, POST] → profile_handler
-│       └── update [POST] → update_handler
-├── posts
-│   └── :post
-│       ├── [GET, POST] → post_handler
-│       ├── edit [PUT] → edit_post_handler
-│       └── comments
-│           └── :comment [GET, DELETE] → comment_handler
-├── category
-│   └── :category
-│       └── :item [GET] → category_item_handler
-├── files
-│   └── :path* [GET] → file_handler
-└── search
-    └── :query? [GET, POST] → search_handler
-```
+![Radix Tree Diagram](assets/tree.svg)
 
 ## Install
 
