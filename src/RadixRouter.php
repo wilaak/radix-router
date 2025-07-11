@@ -17,7 +17,7 @@ class RadixRouter
      * Adds a route for given HTTP methods and pattern.
      *
      * @param string|array<int, string> $methods HTTP method(s) (e.g., 'GET' or ['GET', 'POST']).
-     * @param string $pattern Route pattern (e.g., '/users/:id', '/files/*', '/users/:id?').
+     * @param string $pattern Route pattern (e.g., '/users/:id', '/files/:path*', '/users/:id?').
      * @param mixed $handler Handler for the route.
      * @return self
      *
