@@ -182,19 +182,19 @@ This router is about as fast as you can make in pure PHP supporting dynamic segm
 
 Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
-| Router        | Scenario                | Routes | Registration time (ms) | Lookups per second | Memory usage (KB) | Peak memory (KB) |
-|---------------|-------------------------|-------:|-----------------------:|-------------------:|------------------:|-----------------:|
-| RadixRouter   | Simple application      |     33 | 0.03                   | 3,572,697.51       | 374.80            | 451.48           |
-| FastRoute     | Simple application      |     33 | 1.85                   | 2,767,882.61       | 430.82            | 1,328.00         |
-| SymfonyRouter | Simple application      |     33 | 6.24                   | 1,722,431.80       | 574.23            | 1,328.31         |
-| RadixRouter   | Avatax API              |    256 | 0.21                   | 2,310,931.03       | 586.59            | 588.16           |
-| SymfonyRouter | Avatax API              |    256 | 12.60                  | 1,182,060.31       | 1,291.99          | 1,587.93         |
-| FastRoute     | Avatax API              |    256 | 4.94                   |   707,515.80       | 549.41            | 1,327.72         |
-| RadixRouter   | Bitbucket API           |    178 | 0.312                  | 1,907,130.30       | 537.29            | 538.75           |
-| FastRoute     | Bitbucket API           |    178 | 3.812                  | 371,103.65         | 555.98            | 1,327.76         |
-| SymfonyRouter | Bitbucket API           |    178 | 12.156                 | 910,063.93         | 1,185.56          | 1,426.42         |
+| Router        | Scenario           | # Routes | Register (ms) | Lookups/sec      | Memory (KB) | Peak Mem (KB) |
+|---------------|--------------------|---------:|--------------:|-----------------:|------------:|--------------:|
+| **RadixRouter**   | Simple app         |      33 |         0.03  | 3,572,698        |      375    |        451    |
+| **FastRoute**     | Simple app         |      33 |         1.85  | 2,767,883        |      431    |      1,328    |
+| **SymfonyRouter** | Simple app         |      33 |         6.24  | 1,722,432        |      574    |      1,328    |
+| **RadixRouter**   | Avatax API         |     256 |         0.21  | 2,310,931        |      587    |        588    |
+| **SymfonyRouter** | Avatax API         |     256 |        12.60  | 1,182,060        |    1,292    |      1,588    |
+| **FastRoute**     | Avatax API         |     256 |         4.94  |   707,516        |      549    |      1,328    |
+| **RadixRouter**   | Bitbucket API      |     178 |         0.31  | 1,907,130        |      537    |        539    |
+| **FastRoute**     | Bitbucket API      |     178 |         3.81  |   371,104        |      556    |      1,328    |
+| **SymfonyRouter** | Bitbucket API      |     178 |        12.16  |   910,064        |    1,186    |      1,426    |
 
-You can see the benchmark setup in the `benchmark` folder.
+You can find the benchmark scripts and scenarios in the `benchmark` folder.
 
 ## License
 
