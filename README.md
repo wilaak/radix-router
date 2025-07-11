@@ -176,7 +176,7 @@ According to the HTTP specification, any route that handles a GET request should
 
 ## Performance
 
-This router is about as fast as you can make in pure PHP supporting dynamic segments (prove me wrong!). Routers like [FastRoute](https://github.com/nikic/FastRoute) leverage PHP's built-in regular expression engine, which is implemented in the C programming language.
+This router is about as fast as you can make in pure PHP supporting dynamic segments (prove me wrong!).
 
 ### Benchmarks
 
