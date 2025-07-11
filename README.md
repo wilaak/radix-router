@@ -184,27 +184,27 @@ Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
 #### Simple app (33 routes)
 
-| Router           | Register (ms) | Lookups/sec   | Memory (KB) | Peak Mem (KB) |
-|------------------|--------------:|--------------:|------------:|--------------:|
-| **RadixRouter**  |         0.03  | 3,572,698     |      375    |        451    |
-| **FastRoute**    |         1.85  | 2,767,883     |      431    |      1,328    |
-| **SymfonyRouter**|         6.24  | 1,722,432     |      574    |      1,328    |
+| Router           | Register      | Lookups       | Memory      | Peak Mem      |
+|------------------|--------------|--------------|-------------|--------------|
+| **RadixRouter**  | 0.03 ms      | 3,572,698/sec | 375 KB      | 451 KB       |
+| **FastRoute**    | 1.85 ms      | 2,767,883/sec | 431 KB      | 1,328 KB     |
+| **SymfonyRouter**| 6.24 ms      | 1,722,432/sec | 574 KB      | 1,328 KB     |
 
 #### Avatax API (256 routes)
 
-| Router           | Register (ms) | Lookups/sec   | Memory (KB) | Peak Mem (KB) |
-|------------------|--------------:|--------------:|------------:|--------------:|
-| **RadixRouter**  |         0.21  | 2,310,931     |      587    |        588    |
-| **FastRoute**    |         4.94  |   707,516     |      549    |      1,328    |
-| **SymfonyRouter**|        12.60  | 1,182,060     |    1,292    |      1,588    |
+| Router           | Register      | Lookups       | Memory      | Peak Mem      |
+|------------------|--------------|--------------|-------------|--------------|
+| **RadixRouter**  | 0.21 ms      | 2,310,931/sec | 587 KB      | 588 KB       |
+| **FastRoute**    | 4.94 ms      |   707,516/sec | 549 KB      | 1,328 KB     |
+| **SymfonyRouter**| 12.60 ms     | 1,182,060/sec | 1,292 KB    | 1,588 KB     |
 
 #### Bitbucket API (178 routes)
 
-| Router           | Register (ms) | Lookups/sec   | Memory (KB) | Peak Mem (KB) |
-|------------------|--------------:|--------------:|------------:|--------------:|
-| **RadixRouter**  |         0.31  | 1,907,130     |      537    |        539    |
-| **FastRoute**    |         3.81  |   371,104     |      556    |      1,328    |
-| **SymfonyRouter**|        12.16  |   910,064     |    1,186    |      1,426    |
+| Router           | Register      | Lookups       | Memory      | Peak Mem      |
+|------------------|--------------|--------------|-------------|--------------|
+| **RadixRouter**  | 0.31 ms      | 1,907,130/sec | 537 KB      | 539 KB       |
+| **FastRoute**    | 3.81 ms      |   371,104/sec | 556 KB      | 1,328 KB     |
+| **SymfonyRouter**| 12.16 ms     |   910,064/sec | 1,186 KB    | 1,426 KB     |
 
 ## License
 
