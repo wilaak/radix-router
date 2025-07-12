@@ -57,8 +57,6 @@ class RadixRouter
                 $this->add($methods, $newPattern, $handler);
             } else if (str_ends_with($pattern, '*')) {
                 $segments[count($segments) - 1] = '/wildcard_node';
-                $newPattern = substr($pattern, 0, -1);
-                $this->add($methods, $newPattern, $handler);
             }
 
             $node = &$this->tree;
