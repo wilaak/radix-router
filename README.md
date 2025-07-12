@@ -173,7 +173,7 @@ Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
 | Router           | Register      | Lookups       | Memory      | Peak Mem      |
 |------------------|--------------|--------------|-------------|--------------|
-| **RadixRouter**  | 0.21 ms      | 2,310,931/sec | 587 KB      | 588 KB       |
+| **RadixRouter**  | 0.23 ms      | 2,310,931/sec | 587 KB      | 588 KB       |
 | **FastRoute**    | 4.94 ms      |   707,516/sec | 549 KB      | 1,328 KB     |
 | **SymfonyRouter**| 12.60 ms     | 1,182,060/sec | 1,292 KB    | 1,588 KB     |
 
@@ -181,7 +181,7 @@ Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
 | Router           | Register      | Lookups       | Memory      | Peak Mem      |
 |------------------|--------------|--------------|-------------|--------------|
-| **RadixRouter**  | 0.31 ms      | 1,907,130/sec | 537 KB      | 539 KB       |
+| **RadixRouter**  | 0.17 ms      | 1,907,130/sec | 537 KB      | 539 KB       |
 | **FastRoute**    | 3.81 ms      |   371,104/sec | 556 KB      | 1,328 KB     |
 | **SymfonyRouter**| 12.16 ms     |   910,064/sec | 1,186 KB    | 1,426 KB     |
 
