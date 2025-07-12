@@ -26,7 +26,7 @@ Or simply include it in your project:
 require '/path/to/RadixRouter.php'
 ```
 
-Requires PHP 8.3 or newer.
+Requires PHP 8.0 or newer. (PHP 8.3 for tests)
 
 ## Usage example
 
