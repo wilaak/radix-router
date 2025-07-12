@@ -11,7 +11,7 @@
     ],
     "minimum-stability": "stable",
     "require": {
-        "php": ">=8.3"
+        "php": ">=8.0"
     },
     "autoload": {
         "psr-4": {
@@ -21,10 +21,22 @@
     "keywords": [
         "router",
         "radix tree",
+        "radix trie",
+        "patricia trie",
+        "trie",
+        "routing",
+        "url routing",
+        "radix",
         "high performance",
         "routing",
         "minimal",
-        "lightweight"
+        "simple",
+        "lightweight",
+        "php router",
+        "fast router",
+        "tree router",
+        "url matcher",
+        "http"
     ],
     "homepage": "https://github.com/Wilaak/RadixRouter",
     "support": {
@@ -32,6 +44,7 @@
         "source": "https://github.com/Wilaak/RadixRouter"
     },
     "require-dev": {
+        "php": ">=8.3",
         "phpunit/phpunit": "^12.2"
     },
     "scripts": {
