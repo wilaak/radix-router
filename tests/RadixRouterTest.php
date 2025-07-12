@@ -16,10 +16,10 @@ class RadixRouterTest extends TestCase
     public function testParameterizedRoute()
     {
         $router = new RadixRouter();
-        $router->add('GET', '/user/:id', function ($id) { return $id; });
-        $info = $router->lookup('GET', '/user/123');
+        $router->add('GET', '/user/:id/:type', function ($id, $type) { return [$id, $type]; });
+        $info = $router->lookup('GET', '/user/123/admin');
         $this->assertEquals(200, $info['code']);
-        $this->assertEquals('123', $info['handler'](...$info['params']));
+        $this->assertEquals(['123', 'admin'], $info['handler'](...$info['params']));
     }
 
     public function testMultipleParameters()
@@ -34,25 +34,28 @@ class RadixRouterTest extends TestCase
     public function testOptionalParameter()
     {
         $router = new RadixRouter();
-        $router->add('GET', '/posts/:id?', function ($id = null) { return $id; });
-        $info1 = $router->lookup('GET', '/posts/abc');
-        $info2 = $router->lookup('GET', '/posts/');
+        $router->add('GET', '/posts/:id?/:type?', function ($id = null, $type = null) { return [$id, $type]; });
+        $info1 = $router->lookup('GET', '/posts/abc/editor');
+        $info2 = $router->lookup('GET', '/posts/abc');
+        $info3 = $router->lookup('GET', '/posts/');
         $this->assertEquals(200, $info1['code']);
-        $this->assertEquals('abc', $info1['handler'](...$info1['params']));
+        $this->assertEquals(['abc', 'editor'], $info1['handler'](...$info1['params']));
         $this->assertEquals(200, $info2['code']);
-        $this->assertNull($info2['handler'](...$info2['params']));
+        $this->assertEquals(['abc', null], $info2['handler'](...$info2['params']));
+        $this->assertEquals(200, $info3['code']);
+        $this->assertEquals([null, null], $info3['handler'](...$info3['params']));
     }
 
     public function testWildcardParameter()
     {
         $router = new RadixRouter();
-        $router->add('GET', '/files/:path*', function ($path) { return $path; });
-        $info1 = $router->lookup('GET', '/files/static/dog.jpg');
-        $info2 = $router->lookup('GET', '/files/');
+        $router->add('GET', '/files/:folder/:path*', function ($folder, $path) { return [$folder, $path]; });
+        $info1 = $router->lookup('GET', '/files/static/dog/pic.jpg');
+        $info2 = $router->lookup('GET', '/files/static/');
         $this->assertEquals(200, $info1['code']);
-        $this->assertEquals('static/dog.jpg', $info1['handler'](...$info1['params']));
+        $this->assertEquals(['static', 'dog/pic.jpg'], $info1['handler'](...$info1['params']));
         $this->assertEquals(200, $info2['code']);
-        $this->assertEquals('', $info2['handler'](...$info2['params']));
+        $this->assertEquals(['static', ''], $info2['handler'](...$info2['params']));
     }
 
     public function testMethodNotAllowed()
