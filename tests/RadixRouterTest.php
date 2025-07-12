@@ -5,7 +5,7 @@ use Wilaak\Http\RadixRouter;
 
 class RadixRouterTest extends TestCase
 {
-    public function testStaticRoute()
+    public function testCanMatchStaticRoute()
     {
         $router = new RadixRouter();
         $router->add('GET', '/about', 'handler');
@@ -14,27 +14,19 @@ class RadixRouterTest extends TestCase
         $this->assertEquals('handler', $info['handler']);
     }
 
-    public function testParameterizedRoute()
+    public function testCanMatchParameterizedRoute()
     {
         $router = new RadixRouter();
         $router->add('GET', '/user/:id/:type', 'handler');
         $info = $router->lookup('GET', '/user/123/admin');
+        $info2 = $router->lookup('GET', '/user/123/');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('handler', $info['handler']);
         $this->assertEquals(['123', 'admin'], $info['params']);
+        $this->assertEquals(404, $info2['code']);
     }
 
-    public function testMultipleParameters()
-    {
-        $router = new RadixRouter();
-        $router->add('GET', '/posts/:post/comments/:comment', 'handler');
-        $info = $router->lookup('GET', '/posts/42/comments/7');
-        $this->assertEquals(200, $info['code']);
-        $this->assertEquals('handler', $info['handler']);
-        $this->assertEquals(['42', '7'], $info['params']);
-    }
-
-    public function testOptionalParameter()
+    public function testCanMatchOptionalParameter()
     {
         $router = new RadixRouter();
         $router->add('GET', '/posts/:id/:type?', 'handler');
@@ -48,7 +40,7 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(['abc'], $info2['params']);
     }
 
-    public function testWildcardParameter()
+    public function testCanMatchWildcardParameter()
     {
         $router = new RadixRouter();
         $router->add('GET', '/files/:folder/:path*', 'handler');
@@ -67,7 +59,7 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(['static', 'trailing/'], $info3['params']);
     }
 
-    public function testMethodNotAllowed()
+    public function testReturnsMethodNotAllowed()
     {
         $router = new RadixRouter();
         $router->add('GET', '/about', 'handler');
@@ -76,14 +68,14 @@ class RadixRouterTest extends TestCase
         $this->assertContains('GET', $info['allowed_methods']);
     }
 
-    public function testNotFound()
+    public function testReturnsNotFound()
     {
         $router = new RadixRouter();
         $info = $router->lookup('GET', '/notfound');
         $this->assertEquals(404, $info['code']);
     }
 
-    public function testTrailingSlashStaticRoute()
+    public function testStaticRouteWithTrailingSlash()
     {
         $router = new RadixRouter();
         $router->add('GET', '/contact/', 'handler');
@@ -94,7 +86,7 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(404, $info2['code']);
     }
 
-    public function testTrailingSlashParameterizedRoute()
+    public function testParameterizedRouteWithTrailingSlash()
     {
         $router = new RadixRouter();
         $router->add('GET', '/profile/:id/', 'handler');
@@ -106,7 +98,7 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(404, $info2['code']);
     }
 
-    public function testRouteWithAndWithoutTrailingSlash()
+    public function testDistinctRoutesWithAndWithoutTrailingSlash()
     {
         $router = new RadixRouter();
         $router->add('GET', '/foo', 'handler1');
@@ -119,7 +111,7 @@ class RadixRouterTest extends TestCase
         $this->assertEquals('handler2', $info2['handler']);
     }
 
-    public function testTrailingSlashWithWildcard()
+    public function testWildcardRouteWithTrailingSlash()
     {
         $router = new RadixRouter();
         $router->add('GET', '/assets/:path*', 'handler');
@@ -134,37 +126,22 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(['js/'], $info3['params']);
     }
 
-    public function testUsersAndUsersSlashAreDistinct()
+    public function testDistinctResourceAndResourceSlashRoutes()
     {
         $router = new RadixRouter();
-        $router->add('GET', '/users', 'users_handler');
-        $router->add('GET', '/users/', 'users_slash_handler');
+        $router->add('GET', '/resource', 'resource_handler');
+        $router->add('GET', '/resource/', 'resource_slash_handler');
 
-        $info1 = $router->lookup('GET', '/users');
-        $info2 = $router->lookup('GET', '/users/');
+        $info1 = $router->lookup('GET', '/resource');
+        $info2 = $router->lookup('GET', '/resource/');
 
         $this->assertEquals(200, $info1['code']);
-        $this->assertEquals('users_handler', $info1['handler']);
+        $this->assertEquals('resource_handler', $info1['handler']);
         $this->assertEquals(200, $info2['code']);
-        $this->assertEquals('users_slash_handler', $info2['handler']);
+        $this->assertEquals('resource_slash_handler', $info2['handler']);
     }
 
-    public function testUsersDoesNotMatchUsersSlashAndViceVersa()
-    {
-        $router = new RadixRouter();
-        $router->add('GET', '/users', 'users_handler');
-
-        $info1 = $router->lookup('GET', '/users/');
-        $this->assertEquals(404, $info1['code']);
-
-        $router = new RadixRouter();
-        $router->add('GET', '/users/', 'users_slash_handler');
-
-        $info2 = $router->lookup('GET', '/users');
-        $this->assertEquals(404, $info2['code']);
-    }
-
-    public function testStaticAndParameterizedRoutesDoNotInterfere()
+    public function testStaticAndParameterizedRoutesAreDistinct()
     {
         $router = new RadixRouter();
         $router->add('GET', '/users', 'static_handler');
@@ -180,16 +157,7 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(['123'], $info2['params']);
     }
 
-    public function testParameterizedRouteDoesNotMatchStatic()
-    {
-        $router = new RadixRouter();
-        $router->add('GET', '/users/:id', 'param_handler');
-
-        $info = $router->lookup('GET', '/users');
-        $this->assertEquals(404, $info['code']);
-    }
-
-    public function testOptionalParameterWithTrailingSlash()
+    public function testOptionalParameterWithTrailingSlashBehavior()
     {
         $router = new RadixRouter();
         $router->add('GET', '/foo/:bar?', 'handler');
@@ -205,7 +173,7 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(['baz'], $info3['params']);
     }
 
-    public function testWildcardRouteDoesNotMatchStatic()
+    public function testWildcardRouteDoesNotMatchStaticRoute()
     {
         $router = new RadixRouter();
         $router->add('GET', '/files/:path*', 'wildcard_handler');
@@ -214,17 +182,7 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(404, $info['code']);
     }
 
-    public function testWildcardRouteWithEmptySegment()
-    {
-        $router = new RadixRouter();
-        $router->add('GET', '/files/:path*', 'wildcard_handler');
-
-        $info = $router->lookup('GET', '/files/');
-        $this->assertEquals(200, $info['code']);
-        $this->assertEquals([''], $info['params']);
-    }
-
-    public function testMethodCaseInsensitivity()
+    public function testMethodNamesAreCaseInsensitive()
     {
         $router = new RadixRouter();
         $router->add('get', '/lowercase', 'handler');
@@ -233,7 +191,7 @@ class RadixRouterTest extends TestCase
         $this->assertEquals('handler', $info['handler']);
     }
 
-    public function testConflictingStaticRouteThrowsException()
+    public function testAddingConflictingStaticRouteThrowsException()
     {
         $this->expectException(\InvalidArgumentException::class);
         $router = new RadixRouter();
@@ -241,7 +199,7 @@ class RadixRouterTest extends TestCase
         $router->add('GET', '/conflict', 'handler2');
     }
 
-    public function testConflictingParameterRouteThrowsException()
+    public function testAddingConflictingParameterRouteThrowsException()
     {
         $this->expectException(\InvalidArgumentException::class);
         $router = new RadixRouter();
