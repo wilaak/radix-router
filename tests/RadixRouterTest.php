@@ -206,4 +206,22 @@ class RadixRouterTest extends TestCase
         $router->add('GET', '/conflict/:test', 'handler1');
         $router->add('GET', '/conflict/:test?', 'handler2');
     }
+
+    public function testAddingShadowedWildcardRouteThrowsException()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $router = new RadixRouter();
+        $router->add('GET', '/foo/:bar', 'handler1');
+        // This should throw because wildcard is shadowed by parameter at same position
+        $router->add('GET', '/foo/:bar*', 'handler2');
+    }
+
+    public function testAddingWildcardRouteBeforeParameterThrowsException()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $router = new RadixRouter();
+        $router->add('GET', '/foo/:bar*', 'handler1');
+        // This should throw because parameter is shadowed by existing wildcard at same position
+        $router->add('GET', '/foo/:bar', 'handler2');
+    }
 }
