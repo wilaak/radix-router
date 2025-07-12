@@ -66,12 +66,12 @@ class RadixRouter
             foreach ($segments as $segment) {
                 if ($segment === '/parameter_node' && isset($node['/wildcard_node'])) {
                     throw new InvalidArgumentException(
-                        "Parameter route '$pattern' conflicts with existing wildcard route."
+                        "Route '$pattern' conflicts with existing wildcard route."
                     );
                 }
                 if ($segment === '/wildcard_node' && isset($node['/parameter_node'])) {
                     throw new InvalidArgumentException(
-                        "Wildcard route '$pattern' is shadowed by existing parameter route."
+                        "Route '$pattern' is shadowed by another existing route."
                     );
                 }
                 $node = &$node[$segment];
