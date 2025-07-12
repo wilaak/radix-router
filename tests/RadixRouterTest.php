@@ -233,11 +233,19 @@ class RadixRouterTest extends TestCase
         $this->assertEquals('handler', $info['handler']);
     }
 
-    public function testConflictingRouteThrowsException()
+    public function testConflictingStaticRouteThrowsException()
     {
         $this->expectException(\InvalidArgumentException::class);
         $router = new RadixRouter();
         $router->add('GET', '/conflict', 'handler1');
         $router->add('GET', '/conflict', 'handler2');
+    }
+
+    public function testConflictingParameterRouteThrowsException()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $router = new RadixRouter();
+        $router->add('GET', '/conflict/:test', 'handler1');
+        $router->add('GET', '/conflict/:test?', 'handler2');
     }
 }
