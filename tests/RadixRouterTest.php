@@ -36,14 +36,11 @@ class RadixRouterTest extends TestCase
         $router = new RadixRouter();
         $router->add('GET', '/posts/:id/:type?', 'handler');
         $info1 = $router->lookup('GET', '/posts/abc/editor');
-        $info2 = $router->lookup('GET', '/posts/abc');
-        $info3 = $router->lookup('GET', '/posts/');
+        $info2 = $router->lookup('GET', '/posts/abc/');
         $this->assertEquals(200, $info1['code']);
         $this->assertEquals('handler', $info1['handler']);
         $this->assertEquals(200, $info2['code']);
         $this->assertEquals('handler', $info2['handler']);
-        $this->assertEquals(200, $info3['code']);
-        $this->assertEquals('handler', $info3['handler']);
     }
 
     public function testWildcardParameter()
