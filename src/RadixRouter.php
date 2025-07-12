@@ -71,7 +71,7 @@ class RadixRouter
                 }
                 if ($segment === '/wildcard_node' && isset($node['/parameter_node'])) {
                     throw new InvalidArgumentException(
-                        "Route '$pattern' is shadowed by another existing route."
+                        "Wildcard route '$pattern' is shadowed by an existing route."
                     );
                 }
                 $node = &$node[$segment];
