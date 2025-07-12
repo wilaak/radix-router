@@ -80,7 +80,7 @@ class RadixRouter
             foreach ($methods as $method) {
                 if (isset($node['/routes_node'][$method])) {
                     throw new InvalidArgumentException(
-                        "Route '$method' '$pattern' conflicts with existing route."
+                        "Route $method '$pattern' conflicts with existing route."
                     );
                 }
                 $node['/routes_node'][$method] = $handler;
@@ -89,7 +89,7 @@ class RadixRouter
             foreach ($methods as $method) {
                 if (isset($this->static[$pattern][$method])) {
                     throw new InvalidArgumentException(
-                        "Route '$method' '$pattern' conflicts with existing route."
+                        "Route $method '$pattern' conflicts with existing route."
                     );
                 }
                 $this->static[$pattern][$method] = $handler;
