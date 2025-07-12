@@ -53,10 +53,12 @@ class RadixRouter
 
         if ($hasParameter) {
             if (str_ends_with($pattern, '?')) {
-                $optionalPattern = implode('/', array_slice($segments, 0, -1)) . '/';
-                $this->add($methods, $optionalPattern, $handler);
+                $newPattern = implode('/', array_slice(explode('/', $pattern), 0, -1)) . '/';
+                $this->add($methods, $newPattern, $handler);
             } else if (str_ends_with($pattern, '*')) {
                 $segments[count($segments) - 1] = '/wildcard_node';
+                $newPattern = substr($pattern, 0, -1);
+                $this->add($methods, $newPattern, $handler);
             }
 
             $node = &$this->tree;
@@ -65,7 +67,7 @@ class RadixRouter
             }
 
             foreach ($methods as $method) {
-                if (isset($node[$method])) {
+                if (isset($node['/routes_node'][$method])) {
                     throw new InvalidArgumentException("Route $method $pattern conflicts with existing route.");
                 }
                 $node['/routes_node'][$method] = $handler;
