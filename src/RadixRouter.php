@@ -31,17 +31,20 @@ class RadixRouter
 
         foreach ($methods as &$method) {
             if (!is_string($method) || empty($method)) {
-                throw new InvalidArgumentException('Method must be a non-empty string.');
+                throw new InvalidArgumentException(
+                    "Method must be a non-empty string for route '$pattern'."
+                );
             }
             $method = strtoupper($method);
             if (!in_array($method, $this->allowedMethods, true)) {
-                throw new InvalidArgumentException("Invalid HTTP method: $method");
+                throw new InvalidArgumentException(
+                    "Invalid HTTP method: $method for route '$pattern'."
+                );
             }
         }
         unset($method);
 
         $segments = explode('/', $pattern);
-
         $hasParameter = false;
         foreach ($segments as &$segment) {
             if (str_starts_with($segment, ':')) {
@@ -61,19 +64,33 @@ class RadixRouter
 
             $node = &$this->tree;
             foreach ($segments as $segment) {
+                if ($segment === '/parameter_node' && isset($node['/wildcard_node'])) {
+                    throw new InvalidArgumentException(
+                        "Parameter route '$pattern' conflicts with existing wildcard route at this position."
+                    );
+                }
+                if ($segment === '/wildcard_node' && isset($node['/parameter_node'])) {
+                    throw new InvalidArgumentException(
+                        "Wildcard route '$pattern' is shadowed by existing parameter route at this position."
+                    );
+                }
                 $node = &$node[$segment];
             }
 
             foreach ($methods as $method) {
                 if (isset($node['/routes_node'][$method])) {
-                    throw new InvalidArgumentException("Route $method $pattern conflicts with existing route.");
+                    throw new InvalidArgumentException(
+                        "Route '$method' '$pattern' conflicts with existing route."
+                    );
                 }
                 $node['/routes_node'][$method] = $handler;
             }
         } else {
             foreach ($methods as $method) {
                 if (isset($this->static[$pattern][$method])) {
-                    throw new InvalidArgumentException("Route $method $pattern conflicts with existing route.");
+                    throw new InvalidArgumentException(
+                        "Route '$method' '$pattern' conflicts with existing route."
+                    );
                 }
                 $this->static[$pattern][$method] = $handler;
             }
