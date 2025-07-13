@@ -1,0 +1,9 @@
+/tests/           export-ignore
+/benchmark/       export-ignore
+/assets/          export-ignore
+/.github/         export-ignore
+/.gitattributes   export-ignore
+/phpunit.xml      export-ignore
+/README.md        export-ignore
+/composer.json    !export-ignore
+/src/             !export-ignore
