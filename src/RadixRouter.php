@@ -104,12 +104,11 @@ class RadixRouter
      *
      * @param string $method The HTTP method (e.g., 'GET', 'POST').
      * @param string $path The request path (e.g., '/users/123').
-     * @return array{
-     *     code: int, // 200 (found), 404 (not found), or 405 (method not allowed)
-     *     handler?: mixed, // Present if code is 200
-     *     params?: array<int, string>, // Present if code is 200
-     *     allowed_methods?: array<int, string> // Present if code is 405
-     * }
+     * @return array{code: int, handler?: mixed, params?: array<int, string>, allowed_methods?: array<int, string>}
+     *   - code: 200 (found), 404 (not found), or 405 (method not allowed).
+     *   - handler: Present if code is 200.
+     *   - params: Present if code is 200.
+     *   - allowed_methods: Present if code is 405.
      */
     public function lookup(string $method, string $path): array
     {
