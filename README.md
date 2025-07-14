@@ -69,12 +69,35 @@ switch ($result['code']) {
 }
 ```
 
+## Registering routes
+
+Routes are registered using the `add()` method. You can assign any value as the handler.
+
+The order of route matching is: static > parameter.
+
+```php
+// Register a route for both GET and POST methods
+$router->add(['GET', 'POST'], '/hello', 'handler');
+
+// Register a static route for a single method
+$router->add('GET', '/about', 'aboutHandler');
+
+// Register a route with a required parameter
+$router->add('GET', '/user/:id', 'userHandler');
+
+// Register a route with an optional parameter
+$router->add('GET', '/greet/:name?', 'greetHandler');
+
+// Register a wildcard route to match any path under /files
+$router->add('GET', '/files/:path*', 'filesHandler');
+```
+
 ### Required parameters
 
 These parameters must be present or the route will not be matched:
 
 ```php
-$router->add('GET', '/users/:id', function($id) {});
+$router->add('GET', '/users/:id', 'handler');
 
 // /users        -> no match
 // /users/123    -> match (captures "123")
@@ -87,7 +110,7 @@ $router->add('GET', '/users/:id', function($id) {});
 These parameters let you capture segments that may not always be present in the path:
 
 ```php
-$router->add('GET', '/hello/:name?', function($name = null) {});
+$router->add('GET', '/hello/:name?', 'handler');
 
 // /hello        -> match (no parameters)
 // /hello/alice  -> match (captures "alice")
@@ -96,26 +119,23 @@ $router->add('GET', '/hello/:name?', function($name = null) {});
 You can chain multiple trailing optional parameters:
 
 ```php
-$router->add('GET', '/archive/:year?/:month?', function($year = null, $month = null) {});
+$router->add('GET', '/archive/:year?/:month?', 'handler');
 
-// /archive or /archive/  -> match (no parameters)
-// /archive/2024          -> match (captures "2024")
-// /archive/2024/06       -> match (captures "2024", "06")
+// /archive          -> match (no parameters)
+// /archive/2024     -> match (captures "2024")
+// /archive/2024/06  -> match (captures "2024", "06")
 ```
 
 ### Wildcard parameters
 
-> **Note:**
-> Overlapping dynamic routes will not fall back to wildcards. If you define a route like `/files/foo/:bar` and a wildcard like `/files/:path*`, lookups to `/files/foo/bar/baz` will result in a 404 status code.
-
-Match any remaining segments in the path. Must always appear at the end of a route pattern:
+Capture all remaining segments in the path. Can only occur at the end of a route pattern. Overlapping dynamic routes will not fall back to wildcards; if you define a route like `/files/foo/:bar` and a wildcard like `/files/:path*`, lookups to `/files/foo/bar/baz` will result in a 404 status code.
 
 ```php
-$router->add('GET', '/files/:path*', function($path) {});
+$router->add('GET', '/files/:path*', 'handler');
 
-// /files                     -> match: wildcard (captures "")
-// /files/download            -> match: wildcard (captures "download")
-// /files/anything/else/      -> match: wildcard (captures "anything/else")
+// /files                 -> match: wildcard (captures "")
+// /files/download        -> match: wildcard (captures "download")
+// /files/anything/else/  -> match: wildcard (captures "anything/else")
 ```
 
 ## How to Cache Routes
@@ -167,7 +187,7 @@ Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
 | Router           | Register      | Lookups       | Memory      | Peak Mem      |
 |------------------|--------------|--------------|-------------|--------------|
-| **RadixRouter**  | 0.03 ms      | 3,233,227/sec | 375 KB      | 456 KB       |
+| **RadixRouter**  | 0.04 ms      | 3,233,227/sec | 375 KB      | 456 KB       |
 | **FastRoute**    | 1.85 ms      | 2,767,883/sec | 431 KB      | 1,328 KB     |
 | **SymfonyRouter**| 6.24 ms      | 1,722,432/sec | 574 KB      | 1,328 KB     |
 
@@ -175,7 +195,7 @@ Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
 | Router           | Register     | Lookups       | Memory      | Peak Mem      |
 |------------------|--------------|-------------- |-------------|--------------|
-| **RadixRouter**  | 0.23 ms      | 2,127,808/sec | 587 KB      | 588 KB       |
+| **RadixRouter**  | 0.25 ms      | 2,127,808/sec | 587 KB      | 588 KB       |
 | **FastRoute**    | 4.94 ms      |   707,516/sec | 549 KB      | 1,328 KB     |
 | **SymfonyRouter**| 12.60 ms     | 1,182,060/sec | 1,292 KB    | 1,588 KB     |
 
