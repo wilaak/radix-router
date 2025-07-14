@@ -49,11 +49,11 @@ $path = rawurldecode(
     strtok($_SERVER['REQUEST_URI'], '?')
 );
 
-$info = $router->lookup($method, $path);
+$result = $router->lookup($method, $path);
 
-switch ($info['code']) {
+switch ($result['code']) {
     case 200:
-        $info['handler'](...$info['params']);
+        $result['handler'](...$result['params']);
         break;
 
     case 404:
@@ -62,7 +62,7 @@ switch ($info['code']) {
         break;
 
     case 405:
-        header('Allow: ' . implode(', ', $info['allowed_methods']));
+        header('Allow: ' . implode(', ', $result['allowed_methods']));
         http_response_code(405);
         echo '405 Method Not Allowed';
         break;
@@ -73,62 +73,49 @@ switch ($info['code']) {
 
 These parameters must be present or the route will not be matched:
 
-```text
-Patterns: /user/settings and /user/:user
+```php
+$router->add('GET', '/users/:id', function($id) {});
 
-/user           -> no match (required parameter missing)
-/user/settings  -> match (static route takes precedence)
-/user/gordon    -> match (captures "gordon")
+// /users        -> no match
+// /users/123    -> match (captures "123")
+// /users/alice  -> match (captures "alice")
 ```
+
 
 ### Optional parameters
 
 These parameters let you capture segments that may not always be present in the path:
 
-```text
-Pattern: /hello/:name?
+```php
+$router->add('GET', '/hello/:name?', function($name = null) {});
 
-Matches:
-    /hello         -> match (no parameters)
-    /hello/alice   -> match (captures "alice")
+// /hello        -> match (no parameters)
+// /hello/alice  -> match (captures "alice")
 ```
 
 You can chain multiple trailing optional parameters:
 
-```text
-Pattern: /archive/:year?/:month?
+```php
+$router->add('GET', '/archive/:year?/:month?', function($year = null, $month = null) {});
 
-Matches:
-    /archive           -> match (no parameters)
-    /archive/2024      -> match (captures "2024")
-    /archive/2024/06   -> match (captures "2024", "06")
-```
-
-For more complex cases, you can mix optional parameters with static segments:
-
-```text
-Pattern: /blog/:year?/:month?/:slug?/comments/:action?
-
-Matches:
-    /blog
-    /blog/2024
-    /blog/2024/06
-    /blog/2024/06/my-post/comments
-    /blog/2024/06/my-post/comments/edit
+// /archive or /archive/  -> match (no parameters)
+// /archive/2024          -> match (captures "2024")
+// /archive/2024/06       -> match (captures "2024", "06")
 ```
 
 ### Wildcard parameters
 
-Matches everything after their position in the pattern and must therefore always be at the end:
+> **Note:**
+> Overlapping dynamic routes will not fall back to wildcards. If you define a route like `/files/foo/:bar` and a wildcard like `/files/:path*`, lookups to `/files/foo/bar/baz` will result in a 404 status code.
 
-```text
-Patterns: /files/download and /files/:path*
+Match any remaining segments in the path. Must always appear at the end of a route pattern:
 
-/files                     -> match: wildcard (captures "")
-/files/                    -> match: wildcard (captures "")
-/files/download            -> match: static
-/files/download/readme.txt -> no match (static takes precedence)
-/files/anything/else/      -> match: wildcard (captures "anything/else")
+```php
+$router->add('GET', '/files/:path*', function($path) {});
+
+// /files                     -> match: wildcard (captures "")
+// /files/download            -> match: wildcard (captures "download")
+// /files/anything/else/      -> match: wildcard (captures "anything/else")
 ```
 
 ## How to Cache Routes
@@ -180,15 +167,15 @@ Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
 | Router           | Register      | Lookups       | Memory      | Peak Mem      |
 |------------------|--------------|--------------|-------------|--------------|
-| **RadixRouter**  | 0.03 ms      | 3,572,698/sec | 375 KB      | 451 KB       |
+| **RadixRouter**  | 0.03 ms      | 3,233,227/sec | 375 KB      | 456 KB       |
 | **FastRoute**    | 1.85 ms      | 2,767,883/sec | 431 KB      | 1,328 KB     |
 | **SymfonyRouter**| 6.24 ms      | 1,722,432/sec | 574 KB      | 1,328 KB     |
 
 #### Avatax API (256 routes)
 
-| Router           | Register      | Lookups       | Memory      | Peak Mem      |
-|------------------|--------------|--------------|-------------|--------------|
-| **RadixRouter**  | 0.23 ms      | 2,310,931/sec | 587 KB      | 588 KB       |
+| Router           | Register     | Lookups       | Memory      | Peak Mem      |
+|------------------|--------------|-------------- |-------------|--------------|
+| **RadixRouter**  | 0.23 ms      | 2,127,808/sec | 587 KB      | 588 KB       |
 | **FastRoute**    | 4.94 ms      |   707,516/sec | 549 KB      | 1,328 KB     |
 | **SymfonyRouter**| 12.60 ms     | 1,182,060/sec | 1,292 KB    | 1,588 KB     |
 
@@ -196,7 +183,7 @@ Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
 | Router           | Register      | Lookups       | Memory      | Peak Mem      |
 |------------------|--------------|--------------|-------------|--------------|
-| **RadixRouter**  | 0.17 ms      | 1,907,130/sec | 537 KB      | 539 KB       |
+| **RadixRouter**  | 0.17 ms      | 1,781,226/sec | 532 KB      | 533 KB       |
 | **FastRoute**    | 3.81 ms      |   371,104/sec | 556 KB      | 1,328 KB     |
 | **SymfonyRouter**| 12.16 ms     |   910,064/sec | 1,186 KB    | 1,426 KB     |
 
