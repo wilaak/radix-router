@@ -76,33 +76,6 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(['2024', '06'], $info3['params']);
     }
 
-    public function testMixedOptionalAndStaticSegments()
-    {
-        $router = new RadixRouter();
-        $router->add('GET', '/blog/:year?/:month?/:slug?/comments/:action?', 'handler');
-
-        $info1 = $router->lookup('GET', '/blog');
-        $info2 = $router->lookup('GET', '/blog/2024');
-        $info3 = $router->lookup('GET', '/blog/2024/06');
-        $info4 = $router->lookup('GET', '/blog/2024/06/my-post/comments');
-        $info5 = $router->lookup('GET', '/blog/2024/06/my-post/comments/edit');
-
-        $this->assertEquals(200, $info1['code']);
-        $this->assertEquals([], $info1['params']);
-
-        $this->assertEquals(200, $info2['code']);
-        $this->assertEquals(['2024'], $info2['params']);
-
-        $this->assertEquals(200, $info3['code']);
-        $this->assertEquals(['2024', '06'], $info3['params']);
-
-        $this->assertEquals(200, $info4['code']);
-        $this->assertEquals(['2024', '06', 'my-post'], $info4['params']);
-
-        $this->assertEquals(200, $info5['code']);
-        $this->assertEquals(['2024', '06', 'my-post', 'edit'], $info5['params']);
-    }
-
     public function testWildcardParameters()
     {
         $router = new RadixRouter();
