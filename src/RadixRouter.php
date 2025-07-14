@@ -4,14 +4,28 @@ namespace Wilaak\Http;
 
 use \InvalidArgumentException;
 
+/**
+ * High-performance HTTP request router using a radix tree structure.
+ */
 class RadixRouter
 {
+    /**
+     * The tree structure for dynamic routes.
+     * @var array<string, mixed>
+     */
     public array $tree = [];
+
+    /**
+     * Static routes indexed by pattern and method.
+     * @var array<string, array<string, mixed>>
+     */
     public array $static = [];
 
-    public array $allowedMethods = [
-        'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'
-    ];
+    /**
+     * Allowed HTTP methods for routes.
+     * @var array<int, string>
+     */
+    public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
 
     /**
      * Adds a route for given HTTP methods and pattern.
@@ -25,6 +39,8 @@ class RadixRouter
      */
     public function add(string|array $methods, string $pattern, mixed $handler): self
     {
+        $pattern = rtrim($pattern, '/');
+
         if (is_string($methods)) {
             $methods = [$methods];
         }
@@ -46,41 +62,54 @@ class RadixRouter
 
         $segments = explode('/', $pattern);
         $hasParameter = false;
-        foreach ($segments as &$segment) {
-            if (str_starts_with($segment, ':')) {
-                $segment = '/parameter_node';
-                $hasParameter = true;
+        foreach ($segments as $i => &$segment) {
+            if (!str_starts_with($segment, ':')) {
+                continue;
             }
+            $hasParameter = true;
+            if (str_ends_with($segment, '*')) {
+                if ($i !== count($segments) - 1) {
+                    throw new InvalidArgumentException(
+                        "Wildcard parameter can only appear as the last segment in route '$pattern'."
+                    );
+                }
+                $segment = '/wildcard_node';
+                continue;
+            }
+            if (str_ends_with($segment, '?')) {
+                $variants = $this->getOptionalParameterVariants($pattern);
+                foreach ($variants as $variant) {
+                    try {
+                        $this->add($methods, $variant, $handler);
+                    } catch (InvalidArgumentException $e) {
+                        throw new InvalidArgumentException(
+                            "Route '$pattern' conflicts with an existing route."
+                        );
+                    }
+                }
+                return $this;
+            }
+            $segment = '/parameter_node';
         }
         unset($segment);
 
         if ($hasParameter) {
-            if (str_ends_with($pattern, '?')) {
-                $newPattern = implode('/', array_slice(explode('/', $pattern), 0, -1)) . '/';
-                $this->add($methods, $newPattern, $handler);
-            } else if (str_ends_with($pattern, '*')) {
-                $segments[count($segments) - 1] = '/wildcard_node';
-            }
-
             $node = &$this->tree;
             foreach ($segments as $segment) {
-                if ($segment === '/parameter_node' && isset($node['/wildcard_node'])) {
+                if (
+                    ($segment === '/parameter_node' && isset($node['/wildcard_node'])) ||
+                    ($segment === '/wildcard_node' && isset($node['/parameter_node']))
+                ) {
                     throw new InvalidArgumentException(
-                        "Route '$pattern' conflicts with existing wildcard route."
-                    );
-                }
-                if ($segment === '/wildcard_node' && isset($node['/parameter_node'])) {
-                    throw new InvalidArgumentException(
-                        "Wildcard route '$pattern' is shadowed by an existing route."
+                        "Route '$pattern' conflicts with an existing route."
                     );
                 }
                 $node = &$node[$segment];
             }
-
             foreach ($methods as $method) {
                 if (isset($node['/routes_node'][$method])) {
                     throw new InvalidArgumentException(
-                        "Route $method '$pattern' conflicts with existing route."
+                        "Route $method '$pattern' conflicts with an existing route."
                     );
                 }
                 $node['/routes_node'][$method] = $handler;
@@ -89,7 +118,7 @@ class RadixRouter
             foreach ($methods as $method) {
                 if (isset($this->static[$pattern][$method])) {
                     throw new InvalidArgumentException(
-                        "Route $method '$pattern' conflicts with existing route."
+                        "Route $method '$pattern' conflicts with an existing route."
                     );
                 }
                 $this->static[$pattern][$method] = $handler;
@@ -112,6 +141,7 @@ class RadixRouter
      */
     public function lookup(string $method, string $path): array
     {
+        $path = rtrim($path, '/');
         if (isset($this->static[$path])) {
             if (isset($this->static[$path][$method])) {
                 return [
@@ -129,8 +159,10 @@ class RadixRouter
         $params = [];
         $node = $this->tree;
         $segments = explode('/', $path);
-
-        foreach ($segments as $depth => $segment) {
+        $segCount = count($segments);
+        $depth = 0;
+        for (; $depth < $segCount; $depth++) {
+            $segment = $segments[$depth];
             if (isset($node[$segment])) {
                 $node = $node[$segment];
                 continue;
@@ -140,12 +172,20 @@ class RadixRouter
                 $params[] = $segment;
                 continue;
             }
-            if (isset($node["/wildcard_node"])) {
-                $node = $node["/wildcard_node"];
+            break;
+        }
+
+        if (isset($node["/wildcard_node"])) {
+            $node = $node["/wildcard_node"];
+            if ($depth >= $segCount) {
+                $params[] = '';
+            } else {
                 $params[] = implode('/', array_slice($segments, $depth));
-                break;
             }
-            return ['code' => 404];
+        } else {
+            if ($depth < $segCount) {
+                return ['code' => 404];
+            }
         }
 
         if (isset($node['/routes_node'][$method])) {
@@ -164,5 +204,31 @@ class RadixRouter
             'code' => 405,
             'allowed_methods' => array_keys($node['/routes_node']),
         ];
+    }
+
+    /**
+     * Generates all route pattern variants for optional parameters.
+     *
+     * E.g. '/a/:b?/:c?' => ['/a', '/a/:b', '/a/:b/:c']
+     *
+     * @param string $pattern
+     * @return array<int, string>
+     * @throws InvalidArgumentException
+     */
+    private function getOptionalParameterVariants(string $pattern): array
+    {
+        $segments = explode('/', $pattern);
+        $variants = [];
+        $current = [];
+        foreach ($segments as $segment) {
+            if (str_ends_with($segment, '?')) {
+                $variants[] = implode('/', $current);
+                $current[] = rtrim($segment, '?');
+            } else {
+                $current[] = $segment;
+            }
+        }
+        $variants[] = implode('/', $current);
+        return $variants;
     }
 }
