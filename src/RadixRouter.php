@@ -206,7 +206,7 @@ class RadixRouter
     /**
      * Generates all route pattern variants for optional parameters.
      *
-     * E.g. '/a/:b?/:c?' => ['/a', '/a/:b', '/a/:b/:c']
+     * E.g. '/users/:id?/:action?' => ['/users', '/users/:id', '/users/:id/:action']
      *
      * @param string $pattern
      * @return array<int, string>
@@ -216,11 +216,18 @@ class RadixRouter
         $segments = explode('/', $pattern);
         $variants = [];
         $current = [];
+        $found = false;
         foreach ($segments as $segment) {
             if (str_ends_with($segment, '?')) {
+                $found = true;
                 $variants[] = implode('/', $current);
                 $current[] = rtrim($segment, '?');
             } else {
+                if ($found) {
+                    throw new InvalidArgumentException(
+                        "Optional parameters must be at the end of the route pattern '$pattern'."
+                    );
+                }
                 $current[] = $segment;
             }
         }
