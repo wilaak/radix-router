@@ -7,10 +7,11 @@ Simple implementation of a radix tree based router for PHP. Minimal and high-per
 - High-performance O(k) dynamic route matching, where *k* is the number of segments in the path.
 - Supports parameters, including wildcard and optional segments for flexible route definitions.
 - Static routes are stored in a hash map providing near instant minimal allocation lookups for exact path matches.
+- Trailing slashes are ignored, so `/foo` and `/foo/` are treated as the same route.
 
 ## How does it work?
 
-As the name suggests, RadixRouter utilizes a radix tree (also called a *compact prefix tree* or *Patricia trie*) to organize routes by their common prefixes. This structure enables extremely fast lookups, since each segment of the path is only compared once as the tree is traversed. Instead of checking every registered route, the router follows the path through the tree.
+As the name suggests, RadixRouter utilizes a radix tree (also called a *compact prefix tree* or *Patricia trie*) to organize routes by their common prefixes. This structure enables extremely fast lookups, since each segment of the path is only compared once as the tree is traversed. Instead of checking every registered route, the router follows the path through the tree:
 
 ![Radix Tree Diagram](assets/tree.svg)
 
@@ -28,7 +29,7 @@ require '/path/to/RadixRouter.php'
 
 Requires PHP 8.0 or newer. (PHP 8.3 for tests)
 
-## Usage example
+## Usage
 
 Here's a basic usage example:
 
@@ -37,8 +38,8 @@ use Wilaak\Http\RadixRouter;
 
 $router = new RadixRouter();
 
-$router->add('GET', '/', function () {
-    echo "Hello, World!";
+$router->add('GET', '/:world?', function ($world = 'World') {
+    echo "Hello, $world!";
 });
 
 $method = strtoupper(
@@ -68,45 +69,66 @@ switch ($info['code']) {
 }
 ```
 
-## Defining Routes
+### Required parameters
 
-Routes are defined using the `add()` method. You can assign any value as the handler.
+These parameters must be present or the route will not be matched:
 
-The order of route matching is: static > parameter.
+```text
+Patterns: /user/settings and /user/:user
 
-```php
-// Matches only "/about"
-$router->add('GET', '/about', 'handler');
-
-// Matches both GET and POST requests to "/auth/login"
-$router->add(['GET', 'POST'], '/auth/login', 'handler');
-
-// Matches "/user/123" (captures "123"), but NOT "/user/"
-$router->add('GET', '/user/:id', 'handler');
-
-// Matches "/posts/42/comments/7" (captures "42" and "7")
-$router->add('GET', '/posts/:post/comments/:comment', 'handler');
+/user           -> no match (required parameter missing)
+/user/settings  -> match (static route takes precedence)
+/user/gordon    -> match (captures "gordon")
 ```
 
-**Optional Parameters:**
+### Optional parameters
 
-These are only allowed as the last segment of the route. 
+These parameters let you capture segments that may not always be present in the path:
 
-```php
-// Matches "/posts/abc" (captures "abc") and "/posts/" (provides no parameter)
-$router->add('GET', '/posts/:id?', 'handler');
+```text
+Pattern: /hello/:name?
+
+Matches:
+    /hello         -> match (no parameters)
+    /hello/alice   -> match (captures "alice")
 ```
 
-**Wildcard Parameters:**
+You can chain multiple trailing optional parameters:
 
-These are only allowed as the last segment of the route. 
+```text
+Pattern: /archive/:year?/:month?
 
-> **Note:**
-> Overlapping patterns will not fall back to wildcards. If you register a route like `/files/foo` and a wildcard route like `/files/:path*`, requests to `/files/foo/bar.txt` will result in a 404 Not Found error.
+Matches:
+    /archive           -> match (no parameters)
+    /archive/2024      -> match (captures "2024")
+    /archive/2024/06   -> match (captures "2024", "06")
+```
 
-```php
-// Matches "/files/static/dog.jpg" (captures "static/dog.jpg") and "/files/" (captures empty string)
-$router->add('GET', '/files/:path*', 'handler');
+For more complex cases, you can mix optional parameters with static segments:
+
+```text
+Pattern: /blog/:year?/:month?/:slug?/comments/:action?
+
+Matches:
+    /blog
+    /blog/2024
+    /blog/2024/06
+    /blog/2024/06/my-post/comments
+    /blog/2024/06/my-post/comments/edit
+```
+
+### Wildcard parameters
+
+Matches everything after their position in the pattern and must therefore always be at the end:
+
+```text
+Patterns: /files/download and /files/:path*
+
+/files                     -> match: wildcard (captures "")
+/files/                    -> match: wildcard (captures "")
+/files/download            -> match: static
+/files/download/readme.txt -> no match (static takes precedence)
+/files/anything/else/      -> match: wildcard (captures "anything/else")
 ```
 
 ## How to Cache Routes
@@ -114,14 +136,7 @@ $router->add('GET', '/files/:path*', 'handler');
 Rebuilding the route tree on every request or application startup can slow down performance.
 
 > **Note:**
-> Anonymous functions (closures) are **not supported** for route caching because they cannot be serialized.
-> 
-> Other values that cannot be cached in PHP include:
-> - Resources (such as file handles, database connections)
-> - Objects that are not serializable
-> - References to external state (like open sockets)
-> 
-> When caching routes, only use handlers that can be safely represented as strings, arrays, or serializable objects.
+> Anonymous functions (closures) are **not supported** for route caching because they cannot be serialized. When caching routes, only use handlers that can be safely represented as strings, arrays, or serializable objects.
 
 > **Note:**
 > When implementing route caching, care should be taken to avoid race conditions when rebuilding the cache file. Ensure that the cache is written atomically so that each request can always fully load a valid cache file without errors or partial data.
