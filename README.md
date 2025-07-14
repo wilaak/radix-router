@@ -81,18 +81,9 @@ $router->add(['GET', 'POST'], '/hello', 'handler');
 
 // Register a static route for a single method
 $router->add('GET', '/about', 'aboutHandler');
-
-// Register a route with a required parameter
-$router->add('GET', '/user/:id', 'userHandler');
-
-// Register a route with an optional parameter
-$router->add('GET', '/greet/:name?', 'greetHandler');
-
-// Register a wildcard route to match any path under /files
-$router->add('GET', '/files/:path*', 'filesHandler');
 ```
 
-### Required parameters
+**Required parameters:**
 
 These parameters must be present or the route will not be matched:
 
@@ -105,7 +96,7 @@ $router->add('GET', '/users/:id', 'handler');
 ```
 
 
-### Optional parameters
+**Optional parameters:**
 
 These parameters let you capture segments that may not always be present in the path:
 
@@ -126,9 +117,11 @@ $router->add('GET', '/archive/:year?/:month?', 'handler');
 // /archive/2024/06  -> match (captures "2024", "06")
 ```
 
-### Wildcard parameters
+**Wildcard parameters:**
 
-Capture all remaining segments in the path. Can only occur at the end of a route pattern. Overlapping dynamic routes will not fall back to wildcards; if you define a route like `/files/foo/:bar` and a wildcard like `/files/:path*`, lookups to `/files/foo/bar/baz` will result in a 404 status code.
+These are only allowed as the last segment of the route.
+
+> **Note:** Overlapping dynamic routes will not fall back to wildcards; if you define a route like `/files/foo/:bar` and a wildcard like `/files/:path*`, requests to `/files/foo/bar/baz` will result in a 404 status code.
 
 ```php
 $router->add('GET', '/files/:path*', 'handler');
