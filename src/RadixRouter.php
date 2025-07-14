@@ -25,14 +25,15 @@ class RadixRouter
     public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
 
     /**
-     * Adds a route for given HTTP methods and pattern.
+     * Registers a route for one or more HTTP methods and a given pattern.
      *
      * @param string|array<int, string> $methods HTTP method(s) (e.g., 'GET' or ['GET', 'POST']).
      * @param string $pattern Route pattern (e.g., '/users/:id', '/files/:path*', '/users/:id?').
-     * @param mixed $handler Handler for the route.
+     * @param mixed $handler Handler to associate with the route.
      * @return self
      *
-     * @throws InvalidArgumentException If a method is invalid or the route conflicts.
+     * @throws InvalidArgumentException If a method is invalid, the route conflicts with an existing route,
+     *         a wildcard parameter is not the last segment, or optional parameters are not at the end.
      */
     public function add(string|array $methods, string $pattern, mixed $handler): self
     {
