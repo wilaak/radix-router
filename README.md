@@ -83,7 +83,7 @@ $router->add(['GET', 'POST'], '/hello', 'handler');
 $router->add('GET', '/about', 'aboutHandler');
 ```
 
-**Required parameters:**
+### Required parameters
 
 These parameters must be present or the route will not be matched:
 
@@ -95,8 +95,7 @@ $router->add('GET', '/users/:id', 'handler');
 // /users/alice  -> match (captures "alice")
 ```
 
-
-**Optional parameters:**
+### Optional parameters
 
 These parameters let you capture segments that may not always be present in the path:
 
@@ -117,7 +116,7 @@ $router->add('GET', '/archive/:year?/:month?', 'handler');
 // /archive/2024/06  -> match (captures "2024", "06")
 ```
 
-**Wildcard parameters:**
+### Wildcard parameters
 
 These are only allowed as the last segment of the route.
 
