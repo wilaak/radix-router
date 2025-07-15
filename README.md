@@ -1,13 +1,12 @@
 # RadixRouter
 
-High performance, radix tree based HTTP request router for PHP. (see [benchmarks](#benchmarks))
+Simple radix tree based HTTP request router for PHP. Lightweight and high-performance (see [benchmarks](#benchmarks))
 
 ### Overview
 
 - High-performance O(k) dynamic route matching, where *k* is the number of segments in the path.
 - Supports parameters, including wildcard and optional segments for flexible route definitions.
 - Static routes are stored in a hash map providing fast minimal allocation lookups for exact matches.
-- A minimal (> 250 loc) and dependency free (excluding tests) single file routing solution.
 
 ## Install
 
@@ -23,19 +22,22 @@ require '/path/to/RadixRouter.php'
 
 Requires PHP 8.0 or newer. (PHP 8.3 for tests)
 
-## Usage
+## Usage Example
 
-Here's a basic usage example:
+Here's a basic usage example using the typical PHP-FPM (FastCGI) web environment:
 
 ```php
 use Wilaak\Http\RadixRouter;
 
+// Create a new router instance
 $router = new RadixRouter();
 
+// Register a route with an optional parameter and a handler
 $router->add('GET', '/:world?', function ($world = 'World') {
     echo "Hello, $world!";
 });
 
+// Get the HTTP method and path from the request
 $method = strtoupper(
     $_SERVER['REQUEST_METHOD']
 );
@@ -43,40 +45,41 @@ $path = rawurldecode(
     strtok($_SERVER['REQUEST_URI'], '?')
 );
 
+// Look up the route for the current request
 $result = $router->lookup($method, $path);
 
 switch ($result['code']) {
     case 200:
+        // Route matched: call the handler with parameters
         $result['handler'](...$result['params']);
         break;
 
     case 404:
+        // No matching route found
         http_response_code(404);
         echo '404 Not Found';
         break;
 
     case 405:
+        // Method not allowed for this route
         header('Allow: ' . implode(', ', $result['allowed_methods']));
         http_response_code(405);
         echo '405 Method Not Allowed';
         break;
 }
 ```
-### Registering routes
+## Registering Routes
 
 Routes are registered using the `add()` method. You can assign any value as the handler. The order of route matching is: static > parameter.
 
-Trailing slashes are always ignored. For example, both `/about` and `/about/` are treated as the same route.
-
-> **SEO Tip:** Redirect all requests to a consistent URL format. Either always with a trailing slash or without. This avoids duplicate content and helps search engines index your site correctly.
+> **Note:** Trailing slashes are always ignored. For example, both `/about` and `/about/` are treated as the same route. 
 
 Below is an example showing the different ways to define routes:
 
 ```php
-// Register a static route for a single method
+// Static route for a single method
 $router->add('GET', '/about', 'handler');
-
-// Register a static route for both GET and POST methods
+// Static route for both GET and POST methods
 $router->add(['GET', 'POST'], '/form', 'handler');
 
 // Required parameter
