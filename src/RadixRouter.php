@@ -4,6 +4,9 @@ namespace Wilaak\Http;
 
 use \InvalidArgumentException;
 
+/**
+ * High performance, radix tree based HTTP request router for PHP.
+ */
 class RadixRouter
 {
     /**
@@ -211,6 +214,8 @@ class RadixRouter
      *
      * @param string $pattern
      * @return array<int, string>
+     * 
+     * @throws InvalidArgumentException If optional parameters are not at the end of the route pattern.
      */
     private function getOptionalParameterVariants(string $pattern): array
     {
