@@ -7,6 +7,7 @@ High performance, radix tree based HTTP request router for PHP. (see [benchmarks
 - High-performance O(k) dynamic route matching, where *k* is the number of segments in the path.
 - Supports parameters, including wildcard and optional segments for flexible route definitions.
 - Static routes are stored in a hash map providing fast minimal allocation lookups for exact matches.
+- A minimal (> 250 loc) and dependency free (excluding tests) single file routing solution.
 
 ## Install
 
@@ -65,17 +66,18 @@ switch ($result['code']) {
 
 Routes are registered using the `add()` method. You can assign any value as the handler. The order of route matching is: static > parameter.
 
+Trailing slashes are always ignored. For example, both `/about` and `/about/` are treated as the same route.
+
+> **SEO Tip:** Redirect all requests to a consistent URL format. Either always with a trailing slash or without. This avoids duplicate content and helps search engines index your site correctly.
+
 Below is an example showing the different ways to define routes:
 
 ```php
-// All routes match with or without a trailing slash.
-// For example, both "/about" and "/about/" are treated as the same route.
-
-// Register a route for both GET and POST methods
-$router->add(['GET', 'POST'], '/hello', 'handler');
-
 // Register a static route for a single method
 $router->add('GET', '/about', 'handler');
+
+// Register a static route for both GET and POST methods
+$router->add(['GET', 'POST'], '/form', 'handler');
 
 // Required parameter
 $router->add('GET', '/users/:id', 'handler');
@@ -99,10 +101,10 @@ $router->add('GET', '/archive/:year?/:month?', 'handler');
 // Wildcard parameter (only allowed as last segment)
 $router->add('GET', '/files/:path*', 'handler');
 // Example requests:
-//   GET /files                   -> matches '/files/:path*' (captures "")
-//   GET /files/readme.txt        -> matches '/files/:path*' (captures "readme.txt")
-//   GET /files/images/photo.jpg  -> matches '/files/:path*' (captures "images/photo.jpg")
-//   GET /files/anything/else     -> matches '/files/:path*' (captures "anything/else")
+//   GET /files                   -> matches (captures "")
+//   GET /files/readme.txt        -> matches (captures "readme.txt")
+//   GET /files/images/photo.jpg  -> matches (captures "images/photo.jpg")
+//   GET /files/anything/else     -> matches (captures "anything/else")
 ```
 
 ## How to Cache Routes
