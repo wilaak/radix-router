@@ -1,6 +1,6 @@
 {
     "name": "wilaak/radix-router",
-    "description": "Simple implementation of a radix tree based router for PHP.",
+    "description": "High performance, radix tree based HTTP request router for PHP.",
     "type": "library",
     "license": "WTFPL",
     "authors": [
