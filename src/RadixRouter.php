@@ -84,7 +84,7 @@ class RadixRouter
                         $this->add($methods, $variant, $handler);
                     } catch (InvalidArgumentException $e) {
                         throw new InvalidArgumentException(
-                            "Route '$pattern' conflicts with an existing route."
+                            "Pattern '$pattern' conflicts with an existing route."
                         );
                     }
                 }
@@ -102,7 +102,7 @@ class RadixRouter
                     ($segment === '/wildcard_node' && isset($node['/parameter_node']))
                 ) {
                     throw new InvalidArgumentException(
-                        "Route '$pattern' conflicts with an existing route."
+                        "Pattern '$pattern' conflicts with an existing route."
                     );
                 }
                 $node = &$node[$segment];
@@ -110,7 +110,7 @@ class RadixRouter
             foreach ($methods as $method) {
                 if (isset($node['/routes_node'][$method])) {
                     throw new InvalidArgumentException(
-                        "Route $method '$pattern' conflicts with an existing route."
+                        "Pattern $method '$pattern' conflicts with an existing route."
                     );
                 }
                 $node['/routes_node'][$method] = $handler;
@@ -119,7 +119,7 @@ class RadixRouter
             foreach ($methods as $method) {
                 if (isset($this->static[$pattern][$method])) {
                     throw new InvalidArgumentException(
-                        "Route $method '$pattern' conflicts with an existing route."
+                        "Pattern $method '$pattern' conflicts with an existing route."
                     );
                 }
                 $this->static[$pattern][$method] = $handler;
