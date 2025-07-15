@@ -1,6 +1,6 @@
 # RadixRouter
 
-High performance, radix tree based HTTP request router for PHP. Minimal and high-performance (see [benchmarks](#benchmarks)).
+High performance, radix tree based HTTP request router for PHP. (see [benchmarks](#benchmarks))
 
 ### Overview
 
