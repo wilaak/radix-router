@@ -5,7 +5,7 @@ namespace Wilaak\Http;
 use \InvalidArgumentException;
 
 /**
- * High performance, radix tree based HTTP request router for PHP.
+ * Simple radix tree based HTTP request router for PHP
  */
 class RadixRouter
 {
