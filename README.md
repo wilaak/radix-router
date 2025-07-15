@@ -65,14 +65,9 @@ switch ($result['code']) {
 
 Routes are registered using the `add()` method. You can assign any value as the handler. The order of route matching is: static > parameter.
 
-Here’s an example demonstrating all the ways you can define routes:
-
+Below is an example showing the different ways to define routes:
 
 ```php
-use Wilaak\Http\RadixRouter;
-
-$router = new RadixRouter();
-
 // All routes match with or without a trailing slash.
 // For example, both "/about" and "/about/" are treated as the same route.
 
