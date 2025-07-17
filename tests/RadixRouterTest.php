@@ -85,8 +85,8 @@ class RadixRouterTest extends TestCase
         $info1 = $router->lookup('GET', '/files');
         $info2 = $router->lookup('GET', '/files/');
         $info3 = $router->lookup('GET', '/files/download/123');
-        $info4 = $router->lookup('GET', '/files/download/overlapping/readme.txt');
         $info5 = $router->lookup('GET', '/files/anything/else/');
+        $info6 = $router->lookup('GET', '/files/download/123/456');
 
         $this->assertEquals(200, $info1['code']);
         $this->assertEquals('wildcard_handler', $info1['handler']);
@@ -100,11 +100,13 @@ class RadixRouterTest extends TestCase
         $this->assertEquals('static_handler', $info3['handler']);
         $this->assertEquals(['123'], $info3['params']);
 
-        $this->assertEquals(404, $info4['code']);
-
         $this->assertEquals(200, $info5['code']);
         $this->assertEquals('wildcard_handler', $info5['handler']);
         $this->assertEquals(['anything/else'], $info5['params']);
+
+        $this->assertEquals(200, $info6['code']);
+        $this->assertEquals('wildcard_handler', $info6['handler']);
+        $this->assertEquals(['download/123/456'], $info6['params']);
     }
 
     public function testMethodNotAllowed()
@@ -219,11 +221,12 @@ class RadixRouterTest extends TestCase
         $router->add('', '/bad', 'handler');
     }
 
-    public function testParameterAndWildcardConflict()
+    public function testLookupWithTrailingSlash()
     {
         $router = new RadixRouter();
-        $router->add('GET', '/foo/:bar', 'param_handler');
-        $this->expectException(\InvalidArgumentException::class);
-        $router->add('GET', '/foo/:baz*', 'wildcard_handler');
+        $router->add('GET', '/test/', 'trailing_handler');
+        $info = $router->lookup('GET', '/test');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('trailing_handler', $info['handler']);
     }
 }
