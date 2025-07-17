@@ -72,7 +72,7 @@ switch ($result['code']) {
 
 Routes are registered using the `add()` method. You can assign any value as the handler. The order of route matching is: static > parameter.
 
-> **Note:** Trailing slashes are always ignored. For example, both `/about` and `/about/` are treated as the same route. 
+> **Note:** Trailing slashes are ignored. For example, both `/about` and `/about/` are treated as the same route. 
 
 Below is an example showing the different ways to define routes:
 
@@ -86,7 +86,7 @@ $router->add(['GET', 'POST'], '/form', 'handler');
 $router->add('GET', '/users/:id', 'handler');
 // Example requests:
 //   GET /users/123      -> matches '/users/:id' (captures "123")
-//   GET /users/         -> no-match
+//   GET /users          -> no-match
 
 // Optional parameter (must be in the last trailing segment(s))
 $router->add('GET', '/hello/:name?', 'handler');
@@ -107,7 +107,6 @@ $router->add('GET', '/files/:path*', 'handler');
 //   GET /files                   -> matches (captures "")
 //   GET /files/readme.txt        -> matches (captures "readme.txt")
 //   GET /files/images/photo.jpg  -> matches (captures "images/photo.jpg")
-//   GET /files/anything/else     -> matches (captures "anything/else")
 ```
 
 ## How to Cache Routes
@@ -147,11 +146,7 @@ By storing your routes in a PHP file, you let PHP’s OPcache handle the heavy l
 
 According to the HTTP specification, any route that handles a GET request should also support HEAD requests. RadixRouter does not automatically add this behavior. If you are running outside a standard web server environment (such as in a custom server), ensure that your GET routes also respond appropriately to HEAD requests. Responses to HEAD requests must not include a message body.
 
-## Performance
-
-This router is about as fast as you can make in pure PHP supporting dynamic segments (prove me wrong!).
-
-### Benchmarks
+## Benchmarks
 
 Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
