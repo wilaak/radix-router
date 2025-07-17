@@ -148,6 +148,19 @@ class RadixRouter
                 'handler' => $node['/routes_node'][$method],
                 'params' => $params,
             ];
+        } else if (isset($node['/routes_node'])) {
+            return [
+                'code' => 405,
+                'allowed_methods' => array_keys($node['/routes_node']),
+            ];
+        }
+
+        if (isset($node['/wildcard_node'])) {
+            $wildcard = [
+                'node' => $node['/wildcard_node'],
+                'params' => $params,
+                'index' => $index + 1,
+            ];
         }
 
         if (isset($wildcard['node']['/routes_node'][$method])) {
@@ -161,10 +174,10 @@ class RadixRouter
             ];
         }
 
-        if (isset($node['/routes_node'])) {
+        if (isset($wildcard['node']['/routes_node'])) {
             return [
                 'code' => 405,
-                'allowed_methods' => array_keys($node['/routes_node']),
+                'allowed_methods' => array_keys($wildcard['node']['/routes_node']),
             ];
         }
 
