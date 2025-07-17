@@ -123,12 +123,12 @@ class RadixRouter
         $params = [];
         $node = $this->tree;
 
-        foreach ($segments as $index => $segment) {
+        foreach ($segments as $i => $segment) {
             if (isset($node['/wildcard_node'])) {
                 $wildcard = [
                     'node' => $node['/wildcard_node'],
                     'params' => $params,
-                    'index' => $index,
+                    'index' => $i,
                 ];
             }
             if (isset($node[$segment])) {
@@ -159,7 +159,7 @@ class RadixRouter
             $wildcard = [
                 'node' => $node['/wildcard_node'],
                 'params' => $params,
-                'index' => $index + 1,
+                'index' => $i + 1,
             ];
         }
 
