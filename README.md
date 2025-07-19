@@ -8,6 +8,12 @@ Simple radix tree based HTTP request router for PHP. Lightweight and high-perfor
 - Supports parameters, including wildcard and optional segments for flexible route definitions.
 - Static routes are stored in a hash map providing fast minimal allocation lookups for exact matches.
 
+## How does it work?
+
+The router splits the path into segments and walks the tree, matching each segment in order. Because the tree only branches where routes differ, the router can quickly skip irrelevant routes and find the correct handler with minimal comparisons.
+
+![tree visualiation](assets/tree.svg)
+
 ## Install
 
 Install with composer:
