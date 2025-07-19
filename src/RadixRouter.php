@@ -59,7 +59,7 @@ class RadixRouter
             }
             if (str_ends_with($segment, '*')) {
                 if ($i !== array_key_last($segments)) {
-                    throw new InvalidArgumentException("Wildcard parameter must be last in route '$pattern'.");
+                    throw new InvalidArgumentException("Wildcard parameter must be last in pattern '$pattern'.");
                 }
                 $segment = '/wildcard_node';
             } else {
@@ -199,14 +199,14 @@ class RadixRouter
         $segments = explode('/', $pattern);
         $variants = [];
         $current = [];
-        $foundOptionalParam = false;
+        $optionalParamStarted = false;
         foreach ($segments as $segment) {
             if (str_ends_with($segment, '?')) {
-                $foundOptionalParam = true;
+                $optionalParamStarted = true;
                 $variants[] = implode('/', $current);
                 $current[] = rtrim($segment, '?');
             } else {
-                if ($foundOptionalParam) {
+                if ($optionalParamStarted) {
                     throw new InvalidArgumentException(
                         "Optional parameters must be at the end of the route pattern '$pattern'."
                     );
