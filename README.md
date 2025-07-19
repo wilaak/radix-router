@@ -12,7 +12,7 @@ Simple radix tree based HTTP request router for PHP. Lightweight and high-perfor
 
 The router splits the path into segments and walks the tree, matching each segment in order. Because the tree only branches where routes differ, the router can quickly skip irrelevant routes and find the correct handler with minimal comparisons.
 
-![tree visualiation](assets/radix-visualization.svgg)
+![tree visualiation](assets/radix-visualization.svg)
 
 ## Install
 
