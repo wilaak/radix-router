@@ -91,28 +91,28 @@ $router->add(['GET', 'POST'], '/form', 'handler');
 // Required parameter
 $router->add('GET', '/users/:id', 'handler');
 // Example requests:
-//   GET /users/123      -> matches '/users/:id' (captures "123")
-//   GET /users          -> no-match
+//   /users/123 -> matches '/users/:id' (captures "123")
+//   /users     -> no-match
 
 // Optional parameter (must be in the last trailing segment(s))
 $router->add('GET', '/hello/:name?', 'handler');
 // Example requests:
-//   GET /hello          -> matches
-//   GET /hello/alice    -> matches (captures "alice")
+//   /hello       -> matches
+//   /hello/alice -> matches (captures "alice")
 
 // Multiple trailing optional parameters (must be at the end)
 $router->add('GET', '/archive/:year?/:month?', 'handler');
 // Example requests:
-//   GET /archive            -> matches
-//   GET /archive/2024       -> matches (captures "2024")
-//   GET /archive/2024/06    -> matches (captures "2024", "06")
+//   /archive         -> matches
+//   /archive/2024    -> matches (captures "2024")
+//   /archive/2024/06 -> matches (captures "2024", "06")
 
 // Wildcard parameter (only allowed as last segment)
 $router->add('GET', '/files/:path*', 'handler');
 // Example requests:
-//   GET /files                   -> matches (captures "")
-//   GET /files/readme.txt        -> matches (captures "readme.txt")
-//   GET /files/images/photo.jpg  -> matches (captures "images/photo.jpg")
+//   /files                  -> matches (captures "")
+//   /files/readme.txt       -> matches (captures "readme.txt")
+//   /files/images/photo.jpg -> matches (captures "images/photo.jpg")
 ```
 
 ## How to Cache Routes
