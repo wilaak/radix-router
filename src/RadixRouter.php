@@ -5,14 +5,27 @@ namespace Wilaak\Http;
 use \InvalidArgumentException;
 
 /**
- * Simple radix tree based HTTP request router for PHP. 
+ * Simple radix tree based HTTP request router for PHP.
+ *
+ * @author  Wilaak
+ * @license WTFPL-2.0
+ * @link    https://github.com/Wilaak/RadixRouter
  */
 class RadixRouter
 {
+    /**
+     * The radix tree structure for dynamic routes.
+     */
     public array $tree = [];
-
+     
+    /**
+     * List of static routes indexed by method and pattern.
+     */
     public array $static = [];
 
+    /**
+     * List of allowed HTTP methods.
+     */
     public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
 
     /**
@@ -21,13 +34,13 @@ class RadixRouter
      * @param string|array<int, string> $methods HTTP method(s) (e.g., 'GET' or ['GET', 'POST']).
      * @param string $pattern Route pattern (e.g., '/users/:id', '/files/:path*', '/users/:id?').
      * @param mixed $handler Handler to associate with the route.
-     * @return self
      *
      * @throws InvalidArgumentException On invalid method, conflicting route, or invalid pattern.
      */
     public function add(string|array $methods, string $pattern, mixed $handler): self
     {
         $pattern = rtrim($pattern, '/');
+
         if (is_string($methods)) {
             $methods = [$methods];
         }
@@ -97,14 +110,11 @@ class RadixRouter
      * @param string $method The HTTP method (e.g., 'GET', 'POST').
      * @param string $path The request path (e.g., '/users/123').
      * @return array{code: int, handler?: mixed, params?: array<int, string>, allowed_methods?: array<int, string>}
-     *   - code: 200 (found), 404 (not found), or 405 (method not allowed).
-     *   - handler: Present if code is 200.
-     *   - params: Present if code is 200.
-     *   - allowed_methods: Present if code is 405.
      */
     public function lookup(string $method, string $path): array
     {
         $path = rtrim($path, '/');
+
         if (isset($this->static[$path])) {
             if (isset($this->static[$path][$method])) {
                 return [
@@ -187,11 +197,12 @@ class RadixRouter
     /**
      * Generates all route pattern variants for optional parameters.
      *
-     * E.g. '/users/:id?/:action?' => ['/users', '/users/:id', '/users/:id/:action']
+     * For example, '/users/:id?/:action?' produces:
+     *   ['/users', '/users/:id', '/users/:id/:action']
      *
      * @param string $pattern
      * @return array<int, string>
-     * 
+     *
      * @throws InvalidArgumentException If optional parameters are not at the end of the route pattern.
      */
     private function getOptionalParameterVariants(string $pattern): array
@@ -199,14 +210,15 @@ class RadixRouter
         $segments = explode('/', $pattern);
         $variants = [];
         $current = [];
-        $optionalParamStarted = false;
+        $optionalStarted = false;
+
         foreach ($segments as $segment) {
             if (str_ends_with($segment, '?')) {
-                $optionalParamStarted = true;
+                $optionalStarted = true;
                 $variants[] = implode('/', $current);
                 $current[] = rtrim($segment, '?');
             } else {
-                if ($optionalParamStarted) {
+                if ($optionalStarted) {
                     throw new InvalidArgumentException(
                         "Optional parameters must be at the end of the route pattern '$pattern'."
                     );
@@ -214,7 +226,9 @@ class RadixRouter
                 $current[] = $segment;
             }
         }
+
         $variants[] = implode('/', $current);
+
         return $variants;
     }
 }
