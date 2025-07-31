@@ -78,7 +78,7 @@ switch ($result['code']) {
 
 Routes are registered using the `add()` method. You can assign any value as the handler. The order of route matching is: static > parameter.
 
-> **Note:** Trailing slashes are ignored. For example, both `/about` and `/about/` are treated as the same route. 
+> **Note:** Paths are normalized by removing trailing slashes. For example, both `/about` and `/about/` will be treated as the same route. 
 
 Below is an example showing the different ways to define routes:
 
