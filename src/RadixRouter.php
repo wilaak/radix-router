@@ -13,19 +13,8 @@ use \InvalidArgumentException;
  */
 class RadixRouter
 {
-    /**
-     * The radix tree structure for dynamic routes.
-     */
     public array $tree = [];
-     
-    /**
-     * List of static routes indexed by method and pattern.
-     */
     public array $static = [];
-
-    /**
-     * List of allowed HTTP methods.
-     */
     public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
 
     /**
