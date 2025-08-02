@@ -182,4 +182,4 @@ Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
 ## License
 
-This library is licensed under the **WTFPL-2.0**. Do whatever you want with it.
+This library is licensed under the **WTFPL-2.0** license. Do whatever you want with it.
