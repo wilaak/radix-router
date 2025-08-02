@@ -45,7 +45,7 @@
     },
     "require-dev": {
         "php": ">=8.3",
-        "phpunit/phpunit": "^12.2"
+        "phpunit/phpunit": "^11.0"
     },
     "scripts": {
         "test": "phpunit --testdox /tests"
