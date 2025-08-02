@@ -1,5 +1,5 @@
 <?php
-require 'RadixRouter/src/RadixRouter.php';
+require __DIR__ . '/../src/RadixRouter.php';
 
 $routes = require __DIR__ . "/routes/" . ($argv[1] ?? 'avatax') . ".php";
 

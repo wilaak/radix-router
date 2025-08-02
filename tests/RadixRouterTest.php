@@ -109,6 +109,76 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(['download/123/456'], $info6['params']);
     }
 
+    public function testWildcardAndParameterMixing()
+    {
+        $router = new RadixRouter();
+        // Wildcard at the end, with a parameter before
+        $router->add('GET', '/foo/:bar/:rest*', 'handler1');
+        // Wildcard at the end, with static before
+        $router->add('GET', '/static/:rest*', 'handler2');
+        // Wildcard with nothing before
+        $router->add('GET', '/:rest*', 'handler3');
+
+        // /foo/abc/def/ghi -> bar=abc, rest=def/ghi
+        $info = $router->lookup('GET', '/foo/abc/def/ghi');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('handler1', $info['handler']);
+        $this->assertEquals(['abc', 'def/ghi'], $info['params']);
+
+        // /foo/abc -> bar=abc, rest=''
+        $info = $router->lookup('GET', '/foo/abc');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('handler1', $info['handler']);
+        $this->assertEquals(['abc', ''], $info['params']);
+
+        // /static/one/two/three -> rest=one/two/three
+        $info = $router->lookup('GET', '/static/one/two/three');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('handler2', $info['handler']);
+        $this->assertEquals(['one/two/three'], $info['params']);
+
+        // /static/ -> rest=''
+        $info = $router->lookup('GET', '/static/');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('handler2', $info['handler']);
+        $this->assertEquals([''], $info['params']);
+
+        // /anything/else -> rest=anything/else
+        $info = $router->lookup('GET', '/anything/else');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('handler3', $info['handler']);
+        $this->assertEquals(['anything/else'], $info['params']);
+
+        // / -> rest=''
+        $info = $router->lookup('GET', '/');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('handler3', $info['handler']);
+        $this->assertEquals([''], $info['params']);
+    }
+
+    public function testOptionalAndParameterMixing()
+    {
+        $router = new RadixRouter();
+        // Route with a required parameter followed by an optional parameter
+        $router->add('GET', '/mix/:required/:optional?', 'handler');
+
+        // /mix/foo/bar -> required=foo, optional=bar
+        $info = $router->lookup('GET', '/mix/foo/bar');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('handler', $info['handler']);
+        $this->assertEquals(['foo', 'bar'], $info['params']);
+
+        // /mix/foo -> required=foo, optional missing
+        $info = $router->lookup('GET', '/mix/foo');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('handler', $info['handler']);
+        $this->assertEquals(['foo'], $info['params']);
+
+        // /mix/ (should not match, required param missing)
+        $info = $router->lookup('GET', '/mix/');
+        $this->assertEquals(404, $info['code']);
+    }
+
     public function testMethodNotAllowed()
     {
         $router = new RadixRouter();
@@ -133,6 +203,13 @@ class RadixRouterTest extends TestCase
         $router = new RadixRouter();
         $this->expectException(\InvalidArgumentException::class);
         $router->add('GET', '/foo/:bar*/baz', 'bad_handler');
+    }
+
+    public function testOptionalOnlyAtEnd()
+    {
+        $router = new RadixRouter();
+        $this->expectException(\InvalidArgumentException::class);
+        $router->add('GET', '/foo/:bar?/baz', 'bad_handler');
     }
 
     public function testEmptyPatternAndRoot()
@@ -228,5 +305,47 @@ class RadixRouterTest extends TestCase
         $info = $router->lookup('GET', '/test');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('trailing_handler', $info['handler']);
+    }
+
+    public function testBenchmarking()
+    {
+        $benchmarks = ['avatax', 'simple', 'bitbucket'];
+
+        foreach ($benchmarks as $benchmark) {
+            $routes = require __DIR__ . "/../benchmark/routes/" . $benchmark . ".php";
+
+            // Convert curly braces to colon syntax for RadixRouter compatibility
+            foreach ($routes as &$path) {
+                $path = str_replace('{', ':', $path);
+                $path = str_replace('}', '', $path);
+            }
+            unset($path);
+
+            $registrationStart = microtime(true);
+            $r = new RadixRouter();
+            foreach ($routes as $path) {
+                $r->add('GET', $path, 'handler');
+            }
+            $registrationEnd = microtime(true);
+            $registrationDuration = $registrationEnd - $registrationStart;
+
+            $routeCount = count($routes);
+            $iterations = $routeCount * 2;
+
+            $start = microtime(true);
+            for ($i = 0; $i < $iterations; $i++) {
+                $index = $i % $routeCount;
+                $path = $routes[$index];
+                $info = $r->lookup('GET', $path);
+                $this->assertEquals(200, $info['code'], "Route not found: $path ($benchmark)");
+                $this->assertEquals('handler', $info['handler']);
+            }
+            $end = microtime(true);
+            $duration = $end - $start;
+
+            // Assert that registration and lookup durations are reasonable (arbitrary upper bounds)
+            $this->assertLessThan(2, $registrationDuration, "Registration took too long for $benchmark");
+            $this->assertLessThan(5, $duration, "Lookup took too long for $benchmark");
+        }
     }
 }
