@@ -4,6 +4,19 @@ namespace Wilaak\Http;
 
 use \InvalidArgumentException;
 
+use function is_string;
+use function strtoupper;
+use function in_array;
+use function rtrim;
+use function explode;
+use function str_starts_with;
+use function str_ends_with;
+use function array_key_last;
+use function array_keys;
+use function array_merge;
+use function array_slice;
+use function implode;
+
 /**
  * Simple radix tree based HTTP request router for PHP.
  *
