@@ -41,7 +41,7 @@ class RadixRouter
      */
     public function add(string|array $methods, string $pattern, mixed $handler): self
     {
-        $pattern = rtrim($pattern, '/');
+        $normalizedPattern = rtrim($pattern, '/');
 
         if (is_string($methods)) {
             $methods = [$methods];
@@ -58,7 +58,7 @@ class RadixRouter
         }
         unset($method);
 
-        $segments = explode('/', $pattern);
+        $segments = explode('/', $normalizedPattern);
         $hasParam = false;
 
         foreach ($segments as $i => &$segment) {
@@ -67,7 +67,7 @@ class RadixRouter
             }
             $hasParam = true;
             if (str_ends_with($segment, '?')) {
-                foreach ($this->getOptionalParameterVariants($pattern) as $variant) {
+                foreach ($this->getOptionalParameterVariants($normalizedPattern) as $variant) {
                     $this->add($methods, $variant, $handler);
                 }
                 return $this;
@@ -90,16 +90,20 @@ class RadixRouter
             }
             foreach ($methods as $method) {
                 if (isset($node['/routes_node'][$method])) {
-                    throw new InvalidArgumentException("Pattern $method '$pattern' conflicts with an existing route.");
+                    throw new InvalidArgumentException(
+                        "Cannot register route: method $method with pattern '$pattern' already exists."
+                    );
                 }
                 $node['/routes_node'][$method] = $handler;
             }
         } else {
             foreach ($methods as $method) {
-                if (isset($this->static[$pattern][$method])) {
-                    throw new InvalidArgumentException("Pattern $method '$pattern' conflicts with an existing route.");
+                if (isset($this->static[$normalizedPattern][$method])) {
+                    throw new InvalidArgumentException(
+                        "Cannot register route: method $method with pattern '$pattern' already exists."
+                    );
                 }
-                $this->static[$pattern][$method] = $handler;
+                $this->static[$normalizedPattern][$method] = $handler;
             }
         }
 
