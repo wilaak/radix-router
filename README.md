@@ -30,7 +30,7 @@ Requires PHP 8.0 or newer. (PHP 8.3 for tests)
 
 ## Usage Example
 
-Here's a basic usage example using the typical PHP-FPM (FastCGI) web environment:
+Here's a basic usage example using the typical SAPI web environment:
 
 ```php
 use Wilaak\Http\RadixRouter;
