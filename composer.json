@@ -1,6 +1,6 @@
 {
     "name": "wilaak/radix-router",
-    "description": "Simple radix tree based HTTP request router for PHP.",
+    "description": "High-performance radix tree based HTTP request router for PHP.",
     "type": "library",
     "license": "WTFPL",
     "authors": [
@@ -21,21 +21,9 @@
     "keywords": [
         "router",
         "radix tree",
-        "radix trie",
-        "patricia trie",
         "trie",
         "routing",
-        "url routing",
-        "radix",
-        "high performance",
-        "routing",
-        "minimal",
-        "simple",
-        "lightweight",
-        "php router",
-        "fast router",
-        "tree router",
-        "url matcher",
+        "php",
         "http"
     ],
     "homepage": "https://github.com/Wilaak/RadixRouter",
