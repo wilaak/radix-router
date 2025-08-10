@@ -24,7 +24,8 @@ class RadixRouter
      * @param string $pattern Route pattern (e.g., '/users/:id', '/files/:path*', '/users/:id?').
      * @param mixed $handler Handler to associate with the route.
      *
-     * @throws InvalidArgumentException On invalid method, conflicting route, or invalid pattern.
+     * @throws InvalidArgumentException If the HTTP method is invalid, the route pattern is invalid,
+     *                                  or a conflicting route is registered.
      */
     public function add(string|array $methods, string $pattern, mixed $handler): self
     {
@@ -67,7 +68,12 @@ class RadixRouter
                 (!\ctype_alpha($paramName[0]) && $paramName[0] !== '_') ||
                 !\ctype_alnum(\str_replace('_', '', $paramName))
             ) {
-                throw new InvalidArgumentException("Invalid parameter name '$paramName' in pattern '$pattern'.");
+                throw new InvalidArgumentException(
+                    "Invalid parameter name '$paramName' in pattern '$pattern'. " .
+                        "Parameter names must start with a letter or underscore, " .
+                        "contain only alphanumeric characters or underscores, " .
+                        "and cannot be empty."
+                );
             }
             $paramNames[] = $paramName;
 
@@ -247,4 +253,3 @@ class RadixRouter
         return $variants;
     }
 }
-
