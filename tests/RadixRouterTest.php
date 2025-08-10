@@ -37,7 +37,7 @@ class RadixRouterTest extends TestCase
         $this->assertEquals('static_handler', $info2['handler']);
         $this->assertEquals(200, $info3['code']);
         $this->assertEquals('param_handler', $info3['handler']);
-        $this->assertEquals(['gordon'], $info3['params']);
+        $this->assertEquals(['user' => 'gordon'], $info3['params']);
     }
 
     public function testOptionalParameters()
@@ -54,7 +54,7 @@ class RadixRouterTest extends TestCase
 
         $this->assertEquals(200, $info2['code']);
         $this->assertEquals('handler', $info2['handler']);
-        $this->assertEquals(['alice'], $info2['params']);
+        $this->assertEquals(['name' => 'alice'], $info2['params']);
     }
 
     public function testChainedOptionalParameters()
@@ -70,10 +70,10 @@ class RadixRouterTest extends TestCase
         $this->assertEquals([], $info1['params']);
 
         $this->assertEquals(200, $info2['code']);
-        $this->assertEquals(['2024'], $info2['params']);
+        $this->assertEquals(['year' => '2024'], $info2['params']);
 
         $this->assertEquals(200, $info3['code']);
-        $this->assertEquals(['2024', '06'], $info3['params']);
+        $this->assertEquals(['year' => '2024', 'month' => '06'], $info3['params']);
     }
 
     public function testWildcardParameters()
@@ -90,23 +90,23 @@ class RadixRouterTest extends TestCase
 
         $this->assertEquals(200, $info1['code']);
         $this->assertEquals('wildcard_handler', $info1['handler']);
-        $this->assertEquals([''], $info1['params']);
+        $this->assertEquals(['path' => ''], $info1['params']);
 
         $this->assertEquals(200, $info2['code']);
         $this->assertEquals('wildcard_handler', $info2['handler']);
-        $this->assertEquals([''], $info2['params']);
+        $this->assertEquals(['path' => ''], $info2['params']);
 
         $this->assertEquals(200, $info3['code']);
         $this->assertEquals('static_handler', $info3['handler']);
-        $this->assertEquals(['123'], $info3['params']);
+        $this->assertEquals(['id' => '123'], $info3['params']);
 
         $this->assertEquals(200, $info5['code']);
         $this->assertEquals('wildcard_handler', $info5['handler']);
-        $this->assertEquals(['anything/else'], $info5['params']);
+        $this->assertEquals(['path' => 'anything/else'], $info5['params']);
 
         $this->assertEquals(200, $info6['code']);
         $this->assertEquals('wildcard_handler', $info6['handler']);
-        $this->assertEquals(['download/123/456'], $info6['params']);
+        $this->assertEquals(['path' => 'download/123/456'], $info6['params']);
     }
 
     public function testWildcardAndParameterMixing()
@@ -123,37 +123,37 @@ class RadixRouterTest extends TestCase
         $info = $router->lookup('GET', '/foo/abc/def/ghi');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('handler1', $info['handler']);
-        $this->assertEquals(['abc', 'def/ghi'], $info['params']);
+        $this->assertEquals(['bar' => 'abc', 'rest' => 'def/ghi'], $info['params']);
 
         // /foo/abc -> bar=abc, rest=''
         $info = $router->lookup('GET', '/foo/abc');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('handler1', $info['handler']);
-        $this->assertEquals(['abc', ''], $info['params']);
+        $this->assertEquals(['bar' => 'abc', 'rest' => ''], $info['params']);
 
         // /static/one/two/three -> rest=one/two/three
         $info = $router->lookup('GET', '/static/one/two/three');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('handler2', $info['handler']);
-        $this->assertEquals(['one/two/three'], $info['params']);
+        $this->assertEquals(['rest' => 'one/two/three'], $info['params']);
 
         // /static/ -> rest=''
         $info = $router->lookup('GET', '/static/');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('handler2', $info['handler']);
-        $this->assertEquals([''], $info['params']);
+        $this->assertEquals(['rest' => ''], $info['params']);
 
         // /anything/else -> rest=anything/else
         $info = $router->lookup('GET', '/anything/else');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('handler3', $info['handler']);
-        $this->assertEquals(['anything/else'], $info['params']);
+        $this->assertEquals(['rest' => 'anything/else'], $info['params']);
 
         // / -> rest=''
         $info = $router->lookup('GET', '/');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('handler3', $info['handler']);
-        $this->assertEquals([''], $info['params']);
+        $this->assertEquals(['rest' => ''], $info['params']);
     }
 
     public function testOptionalAndParameterMixing()
@@ -166,13 +166,13 @@ class RadixRouterTest extends TestCase
         $info = $router->lookup('GET', '/mix/foo/bar');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('handler', $info['handler']);
-        $this->assertEquals(['foo', 'bar'], $info['params']);
+        $this->assertEquals(['required' => 'foo', 'optional' => 'bar'], $info['params']);
 
         // /mix/foo -> required=foo, optional missing
         $info = $router->lookup('GET', '/mix/foo');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('handler', $info['handler']);
-        $this->assertEquals(['foo'], $info['params']);
+        $this->assertEquals(['required' => 'foo'], $info['params']);
 
         // /mix/ (should not match, required param missing)
         $info = $router->lookup('GET', '/mix/');
@@ -261,7 +261,7 @@ class RadixRouterTest extends TestCase
         $info2 = $router->lookup('GET', '/foo/baz');
         $this->assertEquals('static_handler', $info1['handler']);
         $this->assertEquals('param_handler', $info2['handler']);
-        $this->assertEquals(['baz'], $info2['params']);
+        $this->assertEquals(['param' => 'baz'], $info2['params']);
     }
 
     public function testOptionalParameterVariants()
@@ -272,8 +272,8 @@ class RadixRouterTest extends TestCase
         $info2 = $router->lookup('GET', '/a/1');
         $info3 = $router->lookup('GET', '/a/1/2');
         $this->assertEquals([], $info1['params']);
-        $this->assertEquals(['1'], $info2['params']);
-        $this->assertEquals(['1', '2'], $info3['params']);
+        $this->assertEquals(['b' => '1'], $info2['params']);
+        $this->assertEquals(['b' => '1', 'c' => '2'], $info3['params']);
     }
 
     public function testWildcardWithNoSegments()
@@ -281,7 +281,7 @@ class RadixRouterTest extends TestCase
         $router = new RadixRouter();
         $router->add('GET', '/wild/:rest*', 'handler');
         $info = $router->lookup('GET', '/wild');
-        $this->assertEquals([''], $info['params']);
+        $this->assertEquals(['rest' => ''], $info['params']);
     }
 
     public function testInvalidMethodThrows()

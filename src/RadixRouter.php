@@ -4,19 +4,6 @@ namespace Wilaak\Http;
 
 use \InvalidArgumentException;
 
-use function is_string;
-use function strtoupper;
-use function in_array;
-use function rtrim;
-use function explode;
-use function str_starts_with;
-use function str_ends_with;
-use function array_key_last;
-use function array_keys;
-use function array_merge;
-use function array_slice;
-use function implode;
-
 /**
  * Simple radix tree based HTTP request router for PHP.
  *
@@ -59,19 +46,31 @@ class RadixRouter
         unset($method);
 
         $segments = explode('/', $normalizedPattern);
-        $hasParam = false;
-
+        $paramNames = [];
         foreach ($segments as $i => &$segment) {
             if (!str_starts_with($segment, ':')) {
                 continue;
             }
-            $hasParam = true;
             if (str_ends_with($segment, '?')) {
                 foreach ($this->getOptionalParameterVariants($normalizedPattern) as $variant) {
                     $this->add($methods, $variant, $handler);
                 }
                 return $this;
             }
+
+            $paramName = substr($segment, 1);
+            if (str_ends_with($paramName, '*')) {
+                $paramName = substr($paramName, 0, -1);
+            }
+            if (
+                $paramName === '' ||
+                (!ctype_alpha($paramName[0]) && $paramName[0] !== '_') ||
+                !ctype_alnum(str_replace('_', '', $paramName))
+            ) {
+                throw new InvalidArgumentException("Invalid parameter name '$paramName' in pattern '$pattern'.");
+            }
+            $paramNames[] = $paramName;
+
             if (str_ends_with($segment, '*')) {
                 if ($i !== array_key_last($segments)) {
                     throw new InvalidArgumentException("Wildcard parameter must be last in pattern '$pattern'.");
@@ -83,7 +82,7 @@ class RadixRouter
         }
         unset($segment);
 
-        if ($hasParam) {
+        if (!empty($paramNames)) {
             $node = &$this->tree;
             foreach ($segments as $segment) {
                 $node = &$node[$segment];
@@ -94,7 +93,10 @@ class RadixRouter
                         "Cannot register route: method $method with pattern '$pattern' already exists."
                     );
                 }
-                $node['/routes_node'][$method] = $handler;
+                $node['/routes_node'][$method] = [
+                    'handler' => $handler,
+                    'param_names' => $paramNames,
+                ];
             }
         } else {
             foreach ($methods as $method) {
@@ -115,7 +117,12 @@ class RadixRouter
      *
      * @param string $method The HTTP method (e.g., 'GET', 'POST').
      * @param string $path The request path (e.g., '/users/123').
-     * @return array{code: int, handler?: mixed, params?: array<int, string>, allowed_methods?: array<int, string>}
+     * @return array{
+     *     code: int,
+     *     handler?: mixed,
+     *     params?: array<string, string>,
+     *     allowed_methods?: array<int, string>
+     * }
      */
     public function lookup(string $method, string $path): array
     {
@@ -138,7 +145,6 @@ class RadixRouter
         $segments = explode('/', $path);
         $params = [];
         $node = $this->tree;
-
         foreach ($segments as $i => $segment) {
             if (isset($node['/wildcard_node'])) {
                 $wildcard = [
@@ -159,10 +165,11 @@ class RadixRouter
         }
 
         if (isset($node['/routes_node'][$method])) {
+            $route = $node['/routes_node'][$method];
             return [
                 'code' => 200,
-                'handler' => $node['/routes_node'][$method],
-                'params' => $params,
+                'handler' => $route['handler'],
+                'params' => array_combine($route['param_names'], $params),
             ];
         } else if (isset($node['/routes_node'])) {
             return [
@@ -180,13 +187,15 @@ class RadixRouter
         }
 
         if (isset($wildcard['node']['/routes_node'][$method])) {
+            $route = $wildcard['node']['/routes_node'][$method];
+            $params = array_merge(
+                $wildcard['params'],
+                [implode('/', array_slice($segments, $wildcard['index']))]
+            );
             return [
                 'code' => 200,
-                'handler' => $wildcard['node']['/routes_node'][$method],
-                'params' => array_merge(
-                    $wildcard['params'],
-                    [implode('/', array_slice($segments, $wildcard['index']))]
-                ),
+                'handler' => $route['handler'],
+                'params' => array_combine($route['param_names'], $params),
             ];
         }
 
