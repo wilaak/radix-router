@@ -348,4 +348,148 @@ class RadixRouterTest extends TestCase
             $this->assertLessThan(5, $duration, "Lookup took too long for $benchmark");
         }
     }
+
+    public function testWildcardFallback()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/foo/bar', 'static_handler');
+        $router->add('GET', '/foo/:param', 'param_handler');
+        $router->add('GET', '/foo/:rest*', 'wildcard_handler');
+
+        // Should match static
+        $info = $router->lookup('GET', '/foo/bar');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('static_handler', $info['handler']);
+
+        // Should match parameter
+        $info = $router->lookup('GET', '/foo/baz');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('param_handler', $info['handler']);
+        $this->assertEquals(['param' => 'baz'], $info['params']);
+
+        // Should fallback to wildcard
+        $info = $router->lookup('GET', '/foo/bar/baz/qux');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('wildcard_handler', $info['handler']);
+        $this->assertEquals(['rest' => 'bar/baz/qux'], $info['params']);
+
+        // Should fallback to wildcard for /foo only
+        $info = $router->lookup('GET', '/foo');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('wildcard_handler', $info['handler']);
+        $this->assertEquals(['rest' => ''], $info['params']);
+    }
+
+    public function testWildcardFallbackWithOverlappingDynamicRoutes()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/api/:version/users/:id', 'user_handler');
+        $router->add('GET', '/api/:version/:rest*', 'wildcard_handler');
+
+        // Should match the specific dynamic route
+        $info = $router->lookup('GET', '/api/v1/users/42');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('user_handler', $info['handler']);
+        $this->assertEquals(['version' => 'v1', 'id' => '42'], $info['params']);
+
+        // Should fallback to wildcard for other paths
+        $info = $router->lookup('GET', '/api/v1/other/path');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('wildcard_handler', $info['handler']);
+        $this->assertEquals(['version' => 'v1', 'rest' => 'other/path'], $info['params']);
+
+        // Should fallback to wildcard for /api/v2
+        $info = $router->lookup('GET', '/api/v2');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('wildcard_handler', $info['handler']);
+        $this->assertEquals(['version' => 'v2', 'rest' => ''], $info['params']);
+    }
+
+    public function testParameterMatchingPriority()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/priority/static', 'static_handler');
+        $router->add('GET', '/priority/:param', 'param_handler');
+        $router->add('GET', '/priority/:rest*', 'wildcard_handler');
+
+        // Should match static first
+        $info = $router->lookup('GET', '/priority/static');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('static_handler', $info['handler']);
+
+        // Should match parameter next
+        $info = $router->lookup('GET', '/priority/foo');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('param_handler', $info['handler']);
+        $this->assertEquals(['param' => 'foo'], $info['params']);
+
+        // Should match wildcard last
+        $info = $router->lookup('GET', '/priority/foo/bar/baz');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('wildcard_handler', $info['handler']);
+        $this->assertEquals(['rest' => 'foo/bar/baz'], $info['params']);
+    }
+
+    public function testParameterNameValidation()
+    {
+        $router = new RadixRouter();
+
+        // Invalid parameter names
+        $invalidPatterns = [
+            '/foo/:',          // Empty parameter name
+            '/foo/:1bar',      // Starts with number
+            '/foo/:bar-baz',   // Contains dash
+            '/foo/:bar baz',   // Contains space
+            '/foo/:bar$',      // Contains special char
+        ];
+
+        foreach ($invalidPatterns as $pattern) {
+            try {
+                $router->add('GET', $pattern, 'handler');
+                $this->fail("Pattern '$pattern' should throw InvalidArgumentException");
+            } catch (\InvalidArgumentException $e) {
+                $this->assertTrue(true); // Exception thrown as expected
+            }
+        }
+
+        // Valid parameter names
+        $validPatterns = [
+            ['/foo/:_bar', ['_bar' => 'value'], '/foo/value'],
+            ['/foo/:bar123', ['bar123' => 'val'], '/foo/val'],
+            ['/foo/:_bar_123', ['_bar_123' => 'val'], '/foo/val'],
+            ['/foo/:BarBaz', ['BarBaz' => 'val'], '/foo/val'],
+        ];
+
+        foreach ($validPatterns as [$pattern, $expectedParams, $lookupPath]) {
+            $router = new RadixRouter();
+            $router->add('GET', $pattern, 'handler');
+            $info = $router->lookup('GET', $lookupPath);
+            $this->assertEquals($expectedParams, $info['params'], "Pattern '$pattern' failed");
+        }
+    }
+
+    public function testFallbackWildcardDoesNotGetDynamicParams()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/api/:version/users/:id', 'user_handler');
+        $router->add('GET', '/api/:version/:rest*', 'wildcard_handler');
+
+        // Should match the specific dynamic route
+        $info = $router->lookup('GET', '/api/v1/users/42');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('user_handler', $info['handler']);
+        $this->assertEquals(['version' => 'v1', 'id' => '42'], $info['params']);
+
+        // Should fallback to wildcard, and only get version and rest
+        $info = $router->lookup('GET', '/api/v1/other/path');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('wildcard_handler', $info['handler']);
+        $this->assertEquals(['version' => 'v1', 'rest' => 'other/path'], $info['params']);
+
+        // Should fallback to wildcard, and not get id param
+        $info = $router->lookup('GET', '/api/v1/users/42/extra');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('wildcard_handler', $info['handler']);
+        $this->assertEquals(['version' => 'v1', 'rest' => 'users/42/extra'], $info['params']);
+    }
 }
