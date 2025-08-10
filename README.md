@@ -126,24 +126,38 @@ Rebuilding the route tree on every request or application startup can slow down 
 > When implementing route caching, care should be taken to avoid race conditions when rebuilding the cache file. Ensure that the cache is written atomically so that each request can always fully load a valid cache file without errors or partial data.
 
 Here is a simple cache implementation:
-
 ```php
 $cacheFile = __DIR__ . '/routes.cache.php';
+
+// Helper to atomically write cache file
+function writeCacheFile(string $file, array $data) {
+    $tmpFile = $file . '.' . uniqid('', true) . '.tmp';
+    file_put_contents($tmpFile, $data, LOCK_EX);
+    rename($tmpFile, $file);
+}
+
 if (!file_exists($cacheFile)) {
-    // Build routes here
+    // Build and register your routes here
     $router->add('GET', '/', 'handler');
-    // Export generated tree and static routes
+    // ...add more routes as needed
+
+    // Prepare the data to cache
     $routes = [
-        'tree' => $router->tree,
+        'tree'   => $router->tree,
         'static' => $router->static,
     ];
-    file_put_contents($cacheFile, '<?php return ' . var_export($routes, true) . ';');
-} else {
-    // Load tree and static routes from cache
-    $routes = require $cacheFile;
-    $router->tree = $routes['tree'];
-    $router->static = $routes['static'];
+
+    // Export as PHP code for fast loading
+    $export = '<?php return ' . var_export($routes, true) . ';';
+
+    // Write cache file atomically
+    writeCacheFile($cacheFile, $export);
 }
+
+// Load cached routes
+$routes = require $cacheFile;
+$router->tree   = $routes['tree'];
+$router->static = $routes['static'];
 ```
 
 By storing your routes in a PHP file, you let PHP’s OPcache handle the heavy lifting, making startup times nearly instantaneous.
