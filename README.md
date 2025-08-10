@@ -126,15 +126,9 @@ Rebuilding the route tree on every request or application startup can slow down 
 > When implementing route caching, care should be taken to avoid race conditions when rebuilding the cache file. Ensure that the cache is written atomically so that each request can always fully load a valid cache file without errors or partial data.
 
 Here is a simple cache implementation:
+
 ```php
 $cacheFile = __DIR__ . '/routes.cache.php';
-
-// Helper to atomically write cache file
-function writeCacheFile(string $file, array $data) {
-    $tmpFile = $file . '.' . uniqid('', true) . '.tmp';
-    file_put_contents($tmpFile, $data, LOCK_EX);
-    rename($tmpFile, $file);
-}
 
 if (!file_exists($cacheFile)) {
     // Build and register your routes here
@@ -150,8 +144,10 @@ if (!file_exists($cacheFile)) {
     // Export as PHP code for fast loading
     $export = '<?php return ' . var_export($routes, true) . ';';
 
-    // Write cache file atomically
-    writeCacheFile($cacheFile, $export);
+    // Atomically write cache file
+    $tmpFile = $cacheFile . '.' . uniqid('', true) . '.tmp';
+    file_put_contents($tmpFile, $export, LOCK_EX);
+    rename($tmpFile, $cacheFile);
 }
 
 // Load cached routes
