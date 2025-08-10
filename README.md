@@ -1,6 +1,6 @@
 # RadixRouter
 
-Simple radix tree based HTTP request router for PHP. Lightweight and high-performance (see [benchmarks](#benchmarks))
+High-performance radix tree based HTTP request router for PHP (see [benchmarks](#benchmarks))
 
 ### Overview
 
@@ -160,25 +160,25 @@ Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
 | Router           | Register     | Lookups           | Memory Usage | Peak Memory  |
 |------------------|--------------|-------------------|--------------|--------------|
-| **RadixRouter**  | 0.04 ms      | 3,351,987/sec     | 375 KB       | 452 KB       |
-| **FastRoute**    | 1.85 ms      | 2,767,883/sec     | 431 KB       | 1,328 KB     |
-| **SymfonyRouter**| 6.24 ms      | 1,722,432/sec     | 574 KB       | 1,328 KB     |
+| **RadixRouter**  | 0.05 ms      | 2,977,816/sec     | 384 KB       | 458 KB       |
+| **FastRoute**    | 1.92 ms      | 2,767,883/sec     | 429 KB       | 1,337 KB     |
+| **SymfonyRouter**| 6.84 ms      | 1,722,432/sec     | 573 KB       | 1,338 KB     |
 
 #### Avatax API (256 Routes)
 
 | Router           | Register     | Lookups           | Memory Usage | Peak Memory  |
 |------------------|--------------|-------------------|--------------|--------------|
-| **RadixRouter**  | 0.25 ms      | 2,180,273/sec     | 585 KB       | 587 KB       |
-| **FastRoute**    | 4.94 ms      |   707,516/sec     | 549 KB       | 1,328 KB     |
-| **SymfonyRouter**| 12.60 ms     | 1,182,060/sec     | 1,292 KB     | 1,588 KB     |
+| **RadixRouter**  | 0.27 ms      | 2,006,929/sec     | 688 KB       | 690 KB       |
+| **FastRoute**    | 4.94 ms      |   707,516/sec     | 549 KB       | 1,337 KB     |
+| **SymfonyRouter**| 12.60 ms     | 1,182,060/sec     | 1,291 KB     | 1,587 KB     |
 
 #### Bitbucket API (178 Routes)
 
 | Router           | Register     | Lookups           | Memory Usage | Peak Memory  |
 |------------------|--------------|-------------------|--------------|--------------|
-| **RadixRouter**  | 0.17 ms      | 1,816,779/sec     | 531 KB       | 533 KB       |
-| **FastRoute**    | 3.81 ms      |   371,104/sec     | 556 KB       | 1,328 KB     |
-| **SymfonyRouter**| 12.16 ms     |   910,064/sec     | 1,186 KB     | 1,426 KB     |
+| **RadixRouter**  | 0.23 ms      | 1,623,718/sec     | 641 KB       | 643 KB       |
+| **FastRoute**    | 3.81 ms      |   371,104/sec     | 555 KB       | 1,337 KB     |
+| **SymfonyRouter**| 12.16 ms     |   910,064/sec     | 1,180 KB     | 1,419 KB     |
 
 ## License
 
