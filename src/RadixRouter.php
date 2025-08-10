@@ -37,11 +37,15 @@ class RadixRouter
 
         foreach ($methods as &$method) {
             if (!\is_string($method) || $method === '') {
-                throw new InvalidArgumentException("Method must be a non-empty string for pattern '$pattern'.");
+                throw new InvalidArgumentException(
+                    "Method must be a non-empty string for pattern '$pattern'."
+                );
             }
             $method = \strtoupper($method);
             if (!\in_array($method, $this->allowedMethods, true)) {
-                throw new InvalidArgumentException("Invalid HTTP method: $method for pattern '$pattern'.");
+                throw new InvalidArgumentException(
+                    "Invalid HTTP method: $method for pattern '$pattern'."
+                );
             }
         }
         unset($method);
@@ -75,11 +79,18 @@ class RadixRouter
                         "and cannot be empty."
                 );
             }
+            if (\in_array($paramName, $paramNames, true)) {
+                throw new InvalidArgumentException(
+                    "Duplicate parameter name '$paramName' in pattern '$pattern'."
+                );
+            }
             $paramNames[] = $paramName;
 
             if (\str_ends_with($segment, '*')) {
                 if ($i !== \array_key_last($segments)) {
-                    throw new InvalidArgumentException("Wildcard parameter must be last in pattern '$pattern'.");
+                    throw new InvalidArgumentException(
+                        "Wildcard parameter must be last in pattern '$pattern'."
+                    );
                 }
                 $segment = '/wildcard_node';
             } else {
