@@ -52,7 +52,6 @@
     '/repositories/{workspace}/{repo_slug}/hooks/{uid}',
     '/repositories/{workspace}/{repo_slug}/issues',
     '/repositories/{workspace}/{repo_slug}/issues/export',
-    '/repositories/{workspace}/{repo_slug}/issues/export/{repo_name}-issues-{task_id}.zip',
     '/repositories/{workspace}/{repo_slug}/issues/import',
     '/repositories/{workspace}/{repo_slug}/issues/{issue_id}',
     '/repositories/{workspace}/{repo_slug}/issues/{issue_id}/attachments',
