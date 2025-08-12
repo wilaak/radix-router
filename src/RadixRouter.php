@@ -193,7 +193,7 @@ class RadixRouter
      * @return array{
      *     code: int,
      *     handler?: mixed,
-     *     params?: array<string>,
+     *     params?: array<string, string>,
      *     allowed_methods?: list<string>
      * }
      */
