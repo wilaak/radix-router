@@ -107,6 +107,12 @@ class RadixRouter
             }
             if (\str_ends_with($segment, '?')) {
                 foreach ($this->getOptionalParameterVariants($normalizedPattern) as $variant) {
+                    if (\str_ends_with($variant, '*')) {
+                        throw new InvalidArgumentException(
+                            "Wildcard parameters cannot be optional. " .
+                                "Pattern '$pattern' produces variant '$variant' with a wildcard after trimming '?'."
+                        );
+                    }
                     try {
                         $this->add($methods, $variant, $handler);
                     } catch (InvalidArgumentException $e) {
