@@ -1,6 +1,6 @@
 # RadixRouter
 
-High-performance radix tree based HTTP request router for PHP (see [benchmarks](#benchmarks))
+Minimal high-performance radix tree based HTTP request router for PHP (see [benchmarks](#benchmarks))
 
 ### Overview
 
@@ -68,12 +68,13 @@ switch ($result['code']) {
 
     case 405:
         // Method not allowed for this route
-        header('Allow: ' . implode(', ', $result['allowed_methods']));
+        header('Allow: ' . implode(',', $result['allowed_methods']));
         http_response_code(405);
         echo '405 Method Not Allowed';
         break;
 }
 ```
+
 ## Registering Routes
 
 Routes are registered using the `add()` method. You can assign any value as the handler. The order of route matching is: static > parameter > wildcard.
@@ -91,33 +92,37 @@ $router->add(['GET', 'POST'], '/form', 'handler');
 // Required parameter
 $router->add('GET', '/users/:id', 'handler');
 // Example requests:
-//   /users/123 -> matches '/users/:id' (captures "123")
+//   /users/123 -> matches (captures ["id" => "123"])
 //   /users     -> no-match
 
-// Optional parameter (must be in the last trailing segment(s))
+// Optional parameter (only allowed as last segment)
 $router->add('GET', '/hello/:name?', 'handler');
 // Example requests:
 //   /hello       -> matches
-//   /hello/alice -> matches (captures "alice")
+//   /hello/alice -> matches (captures ["name" => "alice"])
 
-// Multiple trailing optional parameters (must be at the end)
+// Multiple trailing optional parameters (must be in the last trailing segment(s))
 $router->add('GET', '/archive/:year?/:month?', 'handler');
 // Example requests:
 //   /archive         -> matches
-//   /archive/2024    -> matches (captures "2024")
-//   /archive/2024/06 -> matches (captures "2024", "06")
+//   /archive/2024    -> matches (captures ["year" => "2024"])
+//   /archive/2024/06 -> matches (captures ["year" => "2024", "month" => "06"])
 
 // Wildcard parameter (only allowed as last segment)
 $router->add('GET', '/files/:path*', 'handler');
 // Example requests:
-//   /files                  -> matches (captures "")
-//   /files/readme.txt       -> matches (captures "readme.txt")
-//   /files/images/photo.jpg -> matches (captures "images/photo.jpg")
+//   /files                  -> matches (captures ["path" => ""])
+//   /files/readme.txt       -> matches (captures ["path" => "readme.txt"])
+//   /files/images/photo.jpg -> matches (captures ["path" => "images/photo.jpg"])
 ```
+
+## Note on HEAD Requests
+
+According to the HTTP specification, any route that handles a GET request should also support HEAD requests. RadixRouter does not automatically add this behavior. If you are running outside a standard web server environment (such as in a custom server), ensure that your GET routes also respond appropriately to HEAD requests. Responses to HEAD requests must not include a message body.
 
 ## How to Cache Routes
 
-Rebuilding the route tree on every request or application startup can slow down performance.
+You can most likely ignore this section. Most SAPI environments are generally limited by I/O due to their synchronous nature, so the time spent reconstructing routes is gonna be minimal compared to the overall I/O wait time.
 
 > **Note:**
 > Anonymous functions (closures) are **not supported** for route caching because they cannot be serialized. When caching routes, only use handlers that can be safely represented as strings, arrays, or serializable objects.
@@ -157,10 +162,6 @@ $router->static = $routes['static'];
 ```
 
 By storing your routes in a PHP file, you let PHP’s OPcache handle the heavy lifting, making startup times nearly instantaneous.
-
-## Note on HEAD Requests
-
-According to the HTTP specification, any route that handles a GET request should also support HEAD requests. RadixRouter does not automatically add this behavior. If you are running outside a standard web server environment (such as in a custom server), ensure that your GET routes also respond appropriately to HEAD requests. Responses to HEAD requests must not include a message body.
 
 ## Benchmarks
 
