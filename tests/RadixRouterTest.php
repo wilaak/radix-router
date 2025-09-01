@@ -490,4 +490,11 @@ class RadixRouterTest extends TestCase
         $this->assertEquals('wildcard_handler', $info['handler']);
         $this->assertEquals(['version' => 'v1', 'rest' => 'users/42/extra'], $info['params']);
     }
+
+    public function testEmptyMethodArrayThrows()
+    {
+        $router = new RadixRouter();
+        $this->expectException(\InvalidArgumentException::class);
+        $router->add([], '/bad', 'handler');
+    }
 }

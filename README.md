@@ -1,18 +1,6 @@
 # RadixRouter
 
-Minimal high-performance radix tree based HTTP request router for PHP (see [benchmarks](#benchmarks))
-
-### Overview
-
-- High-performance O(k) dynamic route matching, where *k* is the number of segments in the path.
-- Supports parameters, including wildcard and optional segments for flexible route definitions.
-- Static routes are stored in a hash map providing fast minimal allocation lookups for exact matches.
-
-## How does it work?
-
-The router splits the path into segments and walks the tree, matching each segment in order. Because the tree only branches where routes differ, the router can quickly skip irrelevant routes and find the correct handler with minimal comparisons.
-
-![tree visualiation](assets/radix-visualization.svg)
+High-performance HTTP request router for PHP (see [benchmarks](#benchmarks) and [integrations](#integrations))
 
 ## Install
 
@@ -20,43 +8,35 @@ Install with composer:
 
     composer require wilaak/radix-router
 
-Or simply include it in your project:
-
-```PHP
-require '/path/to/RadixRouter.php'
-```
-
-Requires PHP 8.0 or newer. (PHP 8.3 for tests)
+Requires PHP 8.0 or newer
 
 ## Usage Example
 
-Here's a basic usage example using the typical SAPI web environment:
+Here's a basic usage example using the SAPI environment:
 
 ```php
-use Wilaak\Http\RadixRouter;
-
-// Create a new router instance
-$router = new RadixRouter();
+// Create a new RadixRouter instance
+$router = new \Wilaak\Http\RadixRouter();
 
 // Register a route with an optional parameter and a handler
 $router->add('GET', '/:world?', function ($world = 'World') {
     echo "Hello, $world!";
 });
 
-// Get the HTTP method and path from the request
-$method = strtoupper(
-    $_SERVER['REQUEST_METHOD']
-);
+// Get the HTTP method (GET, POST, etc.)
+$method = $_SERVER['REQUEST_METHOD'];
+
+// Get the request path, ignoring query string
 $path = rawurldecode(
     strtok($_SERVER['REQUEST_URI'], '?')
 );
 
-// Look up the route for the current request
+// Look up the route for the current method and path
 $result = $router->lookup($method, $path);
 
 switch ($result['code']) {
     case 200:
-        // Route matched: call the handler with parameters
+        // Route found, call the handler with parameters
         $result['handler'](...$result['params']);
         break;
 
@@ -73,42 +53,33 @@ switch ($result['code']) {
         echo '405 Method Not Allowed';
         break;
 }
-```
+``` 
 
-## Registering Routes
+## Configuring Routes
 
-Routes are registered using the `add()` method. You can assign any value as the handler. The order of route matching is: static > parameter > wildcard.
-
-> **Note:** Paths are normalized by removing trailing slashes. For example, both `/about` and `/about/` will be treated as the same route. 
-
-Below is an example showing the different ways to define routes:
+You can assign any value as the handler. The order of route matching is:  static > parameter > wildcard. Below is an example showing the different ways to define routes:
 
 ```php
-// Static route for a single method
-$router->add('GET', '/about', 'handler');
-// Static route for both GET and POST methods
+// Static route
+$router->add('GET', '/', 'handler');
+
+// Multiple methods
 $router->add(['GET', 'POST'], '/form', 'handler');
 
-// Required parameter
+// Required parameters
 $router->add('GET', '/users/:id', 'handler');
 // Example requests:
 //   /users/123 -> matches (captures ["id" => "123"])
-//   /users     -> no-match
+//   /users     -> no match
 
-// Optional parameter (only allowed as last segment)
-$router->add('GET', '/hello/:name?', 'handler');
-// Example requests:
-//   /hello       -> matches
-//   /hello/alice -> matches (captures ["name" => "alice"])
-
-// Multiple trailing optional parameters (must be in the last trailing segment(s))
+// Optional parameters
 $router->add('GET', '/archive/:year?/:month?', 'handler');
 // Example requests:
 //   /archive         -> matches
-//   /archive/2024    -> matches (captures ["year" => "2024"])
-//   /archive/2024/06 -> matches (captures ["year" => "2024", "month" => "06"])
+//   /archive/1974    -> matches (captures ["year" => "1974"])
+//   /archive/1974/06 -> matches (captures ["year" => "1974", "month" => "06"])
 
-// Wildcard parameter (only allowed as last segment)
+// Wildcard parameter
 $router->add('GET', '/files/:path*', 'handler');
 // Example requests:
 //   /files                  -> matches (captures ["path" => ""])
@@ -116,21 +87,9 @@ $router->add('GET', '/files/:path*', 'handler');
 //   /files/images/photo.jpg -> matches (captures ["path" => "images/photo.jpg"])
 ```
 
-## Note on HEAD Requests
+## Route Caching
 
-According to the HTTP specification, any route that handles a GET request should also support HEAD requests. RadixRouter does not automatically add this behavior. If you are running outside a standard web server environment (such as in a custom server), ensure that your GET routes also respond appropriately to HEAD requests. Responses to HEAD requests must not include a message body.
-
-## How to Cache Routes
-
-You can most likely ignore this section. Most SAPI environments are generally limited by I/O due to their synchronous nature, so the time spent reconstructing routes is gonna be minimal compared to the overall I/O wait time.
-
-> **Note:**
-> Anonymous functions (closures) are **not supported** for route caching because they cannot be serialized. When caching routes, only use handlers that can be safely represented as strings, arrays, or serializable objects.
-
-> **Note:**
-> When implementing route caching, care should be taken to avoid race conditions when rebuilding the cache file. Ensure that the cache is written atomically so that each request can always fully load a valid cache file without errors or partial data.
-
-Here is a simple cache implementation:
+Rebuilding the routes on every request can slow down performance. Here is a simple cache implementation:
 
 ```php
 $cacheFile = __DIR__ . '/routes.cache.php';
@@ -165,7 +124,8 @@ By storing your routes in a PHP file, you let PHP’s OPcache handle the heavy l
 
 ## Benchmarks
 
-Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
+
+Single-threaded benchmark (Intel Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 
 #### Simple App (33 Routes)
 
@@ -190,6 +150,16 @@ Single-threaded benchmark (Xeon E-2136, PHP 8.4.8 cli OPcache enabled):
 | **RadixRouter**  | 0.23 ms      | 1,623,718/sec     | 641 KB       | 643 KB       |
 | **FastRoute**    | 3.81 ms      |   371,104/sec     | 555 KB       | 1,337 KB     |
 | **SymfonyRouter**| 12.16 ms     |   910,064/sec     | 1,180 KB     | 1,419 KB     |
+
+
+
+## Handling HEAD Requests 
+
+If you are running outside a SAPI environment (e.g., in a custom server), ensure your GET routes also respond correctly to HEAD requests. Responses to HEAD requests must not include a message body.
+
+## Integrations
+
+- [Mezzio](https://github.com/sirix777/mezzio-radixrouter) - RadixRouter integration for Mezzio framework
 
 ## License
 
