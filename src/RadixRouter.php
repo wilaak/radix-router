@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Wilaak\Http;
 
-use \InvalidArgumentException;
+use InvalidArgumentException;
 
 /**
  * High-performance HTTP request router for PHP
@@ -12,85 +14,79 @@ use \InvalidArgumentException;
  */
 class RadixRouter
 {
+    /**
+     * Radix tree structure for routes with parameters.
+     */
     public array $tree = [];
+
+    /**
+     * Static routes for quicker lookups with no parameters.
+     */
     public array $static = [];
+
+    /**
+     * List of allowed HTTP methods. When adding routes only these methods are accepted.
+     */
     public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
 
     /**
-     * Registers a route for one or more HTTP methods and a given pattern.
+     * Node keys for the radix tree, prefixed with a forward slash to avoid collisions with path segments.
+     */
+    private const string NODE_WILDCARD = '/wildcard_node';
+    private const string NODE_PARAMETER = '/parameter_node';
+    private const string NODE_ROUTES = '/routes_node';
+
+    /**
+     * When adding optional parameter variants we use this to keep track of the original pattern.
+     */
+    private ?string $originalOptionalPattern = null;
+
+    /**
+     * Adds a route for one or more HTTP methods and a given pattern.
      *
-     * @param string|array<int, string> $methods HTTP methods (e.g., 'GET' or ['GET', 'POST']).
+     * @param string|array<int, string> $methods HTTP methods (e.g., ['GET', 'POST']).
      * @param string $pattern Route pattern (e.g., '/users/:id', '/files/:path*', '/archive/:year?/:month?').
      * @param mixed $handler Handler to associate with the route.
-     * 
-     * @throws InvalidArgumentException On invalid method, pattern or conflicting route definitions.
-     * 
-     * Example:
-     * ```php
-     * // Static route
-     * $router->add('GET', '/', 'handler');
      *
-     * // Multiple methods
-     * $router->add(['GET', 'POST'], '/form', 'handler');
-     *
-     * // Required parameters
-     * $router->add('GET', '/users/:id', 'handler');
-     * // Example requests:
-     * //   /users/123 -> matches (captures ["id" => "123"])
-     * //   /users     -> no match
-     *
-     * // Optional parameters
-     * $router->add('GET', '/archive/:year?/:month?', 'handler');
-     * // Example requests:
-     * //   /archive         -> matches
-     * //   /archive/1974    -> matches (captures ["year" => "1974"])
-     * //   /archive/1974/06 -> matches (captures ["year" => "1974", "month" => "06"])
-     *
-     * // Wildcard parameter
-     * $router->add('GET', '/files/:path*', 'handler');
-     * // Example requests:
-     * //   /files                  -> matches (captures ["path" => ""])
-     * //   /files/readme.txt       -> matches (captures ["path" => "readme.txt"])
-     * //   /files/images/photo.jpg -> matches (captures ["path" => "images/photo.jpg"])
-     * ```
+     * @throws InvalidArgumentException On invalid method, route pattern or conflicts.
      */
     public function add(string|array $methods, string $pattern, mixed $handler): self
     {
-        if (!\str_starts_with($pattern, '/')) {
-            throw new InvalidArgumentException(
-                "Invalid route pattern '{$pattern}': "
-                    . "Patterns must begin with a forward slash ('/'). "
-                    . "Example: '/users/:id'."
-            );
-        }
-
         if (\is_string($methods)) {
             $methods = [$methods];
         }
 
         if (empty($methods)) {
             throw new InvalidArgumentException(
-                "At least one HTTP method must be specified for route '{$pattern}'."
+                "At least one HTTP method must be specified for route pattern '{$pattern}'."
             );
         }
 
         foreach ($methods as &$method) {
             if (!\is_string($method) || $method === '') {
                 throw new InvalidArgumentException(
-                    "Invalid HTTP method for route '{$pattern}': "
-                        . "Method must be a non-empty string such as 'GET' or 'POST'."
+                    "Invalid HTTP method for route pattern '{$pattern}': "
+                    . "HTTP method must be a non-empty string such as 'GET' or 'POST'."
                 );
             }
             $method = \strtoupper($method);
             if (!\in_array($method, $this->allowedMethods, true)) {
                 throw new InvalidArgumentException(
-                    "Unsupported HTTP method '{$method}' for route '{$pattern}'. "
-                        . "Allowed methods are: "
-                        . implode(', ', $this->allowedMethods) . "."
+                    "Unsupported HTTP method '{$method}' for route pattern '{$pattern}': "
+                    . "Allowed methods are: "
+                    . \implode(', ', $this->allowedMethods) . "."
                 );
             }
         }
         unset($method);
+
+        if (!\str_starts_with($pattern, '/')) {
+            throw new InvalidArgumentException(
+                "Invalid route pattern '{$pattern}': "
+                . "Route patterns must begin with a forward slash ('/'). "
+                . "Example: '/users/:id'."
+            );
+        }
 
         $normalizedPattern = \rtrim($pattern, '/');
         $segments = \explode('/', $normalizedPattern);
@@ -103,23 +99,18 @@ class RadixRouter
             if (\str_ends_with($segment, '*?') || \str_ends_with($segment, '?*')) {
                 throw new InvalidArgumentException(
                     "Malformed route pattern '{$pattern}': "
-                        . "Parameters cannot be both optional ('?') and wildcard ('*'). "
-                        . "Use either ':param?' or ':param*', not both."
+                    . "Parameters cannot be both optional ('?') and wildcard ('*'). "
+                    . "Use either ':param?' or ':param*', not both."
                 );
             }
 
             if (\str_ends_with($segment, '?')) {
-                foreach ($this->getOptionalParameterVariants($normalizedPattern) as $variant) {
-                    try {
-                        $this->add($methods, $variant, $handler);
-                    } catch (InvalidArgumentException $e) {
-                        throw new InvalidArgumentException(
-                            "Failed to register optional parameter variant '{$variant}' "
-                                . "for pattern '{$pattern}': "
-                                . $e->getMessage()
-                        );
-                    }
+                $this->originalOptionalPattern = $pattern;
+                $variants = $this->getOptionalParameterVariants($normalizedPattern);
+                foreach ($variants as $variant) {
+                    $this->add($methods, $variant, $handler);
                 }
+                $this->originalOptionalPattern = null;
                 return $this;
             }
 
@@ -127,22 +118,29 @@ class RadixRouter
             if (\str_ends_with($paramName, '*')) {
                 $paramName = \substr($paramName, 0, -1);
             }
-            if (
-                $paramName === '' ||
-                (!\ctype_alpha($paramName[0]) && $paramName[0] !== '_') ||
-                !\ctype_alnum(\str_replace('_', '', $paramName))
-            ) {
+            // use ctype functions if available for better performance
+            if (\extension_loaded('ctype')) {
+                $isParamNameInvalid = (
+                    $paramName === ''
+                    || (!\ctype_alpha($paramName[0]) && $paramName[0] !== '_')
+                    || !\ctype_alnum(\str_replace('_', '', $paramName))
+                );
+            } else {
+                $isParamNameInvalid = (
+                    $paramName === ''
+                    || !\preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $paramName)
+                );
+            }
+            if ($isParamNameInvalid) {
                 throw new InvalidArgumentException(
                     "Invalid parameter name '{$paramName}' in route pattern '{$pattern}': "
-                        . "Names must start with a letter or underscore, "
-                        . "contain only alphanumeric characters or underscores, "
-                        . "and cannot be empty (e.g., ':user_id')."
+                    . "Parameter names must start with a letter or underscore, contain only alphanumeric characters or underscores, and cannot be empty (e.g., ':user_id')."
                 );
             }
             if (\in_array($paramName, $paramNames, true)) {
                 throw new InvalidArgumentException(
                     "Duplicate parameter name '{$paramName}' in route pattern '{$pattern}': "
-                        . "Each parameter name must be unique within a route."
+                    . "Each parameter name must be unique within a route pattern."
                 );
             }
             $paramNames[] = $paramName;
@@ -151,12 +149,12 @@ class RadixRouter
                 if ($i !== \array_key_last($segments)) {
                     throw new InvalidArgumentException(
                         "Invalid route pattern '{$pattern}': "
-                            . "Wildcard parameters (e.g., ':param*') must be the last segment in the route."
+                        . "Wildcard parameters (e.g., ':param*') must be the last segment in the route pattern."
                     );
                 }
-                $segment = '/wildcard_node';
+                $segment = self::NODE_WILDCARD;
             } else {
-                $segment = '/parameter_node';
+                $segment = self::NODE_PARAMETER;
             }
         }
         unset($segment);
@@ -167,26 +165,32 @@ class RadixRouter
                 $node = &$node[$segment];
             }
             foreach ($methods as $method) {
-                if (isset($node['/routes_node'][$method])) {
+                if (isset($node[self::NODE_ROUTES][$method])) {
+                    $currentPattern = $this->originalOptionalPattern ?? $pattern;
+                    $previousPattern = $node[self::NODE_ROUTES][$method]['orig_pattern'];
                     throw new InvalidArgumentException(
-                        "Route conflict: "
-                            . "Method '{$method}' with pattern '{$pattern}' is already registered."
+                        "Cannot add route '[{$method}] {$currentPattern}': this route is already registered at '[{$method}] {$previousPattern}'."
                     );
                 }
-                $node['/routes_node'][$method] = [
+                $node[self::NODE_ROUTES][$method] = [
                     'handler' => $handler,
                     'param_names' => $paramNames,
+                    'orig_pattern' => $this->originalOptionalPattern ?? $pattern,
                 ];
             }
         } else {
             foreach ($methods as $method) {
                 if (isset($this->static[$normalizedPattern][$method])) {
+                    $currentPattern = $this->originalOptionalPattern ?? $pattern;
+                    $previousPattern = $this->static[$normalizedPattern][$method]['orig_pattern'];
                     throw new InvalidArgumentException(
-                        "Route conflict: "
-                            . "Method '{$method}' with pattern '{$pattern}' is already registered."
+                        "Cannot add route '[{$method}] {$currentPattern}': this route is already registered at '[{$method}] {$previousPattern}'."
                     );
                 }
-                $this->static[$normalizedPattern][$method] = $handler;
+                $this->static[$normalizedPattern][$method] = [
+                    'handler' => $handler,
+                    'orig_pattern' => $this->originalOptionalPattern ?? $pattern,
+                ];
             }
         }
 
@@ -204,50 +208,17 @@ class RadixRouter
      *     params?: array<string, string>,
      *     allowed_methods?: list<string>
      * }
-     * 
-     * Example:
-     * ```php
-     * $router = new \Wilaak\Http\RadixRouter();
-     *
-     * $router->add('GET', '/:world?', function ($world = 'World') {
-     *     echo "Hello, $world!";
-     * });
-     *
-     * $method = $_SERVER['REQUEST_METHOD'];
-     *
-     * $path = rawurldecode(
-     *     strtok($_SERVER['REQUEST_URI'], '?')
-     * );
-     *
-     * $result = $router->lookup($method, $path);
-     *
-     * switch ($result['code']) {
-     *     case 200:
-     *         $result['handler'](...$result['params']);
-     *         break;
-     *
-     *     case 404:
-     *         http_response_code(404);
-     *         echo '404 Not Found';
-     *         break;
-     *
-     *     case 405:
-     *         header('Allow: ' . implode(',', $result['allowed_methods']));
-     *         http_response_code(405);
-     *         echo '405 Method Not Allowed';
-     *         break;
-     * }
-     * ```
      */
     public function lookup(string $method, string $path): array
     {
         $normalizedPath = \rtrim($path, '/');
 
         if (isset($this->static[$normalizedPath])) {
-            if (isset($this->static[$normalizedPath][$method])) {
+            $route = $this->static[$normalizedPath][$method] ?? null;
+            if ($route !== null) {
                 return [
                     'code' => 200,
-                    'handler' => $this->static[$normalizedPath][$method],
+                    'handler' => $route['handler'],
                     'params' => [],
                 ];
             }
@@ -261,61 +232,59 @@ class RadixRouter
         $params = [];
         $node = $this->tree;
         foreach ($segments as $i => $segment) {
-            if (isset($node['/wildcard_node'])) {
-                $wildcard = [
-                    'node' => $node['/wildcard_node'],
-                    'params' => $params,
-                    'index' => $i,
-                ];
+            if (isset($node[self::NODE_WILDCARD])) {
+                $wildcardNode = $node[self::NODE_WILDCARD];
+                $wildcardParams = $params;
+                $wildcardIndex = $i;
             }
             if (isset($node[$segment])) {
                 $node = $node[$segment];
-            } elseif ($segment !== '' && isset($node['/parameter_node'])) {
-                $node = $node['/parameter_node'];
+            } elseif ($segment !== '' && isset($node[self::NODE_PARAMETER])) {
+                $node = $node[self::NODE_PARAMETER];
                 $params[] = $segment;
             } else {
-                $node = [];
+                unset($node);
                 break;
             }
         }
 
-        if (isset($node['/routes_node'][$method])) {
-            $route = $node['/routes_node'][$method];
-            return [
-                'code' => 200,
-                'handler' => $route['handler'],
-                'params' => \array_combine($route['param_names'], $params),
-            ];
-        } else if (isset($node['/routes_node'])) {
+        if (isset($node[self::NODE_ROUTES])) {
+            $route = $node[self::NODE_ROUTES][$method] ?? null;
+            if ($route !== null) {
+                return [
+                    'code' => 200,
+                    'handler' => $route['handler'],
+                    'params' => \array_combine($route['param_names'], $params),
+                ];
+            }
             return [
                 'code' => 405,
-                'allowed_methods' => \array_keys($node['/routes_node']),
+                'allowed_methods' => \array_keys($node[self::NODE_ROUTES]),
             ];
         }
 
-        if (isset($node['/wildcard_node'])) {
-            $wildcard = [
-                'node' => $node['/wildcard_node'],
-                'params' => $params,
-                'index' => $i + 1,
-            ];
+        if (isset($node[self::NODE_WILDCARD])) {
+            $wildcardNode = $node[self::NODE_WILDCARD];
+            $wildcardParams = $params;
+            $wildcardIndex = $i + 1;
         }
 
-        if (isset($wildcard['node']['/routes_node'][$method])) {
-            $route = $wildcard['node']['/routes_node'][$method];
-            $params = \array_merge(
-                $wildcard['params'],
-                [\implode('/', \array_slice($segments, $wildcard['index']))]
-            );
-            return [
-                'code' => 200,
-                'handler' => $route['handler'],
-                'params' => \array_combine($route['param_names'], $params),
-            ];
-        } else if (isset($wildcard['node']['/routes_node'])) {
+        if (isset($wildcardNode[self::NODE_ROUTES])) {
+            $route = $wildcardNode[self::NODE_ROUTES][$method] ?? null;
+            if ($route !== null) {
+                $params = \array_merge(
+                    $wildcardParams,
+                    [\implode('/', \array_slice($segments, $wildcardIndex))]
+                );
+                return [
+                    'code' => 200,
+                    'handler' => $route['handler'],
+                    'params' => \array_combine($route['param_names'], $params),
+                ];
+            }
             return [
                 'code' => 405,
-                'allowed_methods' => \array_keys($wildcard['node']['/routes_node']),
+                'allowed_methods' => \array_keys($wildcardNode[self::NODE_ROUTES]),
             ];
         }
 
@@ -328,10 +297,9 @@ class RadixRouter
      * For example, '/users/:id?/:action?' produces:
      *   ['/users', '/users/:id', '/users/:id/:action']
      *
-     * @param string $pattern
      * @return array<int, string>
      *
-     * @throws InvalidArgumentException If optional parameters are not trailing.
+     * @throws InvalidArgumentException If optional parameters are not in trailing segments.
      */
     private function getOptionalParameterVariants(string $pattern): array
     {
@@ -352,8 +320,8 @@ class RadixRouter
                 if ($optionalFound) {
                     throw new InvalidArgumentException(
                         "Invalid route pattern '{$pattern}': "
-                            . "Optional parameters (e.g., ':param?') must only appear "
-                            . "in the last trailing segments of the route."
+                        . "Optional parameters (e.g., ':param?') must only appear "
+                        . 'in the last trailing segments of the route pattern.'
                     );
                 }
                 $currentSegments[] = $segment;
