@@ -6,6 +6,12 @@ namespace Wilaak\Http;
 
 use InvalidArgumentException;
 
+/**
+ * High-performance HTTP request router for PHP
+ *
+ * @license WTFPL-2.1
+ * @link    https://github.com/Wilaak/RadixRouter
+ */
 class RadixRouter
 {
     public array $tree = [];
@@ -257,7 +263,7 @@ class RadixRouter
      *
      * @return array<int, string> List of route pattern variants.
      *
-     * @throws InvalidArgumentException If optional parameters are not in trailing segments.
+     * @throws InvalidArgumentException If optional parameters are not in the last trailing segments.
      */
     private function expandOptionalPattern(string $pattern): array
     {
@@ -289,5 +295,58 @@ class RadixRouter
         $variants[] = \implode('/', $current);
 
         return $variants;
+    }
+
+
+    /**
+     * Returns a list of all registered routes in the router.
+     *
+     * @return array<int, array{
+     *     method: string,
+     *     handler: mixed,
+     *     pattern: string
+     * }>
+     */
+    public function list(): array
+    {
+        $seen = [];
+        $routes = [];
+        $extract = function ($node) use (&$extract, &$routes, &$seen) {
+            if (!is_array($node)) {
+                return;
+            }
+            foreach ($node as $key => $child) {
+                if ($key === self::NODE_ROUTES && is_array($child)) {
+                    foreach ($child as $method => $route) {
+                        if ($seen[$method . $route['pattern']] ?? false) {
+                            continue;
+                        }
+                        $seen[$method . $route['pattern']] = true;
+                        $routes[] = [
+                            'method' => $method,
+                            'pattern' => $route['pattern'],
+                            'handler' => $route['handler'],
+                        ];
+                    }
+                } else {
+                    $extract($child);
+                }
+            }
+        };
+        $extract($this->tree);
+        foreach ($this->static as $pattern => $methods) {
+            foreach ($methods as $method => $route) {
+                if ($seen[$method . $route['pattern']] ?? false) {
+                    continue;
+                }
+                $seen[$method . $route['pattern']] = true;
+                $routes[] = [
+                    'method' => $method,
+                    'pattern' => $route['pattern'],
+                    'handler' => $route['handler'],
+                ];
+            }
+        }
+        return $routes;
     }
 }
