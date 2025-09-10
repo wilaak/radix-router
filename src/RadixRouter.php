@@ -7,7 +7,7 @@ namespace Wilaak\Http;
 use InvalidArgumentException;
 
 /**
- * High-performance HTTP request router for PHP
+ * High-performance radix tree based HTTP request router
  *
  * @license WTFPL-2.1
  * @link    https://github.com/Wilaak/RadixRouter
@@ -297,9 +297,8 @@ class RadixRouter
         return $variants;
     }
 
-
     /**
-     * Returns a list of all registered routes in the router.
+    * Retrieves all routes currently registered in the router.
      *
      * @return array<int, array{
      *     method: string,
@@ -312,11 +311,11 @@ class RadixRouter
         $seen = [];
         $routes = [];
         $extract = function ($node) use (&$extract, &$routes, &$seen) {
-            if (!is_array($node)) {
+            if (!\is_array($node)) {
                 return;
             }
             foreach ($node as $key => $child) {
-                if ($key === self::NODE_ROUTES && is_array($child)) {
+                if ($key === self::NODE_ROUTES && \is_array($child)) {
                     foreach ($child as $method => $route) {
                         if ($seen[$method . $route['pattern']] ?? false) {
                             continue;
