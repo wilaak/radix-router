@@ -74,10 +74,10 @@ switch ($result['code']) {
 
 ### Route Configuration
 
-> [!NOTE]   
-> Patterns are normalized, meaning you cannot register both `/about` and `/about/` as they will conflict.
-
 You can provide any value as the handler. The order of route matching is: static > parameter > wildcard. Below is an example showing the different ways to define routes.
+
+> [!NOTE]   
+> Patterns are normalized meaning `/about` and `/about/` will be treated as the same.
 
 ```php
 // Static route
