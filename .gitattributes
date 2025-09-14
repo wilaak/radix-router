@@ -7,5 +7,7 @@
 /phpstan.neon     export-ignore
 /phpunit.xml      export-ignore
 /README.md        export-ignore
+/CHANGELOG.md     export-ignore
+/.php-cs-fixer.dist.php export-ignore
 /composer.json    !export-ignore
 /src/             !export-ignore

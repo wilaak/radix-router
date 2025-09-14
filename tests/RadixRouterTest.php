@@ -85,7 +85,7 @@ class RadixRouterTest extends TestCase
         $info1 = $router->lookup('GET', '/files');
         $info2 = $router->lookup('GET', '/files/');
         $info3 = $router->lookup('GET', '/files/download/123');
-        $info5 = $router->lookup('GET', '/files/anything/else/');
+        $info5 = $router->lookup('GET', '/files/anything/else');
         $info6 = $router->lookup('GET', '/files/download/123/456');
 
         $this->assertEquals(200, $info1['code']);
@@ -240,7 +240,7 @@ class RadixRouterTest extends TestCase
         $this->assertEquals('handler', $info['handler']);
     }
 
-    public function testTrailingSlashIgnored()
+    public function testTrailingSlashNormalization()
     {
         $router = new RadixRouter();
         $router->add('GET', '/slash', 'handler');
@@ -496,5 +496,104 @@ class RadixRouterTest extends TestCase
         $router = new RadixRouter();
         $this->expectException(\InvalidArgumentException::class);
         $router->add([], '/bad', 'handler');
+    }
+
+    public function testRouteList()
+    {
+        $router = new RadixRouter();
+
+        $router->add('GET', '/users/:id', 'UserController@show');
+        $router->add('DELETE', '/users/:id', 'UserController@delete');
+        $router->add('GET', '/files/:path*', 'FileController@show');
+        $router->add('GET', '/posts/:id?', 'PostController@show');
+        $router->add('GET', '/users', 'UserController@index');
+        $router->add('POST', '/users', 'UserController@store');
+
+        $routes = $router->list();
+
+        $expected = [
+            [
+                'method' => 'GET',
+                'pattern' => '/files/:path*',
+                'handler' => 'FileController@show',
+            ],
+            [
+                'method' => 'GET',
+                'pattern' => '/posts/:id?',
+                'handler' => 'PostController@show',
+            ],
+            [
+                'method' => 'GET',
+                'pattern' => '/users',
+                'handler' => 'UserController@index',
+            ],
+            [
+                'method' => 'POST',
+                'pattern' => '/users',
+                'handler' => 'UserController@store',
+            ],
+            [
+                'method' => 'DELETE',
+                'pattern' => '/users/:id',
+                'handler' => 'UserController@delete',
+            ],
+            [
+                'method' => 'GET',
+                'pattern' => '/users/:id',
+                'handler' => 'UserController@show',
+            ],
+        ];
+
+        $this->assertEquals($expected, $routes);
+    }
+
+    public function testTrailingSlashCanonicalization()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/with-slash/', 'handler_with_slash');
+        $router->add('GET', '/without-slash', 'handler_without_slash');
+
+        // Test canonicalization for route with trailing slash
+        $canonical1 = $router->canonicalize('/with-slash', [
+            'pattern' => '/with-slash/',
+            'handler' => 'handler_with_slash',
+            'params' => [],
+            'code' => 200,
+        ]);
+        $this->assertEquals('/with-slash/', $canonical1);
+
+        $canonical2 = $router->canonicalize('/with-slash/', [
+            'pattern' => '/with-slash/',
+            'handler' => 'handler_with_slash',
+            'params' => [],
+            'code' => 200,
+        ]);
+        $this->assertEquals('/with-slash/', $canonical2);
+
+        // Test canonicalization for route without trailing slash
+        $canonical3 = $router->canonicalize('/without-slash/', [
+            'pattern' => '/without-slash',
+            'handler' => 'handler_without_slash',
+            'params' => [],
+            'code' => 200,
+        ]);
+        $this->assertEquals('/without-slash', $canonical3);
+
+        $canonical4 = $router->canonicalize('/without-slash', [
+            'pattern' => '/without-slash',
+            'handler' => 'handler_without_slash',
+            'params' => [],
+            'code' => 200,
+        ]);
+        $this->assertEquals('/without-slash', $canonical4);
+
+        // Test multiple trailing slashes
+        $canonical5 = $router->canonicalize('/with-slash///', [
+            'pattern' => '/with-slash/',
+            'handler' => 'handler_with_slash',
+            'params' => [],
+            'code' => 200,
+        ]);
+        $this->assertEquals('/with-slash/', $canonical5);
     }
 }

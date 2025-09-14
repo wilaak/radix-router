@@ -1,0 +1,98 @@
+<?php
+
+require __DIR__ . '/../../vendor/autoload.php';
+
+// Get parameters from the query string
+$suite = $_GET['suite'] ?? null;
+$routerClass = $_GET['router'] ?? null;
+$iterations = isset($_GET['iterations']) ? (int)$_GET['iterations'] : null;
+$benchmarkDuration = isset($_GET['duration']) ? (float)$_GET['duration'] : null;
+
+if (!$suite || !$routerClass || !class_exists($routerClass)) {
+    header('Content-Type: application/json; charset=utf-8');
+    $reason = null;
+    if (!$suite) {
+        $reason = 'Missing suite parameter.';
+    } elseif (!$routerClass) {
+        $reason = 'Missing router parameter.';
+    } elseif (!class_exists($routerClass)) {
+        $reason = "Router class '$routerClass' does not exist.";
+    }
+    echo json_encode([
+        'error' => 'Invalid parameters',
+        'reason' => $reason,
+        'usage' => '?suite={suite_name}&router={router_class}&[iterations=N]&[duration=SECONDS]'
+    ]);
+    exit(1);
+}
+
+header('Content-Type: application/json');
+
+$routerName = $routerClass::details()['name'];
+$routes = require __DIR__ . "/../routes/{$suite}.php";
+if (!is_dir(__DIR__ . "/../cache")) {
+    mkdir(__DIR__ . "/../cache", 0777, true);
+}
+$router = new $routerClass();
+$router->mount(__DIR__ . "/../cache/{$routerName}_{$suite}.php");
+$adaptedRoutes = $router->adapt($routes);
+
+// Measure register time
+$registerStart = microtime(true);
+$router->register($adaptedRoutes);
+$registerEnd = microtime(true);
+$registerTimeMs = ($registerEnd - $registerStart) * 1000;
+
+unset($adaptedRoutes);
+gc_collect_cycles();
+if (function_exists('memory_reset_peak_usage')) {
+    memory_reset_peak_usage();
+}
+
+$routeCount = count($routes);
+$totalIterations = 0;
+$duration = 0.0;
+
+if ($iterations !== null && $iterations > 0) {
+    // Run for a fixed number of iterations
+    $start = microtime(true);
+    for ($i = 0; $i < $iterations; $i++) {
+        $index = $i % $routeCount;
+        $path = $routes[$index];
+        $router->lookup($path);
+    }
+    $end = microtime(true);
+    $duration = $end - $start;
+    $totalIterations = $iterations;
+} else {
+    // Time-based benchmark: run as many iterations as possible in $benchmarkDuration seconds
+    $benchmarkDuration = $benchmarkDuration > 0 ? $benchmarkDuration : 1.0;
+    $batchSize = 10000;
+    $start = microtime(true);
+    $end = $start;
+    while (($end - $start) < $benchmarkDuration) {
+        for ($i = 0; $i < $batchSize; $i++) {
+            $index = ($totalIterations + $i) % $routeCount;
+            $path = $routes[$index];
+            $router->lookup($path);
+        }
+        $totalIterations += $batchSize;
+        $end = microtime(true);
+    }
+    $duration = $end - $start;
+}
+
+$lookupsPerSecond = $duration > 0 ? $totalIterations / $duration : 0;
+
+$result = [
+    'router' => $routerName,
+    'router_class' => $routerClass,
+    'suite' => $suite,
+    'lookups_per_second' => $lookupsPerSecond,
+    'total_iterations' => $totalIterations,
+    'duration_seconds' => $duration,
+    'peak_memory_kb' => memory_get_peak_usage() / 1024,
+    'register_time_ms' => $registerTimeMs,
+];
+echo json_encode($result);
+exit(0);
