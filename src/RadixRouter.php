@@ -9,7 +9,7 @@ use InvalidArgumentException;
 /**
  * High-performance radix tree based HTTP request router
  *
- * @license WTFPL-2.1
+ * @license WTFPL-2
  * @link    https://github.com/Wilaak/RadixRouter
  */
 class RadixRouter
