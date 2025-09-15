@@ -18,6 +18,7 @@ Notable changes to this project goes here
 - Exception messages for route conflicts are now more user friendly, providing clearer context.
 - Updated benchmark scripts for easier testing and more realistic results.
 - Composer now always includes the router without autoloading for better startup performance.
+- Updated documentation with examples for path correction and new section for integrators.
 
 ### Improved
 
