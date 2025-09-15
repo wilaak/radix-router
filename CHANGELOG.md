@@ -2,29 +2,26 @@
 
 Notable changes to this project goes here
 
-## [v3.2.0] - 14.09.2025
+## [v3.2.0] - 15.09.2025
 
 ### Added
 
 - Method to list all registered routes.
-- Method to canonicalize request paths to the same style as the registered pattern.
 - Changelog with previous changes for better clarity and transparency.
 
 ### Changed
 
 - **[Potential Breaking]** Empty segments in route patterns (e.g. `//`) will now throw an exception in route registration.
-- Replaced use of the ctype extension in parameter name validation (added in `v3.0.0`) with preg_match for improved compatibility across PHP environments.
-- The route pattern is now included in lookup results if a route is found.
+- Replaced use of the ctype extension in parameter name validation (in `v3.0.0`) with preg_match for improved compatibility across PHP environments.
+- The route pattern is now included in lookup results.
+- Overhauled exception messages by standardizing their prefix and improving consistency.
+- Exception messages for route conflicts are now more user friendly, providing clearer context.
+- Updated benchmark scripts for easier testing and more realistic results.
+- Composer now always includes the router without autoloading for better startup performance.
 
 ### Improved
 
-- Improved performance of route lookups by being smarter about PHP’s copy-on-write (CoW) behavior.
-- Reduced hash map resolution overhead in lookups improving performance.
-- Updated benchmark scripts for easier testing and more realistic results.
-- Overhauled exception messages by standardizing their prefix and improving consistency.
-- Exception messages for route conflicts are now more user friendly and provide clearer context.
-- Composer now always includes the router without autoloading for better startup performance.
-
+- Improved performance of route lookups by being smarter about PHP’s copy-on-write (CoW) behavior and reducing hash map resolution overhead.
 
 ## [v3.1.1] - 01.09.2025
 

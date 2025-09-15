@@ -3,13 +3,7 @@
 ![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg)
 ![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg)
 
-This library provides a lightweight radix tree based HTTP request router implementation (see [benchmarks](#benchmarks) and [integrations](#integrations))
-
-### Features
-
-- High-performance dynamic route matching using a radix tree
-- Named route parameters with optional and wildcard types
-- Canonical URL redirects; don't worry about trailing slashes or SEO
+This library provides a minimal radix tree based HTTP request router implementation (see [benchmarks](#benchmarks) and [integrations](#integrations))
 
 ## Install
 
@@ -38,20 +32,27 @@ $router->add(['GET'], '/hello/:name?', function ($name = 'World') {
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Get the request path, removing any query parameters (?foo=bar)
-$path = rawurldecode(
+$normalizedPath = $path = rawurldecode(
     strtok($_SERVER['REQUEST_URI'], '?')
 );
 
-$result = $router->lookup($method, $path);
+// Collapse slashes (e.g. //hello//world-> /hello/world)
+if (str_contains($path, '//')) {
+    $normalizedPath = preg_replace('#/+#', '/', $path);
+}
+
+$result = $router->lookup($method, $normalizedPath);
 
 switch ($result['code']) {
     case 200:
-        // Optionally redirect to the same style as route pattern
-        $canonical = $router->canonicalize($path, $result);
-        if ($path !== $canonical) {
-            // Note: This removes any query parameters
-            header("Location: $canonical", true, 301);
-            exit;
+        // Follow trailing slash convention from the route pattern
+        $canonicalPath = rtrim($normalizedPath, '/');
+        if (str_ends_with($result['pattern'], '/')) {
+            $canonicalPath = "{$canonicalPath}/";
+        }
+        if ($path !== $canonicalPath) {
+            header("Location: {$canonicalPath}", true, 301);
+            break;
         }
         // Route found, call the handler with parameters
         $result['handler'](...$result['params']);
@@ -66,6 +67,10 @@ switch ($result['code']) {
     case 405:
         // Method not allowed for this route
         header('Allow: ' . implode(',', $result['allowed_methods']));
+        if ($method === 'OPTIONS') {
+            http_response_code(204);
+            break;
+        }
         http_response_code(405);
         echo '405 Method Not Allowed';
         break;
@@ -77,7 +82,7 @@ switch ($result['code']) {
 You can provide any value as the handler. The order of route matching is: static > parameter > wildcard. Below is an example showing the different ways to define routes.
 
 > [!NOTE]   
-> Patterns are normalized meaning `/about` and `/about/` will be treated as the same.
+> Patterns are normalized, so `/about` and `/about/` are considered equivalent and will conflict if both are added as separate routes.
 
 ```php
 // Static route
@@ -115,26 +120,40 @@ $router->add(['GET'], '/files/:path*', 'FileController@show');
 
 ### Listing Routes
 
-The router provides a convenient method for listing all registered routes and their associated handlers.
+The router provides a convenient method for listing routes and their associated handlers.
 
 ```php
+// List all routes
+printf("%-8s  %-24s  %s\n", 'METHOD', 'PATTERN', 'HANDLER');
+printf("%s\n", str_repeat('-', 60));
 $routes = $router->list();
 foreach ($routes as $route) {
-    printf("%s %s %s\n", $route['method'], $route['pattern'], $route['handler']);
+    printf("%-8s  %-24s  %s\n", $route['method'], $route['pattern'], $route['handler']);
+}
+
+// List routes for specific path
+printf("%s\n", str_repeat('-', 60));
+$filtered = $router->list('/form');
+foreach ($filtered as $route) {
+    printf("%-8s  %-24s  %s\n", $route['method'], $route['pattern'], $route['handler']);
 }
 ```
 
 Example Output:
 
 ```
-GET     /files/:path*            FileController@show
-GET     /users                   UserController@index
-POST    /users                   UserController@store
-DELETE  /users/:id               UserController@delete
-GET     /users/:id               UserController@show
-GET     /archive/:year?/:month?  ArchiveController@show
-GET     /profile/:username?      ProfileController@show
-GET     /about                   AboutController@show
+METHOD    PATTERN                   HANDLER
+------------------------------------------------------------
+GET       /about                    AboutController@show
+GET       /archive/:year?/:month?   ArchiveController@show
+GET       /files/:path*             FileController@show
+GET       /form                     FormController@handle
+POST      /form                     FormController@handle
+GET       /profile/:username?       ProfileController@show
+GET       /users/:id                UserController@show
+------------------------------------------------------------
+GET       /form                     FormController@handle
+POST      /form                     FormController@handle
 ```
 
 ### Route Caching
@@ -164,9 +183,65 @@ $router->tree   = $routes['tree'];
 $router->static = $routes['static'];
 ```
 
+## For Integrators
+
+If you are using this as the foundation for your own router there are a couple things you should consider.
+
+### Handling OPTIONS Requests and CORS
+
+When handling OPTIONS requests, you should always inform the client which HTTP methods are allowed for the requested path by setting the Allow header. In most cases, you can upgrade a 405 Method Not Allowed result to an OPTIONS response. It can also be practical to automatically add this header if you explicitly register OPTIONS routes.
+
+To support [CORS Preflight requests](https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request) or set other custom headers, you may wish to modify automatic responses to OPTIONS requests. This is best handled via configuration or middleware in your integration layer.
+
+```php
+// ...existing code...
+
+switch ($result['code']) {
+    case 200:
+        // ...existing code...
+
+        // Automatically add necessary headers for OPTIONS requests
+        if ($method === 'OPTIONS') {
+            $allowedMethods = [];
+            $routes = $router->list('/request/path');
+            foreach ($routes as $route) {
+                $allowedMethods[] = $route['method'];
+            }
+            header('Allow: ' . implode(',', $allowedMethods));
+            // Add CORS headers here if needed, e.g.:
+            // if (isset($_SERVER['HTTP_ORIGIN'])) {
+            //     header('Access-Control-Allow-Origin: *');
+            //     header('Access-Control-Allow-Headers: ...');
+            //     header('Access-Control-Allow-Methods: ...');
+            // }
+        }
+
+        // ...existing code...
+        break;
+
+    case 404:
+        // ...existing code...
+        break;
+
+    case 405:
+        // Method not allowed for this route
+        header('Allow: ' . implode(',', $result['allowed_methods']));
+        if ($method === 'OPTIONS') {
+            http_response_code(204);
+            // Add CORS headers here if needed
+            break;
+        }
+        http_response_code(405);
+        echo '405 Method Not Allowed';
+        break;
+}
+```
+
 ### Handling HEAD Requests 
 
-If you are running outside of a traditional SAPI environment, ensure your GET routes also respond correctly to HEAD requests. Responses to HEAD requests must not include a message body.
+If you are running outside of a traditional SAPI environment (like a custom server), ensure your GET routes also respond correctly to HEAD requests. Responses to HEAD requests must not include a message body.
+
+This is usually done by converting HEAD to GET and returning just the headers, no body.
 
 ## Benchmarks
 
