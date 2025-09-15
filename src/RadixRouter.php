@@ -142,7 +142,7 @@ class RadixRouter
         unset($segment);
 
         if ($optional) {
-            $variants = $this->expandOptionalPattern($pattern);
+            $variants = $this->getOptionalVariants($pattern);
             $this->optionalPattern = $pattern;
             foreach ($variants as $variant) {
                 $this->add($method, $variant, $handler);
@@ -176,8 +176,8 @@ class RadixRouter
     /**
      * Looks up a route based on the HTTP method and path.
      *
-     * @param string $method The HTTP method (e.g., 'GET', 'POST').
-     * @param string $path The request path (e.g., '/users/123').
+     * @param string $method HTTP method (e.g., 'GET', 'POST').
+     * @param string $path Request path (e.g., '/users/123').
      * @return array{code: int, handler?: mixed, params?: array<string, string>, pattern?: string, allowed_methods?: list<string>}
      */
     public function lookup(string $method, string $path): array
@@ -190,7 +190,7 @@ class RadixRouter
             if (isset($result)) {
                 return $result;
             }
-            return ['code' => 405, 'allowed_methods' => \array_keys($routes)];
+            return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
         }
 
         $wildcardNode = [];
@@ -224,7 +224,7 @@ class RadixRouter
                 $result['params'] = \array_combine($result['params'], $params);
                 return $result;
             }
-            return ['code' => 405, 'allowed_methods' => \array_keys($routes)];
+            return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
         }
 
         if (isset($node[self::NODE_WILDCARD])) {
@@ -244,23 +244,40 @@ class RadixRouter
                 $result['params'] = \array_combine($result['params'], $params);
                 return $result;
             }
-            return ['code' => 405, 'allowed_methods' => \array_keys($routes)];
+            return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
         }
 
         return ['code' => 404];
     }
 
     /**
-     * List all registered routes in the router.
+     * List all routes or routes matching a specific path.
      *
+     * @param string|null $path If provided, lists only routes matching this path.
      * @return list<array{method: string, pattern: string, handler: mixed}>
      */
-    public function list(): array
+    public function list(?string $path = null): array
     {
-        $variants = [];
+        if (isset($path)) {
+            $result = $this->lookup('ANALPROBE', $path);
+            if ($result['code'] !== 405) {
+                return [];
+            }
+            $routes = [];
+            foreach ($result['_routes'] as $method => $route) {
+                $routes[] = [
+                    'method' => $method,
+                    'pattern' => $route['pattern'],
+                    'handler' => $route['handler'],
+                ];
+            }
+            return $routes;
+        }
+
+        $routes = [];
         foreach ($this->static as $methods) {
             foreach ($methods as $method => $route) {
-                $variants[] = [
+                $routes[] = [
                     'method' => $method,
                     'pattern' => $route['pattern'],
                     'handler' => $route['handler'],
@@ -268,10 +285,10 @@ class RadixRouter
             }
         }
 
-        $traverse = function (array $node) use (&$traverse, &$variants): void {
+        $traverse = function (array $node) use (&$traverse, &$routes): void {
             if (isset($node[self::NODE_ROUTES])) {
                 foreach ($node[self::NODE_ROUTES] as $method => $route) {
-                    $variants[] = [
+                    $routes[] = [
                         'method' => $method,
                         'pattern' => $route['pattern'],
                         'handler' => $route['handler'],
@@ -294,35 +311,33 @@ class RadixRouter
         $traverse($this->tree);
 
         $seen = [];
-        $variants = \array_filter(
-            $variants,
-            function ($route) use (&$seen) {
-                $key = $route['method'] . ' ' . $route['pattern'];
-                if (isset($seen[$key])) {
-                    return false;
-                }
+        $uniqueRoutes = [];
+        foreach ($routes as $route) {
+            $key = $route['method'] . ' ' . $route['pattern'];
+            if (!isset($seen[$key])) {
                 $seen[$key] = true;
-                return true;
+                $uniqueRoutes[] = $route;
             }
-        );
+        }
+        $routes = $uniqueRoutes;
 
-        \usort($variants, function ($a, $b) {
+        \usort($routes, function ($a, $b): int {
             return $a['pattern'] <=> $b['pattern'] ?: $a['method'] <=> $b['method'];
         });
 
-        return $variants;
+        return $routes;
     }
 
     /**
-     * Turns a route pattern with optional parameters into all its variants.
+     * Generates all variants of a route pattern with optional parameters.
      *
      * Example:
-     *   '/users/:id?/:action?' → ['/users', '/users/:id', '/users/:id/:action']
+     *   '/users/:id?/:action?' turns into ['/users', '/users/:id', '/users/:id/:action']
      *
-     * @param string $pattern The route pattern with optional parameters.
+     * @param string $pattern Route pattern with optional parameters.
      * @return list<string> List of route pattern variants.
      */
-    private function expandOptionalPattern(string $pattern): array
+    private function getOptionalVariants(string $pattern): array
     {
         $segments = \explode('/', \trim($pattern, '/'));
         $firstOptional = null;
@@ -335,31 +350,12 @@ class RadixRouter
         }
         $variants = [];
         for ($variantEnd = $firstOptional; $variantEnd <= $count; $variantEnd++) {
-            $variants[] = '/' . \implode('/', \array_map(
-                fn ($segment): string => \rtrim($segment, '?'),
-                \array_slice($segments, 0, $variantEnd)
-            ));
+            $parts = [];
+            foreach (\array_slice($segments, 0, $variantEnd) as $segment) {
+                $parts[] = \rtrim($segment, '?');
+            }
+            $variants[] = '/' . \implode('/', $parts);
         }
         return $variants;
-    }
-
-    /**
-     * Canonicalizes the request path to match the registered route's trailing slash style.
-     *
-     * @param string $path The original request path.
-     * @param array $result The result from the lookup method.
-     * @return string The canonicalized path.
-     */
-    public function canonicalize(string $path, array $result): string
-    {
-        if ($path === '/') {
-            return '/';
-        }
-        if (!isset($result['pattern'])) {
-            return $path;
-        }
-        $hasSlash = \str_ends_with($result['pattern'], '/');
-        $path = \rtrim($path, '/');
-        return $hasSlash ? "{$path}/" : $path;
     }
 }
