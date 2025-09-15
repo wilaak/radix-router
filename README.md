@@ -36,7 +36,7 @@ $normalizedPath = $path = rawurldecode(
     strtok($_SERVER['REQUEST_URI'], '?')
 );
 
-// Collapse slashes (e.g. //hello//world-> /hello/world)
+// Collapse slashes (e.g. //hello//world -> /hello/world)
 if (str_contains($path, '//')) {
     $normalizedPath = preg_replace('#/+#', '/', $path);
 }
