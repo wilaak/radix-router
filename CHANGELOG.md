@@ -15,7 +15,7 @@ Notable changes to this project goes here
 
 ### Removed
 
-- Unsafe redirection example for path correction in README, been moved to a different section and a warning has been included for this.
+- Unsafe redirect example for path correction in README.
 
 ## [v3.2.0] - 15.09.2025
 
@@ -26,18 +26,18 @@ Notable changes to this project goes here
 
 ### Changed
 
-- **[Potential Breaking]** Empty segments in route patterns (e.g. `//`) will now throw an exception in route registration.
-- Replaced use of the ctype extension in parameter name validation (introduced `v3.0.0`) with preg_match for improved compatibility.
-- The route pattern is now included in lookup results.
-- Overhauled exception messages by standardizing their prefix and improving consistency.
-- Exception messages for route conflicts are now more user friendly, providing clearer context.
-- Updated benchmark scripts for easier testing and more realistic results.
+- **[Potential Breaking]** Empty segments in route patterns (e.g. `//`) will now throw an exception.
+- Replaced use of ctype extension (introduced `v3.0.0`) with preg_match for improved compatibility.
+- Route pattern is now included in lookup results.
+- Overhauled exception messages; standardizing their prefix and improving consistency.
+- Route conflict exceptions now include both original patterns.
+- Updated benchmark scripts for more realistic results and easier usage.
 - Composer now always includes the router without autoloading for better startup performance.
 - Updated documentation with examples for path correction and new section for integrators.
 
 ### Improved
 
-- Improved lookup performance by being smarter about PHP’s copy-on-write behavior and reducing hash map resolution overhead.
+- Improved lookup performance by optimizing copy-on-write and hash map usage.
 
 ## [v3.1.1] - 01.09.2025
 
@@ -49,7 +49,7 @@ Notable changes to this project goes here
 
 ### Changed
 
-- **[Potential Breaking]** Route patterns now require a leading forward slash (e.g `/path`), an exception is thrown if omitted.
+- **[Potential Breaking]** Route patterns must now start with a forward slash.
 
 ### Improved
 
@@ -57,19 +57,19 @@ Notable changes to this project goes here
 
 ### Fixed
 
-- Root pattern is now correctly shown in exceptions when failing to register optional parameter variants.
+- Exceptions now correctly show the root pattern for optional parameters.
 
 ## [v3.0.2] - 17.08.2025
 
 ### Fixed
  
-- Prevent undefined behavior when mixing wildcard and optional markers at the end of a parameter (e.g `/:param*?`)
+- Fixed issues with wildcard and optional markers at parameter end.
 
 ## [v3.0.1] - 15.08.2025
 
 ### Improved
 
-- Failure when adding optional parameter variants now throws a more descriptive exception message.
+- Optional parameter errors now have clearer messages.
 
 ## [v3.0.0] - 10.08.2025
 
@@ -77,8 +77,7 @@ There has been one too many breaking changes for such a simple router. I am most
 
 ### Changed
 
-- **[BREAKING]** Lookups now return parameters as an associative array, mapping parameter names to their values.
-- **[BREAKING]** Parameter names must now start with a letter or underscore, contain only alphanumeric characters or underscores, and cannot be empty.
+- **[BREAKING]** Lookups now return parameters as a named array. Parameter names must start with a letter or underscore and only contain alphanumeric characters or underscores.
 
 ### Improved
 

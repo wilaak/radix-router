@@ -32,11 +32,9 @@ $router->add(['GET'], '/hello/:name?', function ($name = 'World') {
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Get the request path, removing any query parameters (?foo=bar)
-$path = rawurldecode(
-    strtok($_SERVER['REQUEST_URI'], '?')
-);
+$path = strtok($_SERVER['REQUEST_URI'], '?');
 
-$result = $router->lookup($method, $path);
+$result = $router->lookup($method, rawurldecode($path));
 
 switch ($result['code']) {
     case 200:
@@ -64,7 +62,7 @@ switch ($result['code']) {
 You can provide any value as the handler. The order of route matching is: static > parameter > wildcard. Below is an example showing the different ways to define routes.
 
 > [!NOTE]   
-> Patterns are normalized, so `/about` and `/about/` are treated as the same route. Attempting to register both will result in a conflict. Read more in [path correction](#path-correction).
+> Patterns are normalized meaning `/about` and `/about/` are treated as the same route. Read more in [path correction](#path-correction).
 
 ```php
 // Static route
@@ -138,6 +136,9 @@ GET       /form                     FormController@handle
 POST      /form                     FormController@handle
 ```
 
+
+## Advanced Usage 
+
 ### Route Caching
 
 By storing your routes in a PHP file you let OPcache keep it in memory between requests.
@@ -165,16 +166,12 @@ $router->tree   = $routes['tree'];
 $router->static = $routes['static'];
 ```
 
-## For Integrators
-
-If you are using this as the foundation for your own router there are a couple things you should consider.
-
 ### Path Correction
 
-By default the router strips trailing slashes, so registering a route like `/about` will also match `/about/` or even `/about//////`. While this is common behavior in most routers, you may prefer enforcing a single canonical URL. This prevents duplicate content for search engines, ensures consistency, improves caching efficiency, and simplifies analytics.
+Trailing slashes are ignored. While this is common behavior in most routers, you may prefer enforcing a single canonical URL. This can help prevent duplicate content for search engines, improve caching efficiency and simplify analytics.
 
 > [!CAUTION]    
-> Never use paths from `rawurldecode()` directly in HTTP headers. Decoded paths may contain dangerous characters (like `%0A` for newlines) that can lead to header injection vulnerabilities. Always use the original, encoded path when setting headers or performing redirects. Validate and sanitize user input as needed.
+> Never use decoded paths (e.g from `rawurldecode()`) directly in HTTP headers. Decoded paths may contain dangerous characters (like `%0A` for newlines) that can lead to header injection vulnerabilities. Always use the original, encoded path when performing redirects.
 
 
 #### Collapse Slashes
@@ -184,28 +181,29 @@ This finds multiple consecutive slashes in the path and replaces them with a sin
 ```php
 if (str_contains($path, '//')) {
     $path = preg_replace('#/+#', '/', $path);
-    header("Location: $path", true, 301);
-    exit();
+    header("Location: {$path}", true, 301);
+    exit;
 }
 ```
 
-#### Pattern Convention
+#### Trailing Slash Convention
 
-This ensures the request path’s trailing slash matches the route pattern. For example, accessing `/files/:folder` when `/files/:folder/` is registered will redirect to the version with a trailing slash.
+This ensures the request path’s trailing slash matches the route pattern. For example, accessing `/files/:folder` when `/files/:folder/` is registered will redirect to the trailing slash.
 
 ```php
 // ...existing code...
 
 switch ($result['code']) {
     case 200:
-        // ...existing code...
-
         // Follow trailing slash convention of the route pattern
-        if (str_ends_with($path, '/') !== str_ends_with($result['pattern'], '/')) {
-            $canonicalPath = rtrim($path, '/');
-            if (str_ends_with($result['pattern'], '/')) {
-                $canonicalPath = "{$canonicalPath}/";
+        $trailing = str_ends_with($result['pattern'], '/');
+        if (str_ends_with($path, '/') !== $trailing) {
+            $canonical = rtrim($path, '/');
+            if ($trailing) {
+                $canonical = "{$canonical}/";
             }
+            header("Location: {$canonical}", true, 301);
+            break;
         }
 
         // ...existing code...
@@ -223,9 +221,10 @@ switch ($result['code']) {
 
 ### Handling OPTIONS Requests and CORS
 
-For OPTIONS requests you should always inform the client which HTTP methods are allowed for the path by setting the Allow header. An easy way of enabling this behavior is by upgrading a 405 response and automatically injecting the headers for registered routes.
+For OPTIONS requests you should always inform the client which HTTP methods are allowed for the path by setting the Allow header. You can enable this behavior by upgrading a 405 response and injecting the headers for registered routes.
 
-You should also support [CORS Preflight requests](https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request) or to set other custom headers in these automatic responses. This is best handled via configuration or middleware in your integration.
+> [!NOTE]   
+> For Integrators: One might wish to modify automatic responses to OPTIONS requests, e.g. to support [CORS Preflight requests](https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request) or to set other custom headers. You should handle this via configuration or middleware in your integration.
 
 ```php
 // ...existing code...
@@ -272,11 +271,24 @@ switch ($result['code']) {
 You may wish to support more HTTP methods than the default ones, for example if you are going to create a WebDAV server.
 
 > [!NOTE]   
-> Methods must be in all uppercase and are only validated when adding routes.
+> Methods must be uppercase and are only validated when adding routes.
 
 ```php
-$webdavMethods = ['PROPFIND', 'PROPPATCH', 'MKCOL', 'COPY', 'MOVE', 'LOCK', 'UNLOCK', 'REPORT', 'MKACTIVITY', 'CHECKOUT', 'MERGE'];
+$webdavMethods = [
+    'PROPFIND',
+    'PROPPATCH',
+    'MKCOL',
+    'COPY',
+    'MOVE',
+    'LOCK',
+    'UNLOCK',
+    'REPORT',
+    'MKACTIVITY',
+    'CHECKOUT',
+    'MERGE'
+];
 
+// Add support for WebDAV
 array_merge(
     $router->allowedMethods,
     $webdavMethods
@@ -288,8 +300,6 @@ array_merge(
 If you are running outside of a traditional SAPI environment (like a custom server), ensure your GET routes also respond correctly to HEAD requests. Responses to HEAD requests must not include a message body.
 
 This is usually done by converting HEAD to GET and returning just the headers, no body.
-
-
 
 ## Benchmarks
 
@@ -369,9 +379,9 @@ All benchmarks are single-threaded and run on an Intel Xeon Gold 6138, PHP 8.4.1
 |   17 |  **FastRoute**               | No OPcache         |       317,329 |     1699.7 |           1.349 |
 |   18 |  **FastRoute (cached)**      | No OPcache         |       310,684 |     1605.8 |           0.571 |
 
-#### Large (500 routes)
+#### Huge (500 routes)
 
-This tests a large number of randomly generated routes containing at least 1 dynamic segment, depth ranging from 1 to 6.
+Randomly generated routes containing at least 1 dynamic segment with depth ranging from 1 to 6 segments.
 
 | Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Register (ms)   |
 |------|------------------------------|--------------------|---------------|------------|-----------------|

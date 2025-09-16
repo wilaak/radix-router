@@ -226,7 +226,7 @@ function printUsageScreen($cliSuites, $cliRouters, $cliModes) {
 }
 
 
-$cliSuites = ['simple', 'avatax', 'bitbucket', 'large', 'static', 'dynamic'];
+$cliSuites = ['simple', 'avatax', 'bitbucket', 'huge'];
 $cliRouters = [
     'RadixRouterAdapter' => RadixRouterAdapter::class,
     'RadixRouterCachedAdapter' => RadixRouterCachedAdapter::class,
