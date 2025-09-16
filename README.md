@@ -173,8 +173,9 @@ If you are using this as the foundation for your own router there are a couple t
 
 By default the router strips trailing slashes, so registering a route like `/about` will also match `/about/` or even `/about//////`. While this is common behavior in most routers, you may prefer enforcing a single canonical URL. This prevents duplicate content for search engines, ensures consistency, improves caching efficiency, and simplifies analytics.
 
-> [!WARNING]    
-> Using paths from `rawurldecode()` in headers can cause security vulnerabilities as it will allow injecting dangerous characters like `%0A` for newlines. Always use the encoded path when redirecting.
+> [!CAUTION]    
+> Never use paths from `rawurldecode()` directly in HTTP headers. Decoded paths may contain dangerous characters (like `%0A` for newlines) that can lead to header injection vulnerabilities. Always use the original, encoded path when setting headers or performing redirects. Validate and sanitize user input as needed.
+
 
 #### Collapse Slashes
 
