@@ -7,33 +7,34 @@ Notable changes to this project goes here
 ### Added
 
 - Method to list allowed HTTP methods for a specific path.
-- Sections for path correction and extending built-in HTTP methods in README.
+- Section for extending built-in HTTP methods in README.
 
 ### Changed
 
 - Updated benchmarking scripts for more realistic results and added options for convenience.
+- Section for path correction now references the new method in README.
 
-### Removed
+### Fixed
 
-- Unsafe redirect example for path correction in README.
+- Unsafe redirect example in path correction section is now removed and clarified.
 
 ## [v3.2.0] - 15.09.2025
 
 ### Added
 
-- Method to list all routes or routes matching a specific path.
+- Method to list all routes or routes for a specific path.
 - Changelog with previous changes for better clarity and transparency.
+- Examples for path correction and OPTIONS method handling in README.
 
 ### Changed
 
 - **[Potential Breaking]** Empty segments in route patterns (e.g. `//`) will now throw an exception.
-- Replaced use of ctype extension (introduced `v3.0.0`) with preg_match for improved compatibility.
+- Improved compatibility: Replaced `ctype` extension (introduced v3.0.0) with `preg_match`.
 - Route pattern is now included in lookup results.
 - Overhauled exception messages; standardizing their prefix and improving consistency.
-- Route conflict exceptions now include both original patterns.
+- Route conflict exceptions now show both the original conflicting patterns.
 - Updated benchmark scripts for more realistic results and easier usage.
-- Composer now always includes the router without autoloading for better startup performance.
-- Updated documentation with examples for path correction and new section for integrators.
+- Composer now includes the router by default, improving startup performance.
 
 ### Improved
 
@@ -63,13 +64,13 @@ Notable changes to this project goes here
 
 ### Fixed
  
-- Fixed issues with wildcard and optional markers at parameter end.
+- Prevent undefined behaviors when combining wildcard and optional parameter markers.
 
 ## [v3.0.1] - 15.08.2025
 
 ### Improved
 
-- Optional parameter errors now have clearer messages.
+- Route conflict exceptions now clarify when a pattern is optional, providing better context for debugging.
 
 ## [v3.0.0] - 10.08.2025
 

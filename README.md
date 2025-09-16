@@ -15,7 +15,7 @@ Requires PHP 8.0 or newer
 
 ## Usage
 
-Below is an example to get you started.
+Below is a basic usage example to get you started.
 
 ```PHP
 $router = new Wilaak\Http\RadixRouter;
@@ -168,13 +168,13 @@ $router->static = $routes['static'];
 
 ### Path Correction
 
-Trailing slashes are ignored. While this is common behavior in most routers, you may prefer enforcing a single canonical URL. This can help prevent duplicate content for search engines, improve caching efficiency and simplify analytics.
+Trailing slashes are ignored, meaning both `/about` and `/about/` will match. While this is common behavior in most routers, you may prefer enforcing a single canonical URL. This can help prevent duplicate content for search engines, improve caching efficiency and simplify analytics.
 
 > [!CAUTION]    
 > Never use decoded paths (e.g from `rawurldecode()`) directly in HTTP headers. Decoded paths may contain dangerous characters (like `%0A` for newlines) that can lead to header injection vulnerabilities. Always use the original, encoded path when performing redirects.
 
 
-#### Collapse Slashes
+#### Normalizing Consecutive Slashes
 
 This finds multiple consecutive slashes in the path and replaces them with a single slash. For example, accessing `/user//123` will redirect to `/user/123`.
 
