@@ -2,17 +2,32 @@
 
 Notable changes to this project goes here
 
+## [v3.3.0] - 16.09.2025
+
+### Added
+
+- Method to list allowed HTTP methods for a specific path.
+- Sections for path correction and extending built-in HTTP methods in README.
+
+### Changed
+
+- Updated benchmarking scripts for more realistic results and added options for convenience.
+
+### Removed
+
+- Unsafe redirection example for path correction in README, been moved to a different section and a warning has been included for this.
+
 ## [v3.2.0] - 15.09.2025
 
 ### Added
 
-- Method to list all registered routes.
+- Method to list all routes or routes matching a specific path.
 - Changelog with previous changes for better clarity and transparency.
 
 ### Changed
 
 - **[Potential Breaking]** Empty segments in route patterns (e.g. `//`) will now throw an exception in route registration.
-- Replaced use of the ctype extension in parameter name validation (in `v3.0.0`) with preg_match for improved compatibility across PHP environments.
+- Replaced use of the ctype extension in parameter name validation (introduced `v3.0.0`) with preg_match for improved compatibility.
 - The route pattern is now included in lookup results.
 - Overhauled exception messages by standardizing their prefix and improving consistency.
 - Exception messages for route conflicts are now more user friendly, providing clearer context.
@@ -22,7 +37,7 @@ Notable changes to this project goes here
 
 ### Improved
 
-- Improved performance of route lookups by being smarter about PHP’s copy-on-write (CoW) behavior and reducing hash map resolution overhead.
+- Improved lookup performance by being smarter about PHP’s copy-on-write behavior and reducing hash map resolution overhead.
 
 ## [v3.1.1] - 01.09.2025
 
@@ -34,7 +49,7 @@ Notable changes to this project goes here
 
 ### Changed
 
-- **[Potential Breaking]** Route registration now requires a leading forward slash (e.g `/path`), an exception is thrown if omitted.
+- **[Potential Breaking]** Route patterns now require a leading forward slash (e.g `/path`), an exception is thrown if omitted.
 
 ### Improved
 
