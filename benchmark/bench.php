@@ -57,7 +57,7 @@ function runBenchmark($port, $suite, $routerClass, $iterations = 1000000, $durat
         'duration' => $duration,
     ];
     $url = "http://127.0.0.1:$port/?" . http_build_query(array_filter($params, fn($v) => $v !== null));
-    $json = @file_get_contents($url);
+    $json = file_get_contents($url);
     $data = json_decode($json, true);
 
     if ($json === false || !is_array($data)) {
@@ -78,26 +78,6 @@ function getTestSuiteRoutesLength($suite): int
     $routes = require $file;
     return count($routes);
 }
-
-$allTestSuites = [
-    'simple',
-    'avatax',
-    'bitbucket',
-];
-
-$allRouters = [
-    RadixRouterAdapter::class,
-    RadixRouterCachedAdapter::class,
-    FastRouteAdapter::class,
-    FastRouteCachedAdapter::class,
-    SymfonyAdapter::class,
-    SymfonyCachedAdapter::class
-];
-$benchmarkModes = [
-    ['JIT=tracing', '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit_buffer_size=100M -d opcache.jit=tracing'],
-    ['OPcache', '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1'],
-    ['No OPcache', ''],
-];
 
 function startServers(array $benchmarkModes): array
 {
@@ -233,12 +213,112 @@ function printCombinedBenchmarkTable(array $results): void
     }
 }
 
-echo "PHP Router Benchmarks\n";
-echo "PHP Version: " . PHP_VERSION . "\n\n";
+function printUsageScreen($cliSuites, $cliRouters, $cliModes) {
+    echo "\nUsage: " . __FILE__ . " [--suite=\"simple, avatax, bitbucket\"] [--router=\"RadixRouterAdapter, FastRouteAdapter,...\"] [--mode=\"JIT=tracing, OPcache, No OPcache\"] [--all]\n";
+    echo "\nOptions:\n";
+    echo "  --suite   Comma-separated list of test suites (default: all)\n";
+    echo "  --router  Comma-separated list of routers (default: all)\n";
+    echo "  --mode    Comma-separated list of benchmark modes (default: all)\n";
+    echo "  --all     Run all suites, routers, and modes\n";
+    echo "\nAvailable suites: " . implode(', ', $cliSuites) . "\n";
+    echo "Available routers: " . implode(', ', array_keys($cliRouters)) . "\n";
+    echo "Available modes: " . implode(', ', array_keys($cliModes)) . "\n";
+}
+
+
+$cliSuites = ['simple', 'avatax', 'bitbucket', 'large', 'static', 'dynamic'];
+$cliRouters = [
+    'RadixRouterAdapter' => RadixRouterAdapter::class,
+    'RadixRouterCachedAdapter' => RadixRouterCachedAdapter::class,
+    'FastRouteAdapter' => FastRouteAdapter::class,
+    'FastRouteCachedAdapter' => FastRouteCachedAdapter::class,
+    'SymfonyAdapter' => SymfonyAdapter::class,
+    'SymfonyCachedAdapter' => SymfonyCachedAdapter::class,
+];
+$cliModes = [
+    'JIT=tracing' => ['JIT=tracing', '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit_buffer_size=100M -d opcache.jit=tracing'],
+    'OPcache' => ['OPcache', '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1'],
+    'No OPcache' => ['No OPcache', '-d opcache.enable=0'],
+];
+
+$opts = getopt('', ['suite::', 'router::', 'mode::', 'all']);
+
+if (isset($opts['all'])) {
+    $allTestSuites = $cliSuites;
+    $allRouters = array_values($cliRouters);
+    $benchmarkModes = array_values($cliModes);
+} else {
+    $hasAnyOption = isset($opts['suite']) || isset($opts['router']) || isset($opts['mode']);
+    if (!$hasAnyOption) {
+        printUsageScreen($cliSuites, $cliRouters, $cliModes);
+        exit(1);
+    }
+
+    // Suite selection
+    $allTestSuites = [];
+    if (isset($opts['suite'])) {
+        foreach (str_getcsv($opts['suite']) as $suite) {
+            $suite = trim($suite);
+            if (in_array($suite, $cliSuites, true)) {
+                $allTestSuites[] = $suite;
+            }
+        }
+    }
+    if (!$allTestSuites) {
+        $allTestSuites = $cliSuites;
+    }
+
+    // Router selection
+    $allRouters = [];
+    if (isset($opts['router'])) {
+        foreach (str_getcsv($opts['router']) as $router) {
+            $router = trim($router);
+            if (isset($cliRouters[$router])) {
+                $allRouters[] = $cliRouters[$router];
+            }
+        }
+    }
+    if (!$allRouters) {
+        $allRouters = array_values($cliRouters);
+    }
+
+    // Mode selection
+    $benchmarkModes = [];
+    if (isset($opts['mode'])) {
+        foreach (str_getcsv($opts['mode']) as $mode) {
+            $mode = trim($mode);
+            if (isset($cliModes[$mode])) {
+                $benchmarkModes[] = $cliModes[$mode];
+            }
+        }
+    }
+    if (!$benchmarkModes) {
+        $benchmarkModes = array_values($cliModes);
+    }
+}
+
+if (!$allTestSuites || !$allRouters) {
+    printUsageScreen($cliSuites, $cliRouters, $cliModes);
+    exit(1);
+}
+if (!$benchmarkModes) {
+    $benchmarkModes = array_values($cliModes);
+}
+
+echo "If you encounter any issues, try deleting the cache folder.\n";
+echo "\n";
+echo "Selected suites: " . implode(', ', $allTestSuites) . "\n";
+echo "Selected routers: " . implode(', ', array_map(function ($r) use ($cliRouters) {
+    return array_search($r, $cliRouters, true);
+}, $allRouters)) . "\n";
+echo "Selected modes: " . implode(', ', array_map(function ($m) {
+    return $m[0]; }, $benchmarkModes)) . "\n\n";
 
 $servers = startServers($benchmarkModes);
 warmupServers($allTestSuites, $allRouters, $benchmarkModes, $servers);
 
 $results = runBenchmarks($allTestSuites, $allRouters, $benchmarkModes, $servers);
-benchmarkRegistrationTimes($results, $servers, 10, 0.1);
+benchmarkRegistrationTimes($results, $servers, 100, 0.1);
 printCombinedBenchmarkTable($results);
+
+echo "\nTo ensure best results, run this test multiple times.\n";

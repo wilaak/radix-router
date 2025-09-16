@@ -5,8 +5,8 @@ require __DIR__ . '/../../vendor/autoload.php';
 // Get parameters from the query string
 $suite = $_GET['suite'] ?? null;
 $routerClass = $_GET['router'] ?? null;
-$iterations = isset($_GET['iterations']) ? (int)$_GET['iterations'] : null;
-$benchmarkDuration = isset($_GET['duration']) ? (float)$_GET['duration'] : null;
+$iterations = isset($_GET['iterations']) ? (int) $_GET['iterations'] : null;
+$benchmarkDuration = isset($_GET['duration']) ? (float) $_GET['duration'] : null;
 
 if (!$suite || !$routerClass || !class_exists($routerClass)) {
     header('Content-Type: application/json; charset=utf-8');
@@ -37,19 +37,23 @@ $router = new $routerClass();
 $router->mount(__DIR__ . "/../cache/{$routerName}_{$suite}.php");
 $adaptedRoutes = $router->adapt($routes);
 
+$routeCount = count($routes);
+
 // Measure register time
 $registerStart = microtime(true);
 $router->register($adaptedRoutes);
+
+$index = 50 % $routeCount; // select some route to test
+$path = $routes[$index];
+$router->lookup($path);
+
 $registerEnd = microtime(true);
 $registerTimeMs = ($registerEnd - $registerStart) * 1000;
 
 unset($adaptedRoutes);
 gc_collect_cycles();
-if (function_exists('memory_reset_peak_usage')) {
-    memory_reset_peak_usage();
-}
+memory_reset_peak_usage();
 
-$routeCount = count($routes);
 $totalIterations = 0;
 $duration = 0.0;
 
