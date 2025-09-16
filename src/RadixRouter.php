@@ -329,6 +329,17 @@ class RadixRouter
     }
 
     /**
+     * List allowed HTTP methods for a given path.
+     * 
+     * @param string $path Request path (e.g., '/users/123').
+     * @return list<string> List of allowed HTTP methods for the path.
+     */
+    public function methods(string $path): array
+    {
+        return $this->lookup('ANALPROBE', $path)['allowed_methods'] ?? [];
+    }
+
+    /**
      * Generates all variants of a route pattern with optional parameters.
      *
      * Example:
