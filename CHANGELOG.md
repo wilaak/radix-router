@@ -9,8 +9,8 @@ This release provides an important bug fix for users running v3.2.0 and v3.3.0. 
 ### Added
 
 - Support for required wildcard parameters (e.g. `/assets/:resource+`).
-- Path traversal warnings for wildcard examples in README
-- Examples for using required wildcard parameters in README
+- Path traversal warnings for wildcard examples in README.
+- Examples for using required wildcard parameters in README.
 
 ### Improved
 

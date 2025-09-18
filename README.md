@@ -107,7 +107,7 @@ $router->add(['GET'], '/archive/:year?/:month?', 'ArchiveController@show');
 Also known as catch-all, splat, greedy, rest, or path remainder parameters. These capture all remaining path segments.
 
 > [!CAUTION]    
-> When using wildcard parameters to access files or directories, always validate and sanitize user input. Never use captured path segments directly in filesystem operations. Path traversal attacks (e.g., `../` or absolute paths) can expose sensitive files or directories. Use functions like `realpath()` and restrict access to a safe base directory.
+> When using wildcard parameters to access files or directories, always validate and sanitize user input. Never use captured path segments directly in filesystem operations. Path traversal attacks (e.g. `../` or absolute paths) can expose sensitive files or directories. Use functions like `realpath()` and restrict access to a safe base directory.
 
 ```php
 // Required wildcard parameter (one or more segments)
