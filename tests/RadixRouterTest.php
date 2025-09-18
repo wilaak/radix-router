@@ -627,7 +627,7 @@ class RadixRouterTest extends TestCase
         $this->assertEquals($expected, $routes);
     }
 
-    public function testMixingWildcardAndOptionalMarker() 
+    public function testMixingWildcardAndOptionalMarker()
     {
         $router = new RadixRouter();
         $this->expectException(\InvalidArgumentException::class);
@@ -659,5 +659,36 @@ class RadixRouterTest extends TestCase
         $this->assertEqualsCanonicalizing(['GET', 'POST'], $methods1);
         $this->assertEqualsCanonicalizing(['DELETE'], $methods2);
         $this->assertEquals([], $methods3);
+    }
+
+    public function testOptionalWildcardPrioritization()
+    {
+        $router = new RadixRouter();
+
+        $router->add('DELETE', '/:test+', 'required');
+        $router->add('POST', '/:test*', 'optional');
+        $router->add('GET', '/demo/:test+', 'demo_required');
+
+        $allowedMethods = $router->lookup('DELETE', '/')['allowed_methods'];
+        $this->assertEquals(['POST'], $allowedMethods);
+
+        $info = $router->lookup('POST', '/demo');
+        $this->assertEquals('optional', $info['handler']);
+
+
+        $info = $router->lookup('DELETE', '/demo');
+        $this->assertEquals('required', $info['handler']);
+    }
+
+    public function testOptionalWildcardListingPrioritization()
+    {
+        $router = new RadixRouter();
+
+        $router->add('GET', '/:test*', 'optional');
+        $router->add('POST', '/:test+', 'required');
+
+        $routes = $router->list('/');
+
+        $this->assertCount(1, $routes);
     }
 }

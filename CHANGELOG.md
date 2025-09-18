@@ -2,6 +2,12 @@
 
 Notable changes to this project goes here
 
+## [v3.4.1] - 18.09.2025
+
+### Fixed
+
+- Fixed bug causing incorrect prioritization and grouping of wildcard parameters under certain conditions. ([#2](https://github.com/Wilaak/RadixRouter/issues/2))
+
 ## [v3.4.0] - 18.09.2025
 
 This release provides an important bug fix for users running v3.2.0 and v3.3.0. This could cause valid routes to be missed and result in incorrect 404 responses. If your application uses parameters that may be zero, upgrading is strongly recommended.

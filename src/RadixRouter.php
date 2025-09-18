@@ -224,22 +224,28 @@ class RadixRouter
         }
 
         $routes = $node[self::NODE_WILDCARD][self::NODE_ROUTES] ?? null;
-        if (isset($routes)) {
-            $result = $routes[$method] ?? null;
-            if (isset($result)) {
+        if ($routes) {
+            if (isset($routes[$method])) {
+                $result = $routes[$method];
                 $pattern = $result['pattern'];
-                $isOptional = \str_ends_with($pattern, '*') || \str_ends_with($pattern, '*/');
-                if (!$isOptional) {
-                    goto required_wildcard_match; // max win ^_^
+                if (\str_ends_with($pattern, '*') || \str_ends_with($pattern, '*/')) {
+                    $params[] = '';
+                    $result['params'] = \array_combine($result['params'], $params);
+                    return $result;
                 }
-                $params[] = '';
-                $result['params'] = \array_combine($result['params'], $params);
-                return $result;
             }
-            return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
+
+            $optionalRoutes = \array_filter($routes, function ($result) {
+                $pattern = $result['pattern'];
+                return \str_ends_with($pattern, '*') || \str_ends_with($pattern, '*/');
+            });
+
+            if (!empty($optionalRoutes)) {
+                $allowedMethods = \array_keys($optionalRoutes);
+                return ['code' => 405, 'allowed_methods' => $allowedMethods, '_routes' => $optionalRoutes];
+            }
         }
 
-        required_wildcard_match: // 😏
         $routes = $wildcardNode[self::NODE_ROUTES] ?? null;
         if (isset($routes)) {
             $result = $routes[$method] ?? null;
