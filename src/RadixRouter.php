@@ -204,7 +204,7 @@ class RadixRouter
             }
             if (isset($node[$segment])) {
                 $node = $node[$segment];
-            } elseif (!empty($segment) && isset($node[self::NODE_PARAMETER])) {
+            } elseif ($segment !== '' && isset($node[self::NODE_PARAMETER])) {
                 $node = $node[self::NODE_PARAMETER];
                 $params[] = $segment;
             } else {
