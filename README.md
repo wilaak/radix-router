@@ -1,7 +1,7 @@
 # RadixRouter
 
-![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg)
-![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg)
+![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)
+![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)
 
 This library provides a minimal radix tree based HTTP request router implementation (see [benchmarks](#benchmarks) and [integrations](#integrations))
 
@@ -20,11 +20,7 @@ Below is a basic usage example to get you started.
 ```PHP
 $router = new Wilaak\Http\RadixRouter;
 
-$router->add(['GET'], '/', function () {
-    echo "Welcome!";
-});
-
-$router->add(['GET'], '/hello/:name?', function ($name = 'World') {
+$router->add(['GET'], '/:name?', function ($name = 'World') {
     echo "Hello, $name!";
 });
 
@@ -33,8 +29,9 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 // Get the request path, removing any query parameters (?foo=bar)
 $path = strtok($_SERVER['REQUEST_URI'], '?');
+$decodedPath = rawurldecode($path);
 
-$result = $router->lookup($method, rawurldecode($path));
+$result = $router->lookup($method, $decodedPath);
 
 switch ($result['code']) {
     case 200:
@@ -59,43 +56,75 @@ switch ($result['code']) {
 
 ### Route Configuration
 
-You can provide any value as the handler. The order of route matching is: static > parameter > wildcard. Below is an example showing the different ways to define routes.
+You can provide any value as the handler. The order of route matching is: static > parameter > wildcard.
 
 > [!NOTE]   
 > Patterns are normalized meaning `/about` and `/about/` are treated as the same route. Read more in [path correction](#path-correction).
 
+#### Basic Routing
+
 ```php
-// Static route
+// Simple GET route
 $router->add(['GET'], '/about', 'AboutController@show');
 
 // Multiple HTTP methods
 $router->add(['GET', 'POST'], '/form', 'FormController@handle');
+```
 
+#### Required Parameters
+
+Matches only when the segment is present and not empty.
+
+```php
 // Required parameter
 $router->add(['GET'], '/users/:id', 'UserController@show');
 // Example requests:
 //   /users     -> no match
 //   /users/123 -> ['id' => '123']
+```
 
-// Optional parameter
+#### Optional Parameters
+
+Matches whether the segment is present or not.
+
+```php
+// Single optional parameter
 $router->add(['GET'], '/profile/:username?', 'ProfileController@show');
 // Example requests:
-//   /profile      -> [] (empty)
-//   /profile/jane -> ['username' => 'jane'])
+//   /profile         -> [] (no parameters)
+//   /profile/jane    -> ['username' => 'jane']
 
 // Chained optional parameters
 $router->add(['GET'], '/archive/:year?/:month?', 'ArchiveController@show');
 // Example requests:
-//   /archive         -> [] (empty)
-//   /archive/1974    -> ['year' => '1974']
-//   /archive/1974/06 -> ['year' => '1974', 'month' => '06']
+//   /archive             -> [] (no parameters)
+//   /archive/1974        -> ['year' => '1974']
+//   /archive/1974/06     -> ['year' => '1974', 'month' => '06']
+```
 
-// Wildcard (Catch-All) parameter
-$router->add(['GET'], '/files/:path*', 'FileController@show');
+#### Wildcard Parameters
+
+Also known as catch-all, splat, greedy, rest, or path remainder parameters. These capture all remaining path segments.
+
+> [!CAUTION]    
+> When using wildcard parameters to access files or directories, always validate and sanitize user input. Never use captured path segments directly in filesystem operations. Path traversal attacks (e.g., `../` or absolute paths) can expose sensitive files or directories. Use functions like `realpath()` and restrict access to a safe base directory.
+
+```php
+// Required wildcard parameter (one or more segments)
+// Matches any path under /assets with at least one segment
+$router->add(['GET'], '/assets/:resource+', 'AssetController@show');
 // Example requests:
-//   /files                  -> ['path' => ''] (empty string)
-//   /files/readme.txt       -> ['path' => 'readme.txt'])
-//   /files/images/photo.jpg -> ['path' => 'images/photo.jpg']
+//   /assets                 -> no match
+//   /assets/logo.png        -> ['resource' => 'logo.png']
+//   /assets/img/banner.jpg  -> ['resource' => 'img/banner.jpg']
+
+// Optional wildcard parameter (zero or more segments)
+// Matches /downloads and any subpath under it
+$router->add(['GET'], '/downloads/:file*', 'DownloadController@show');
+// Example requests:
+//   /downloads               -> ['file' => ''] (empty string)
+//   /downloads/report.pdf    -> ['file' => 'report.pdf']
+//   /downloads/docs/guide.md -> ['file' => 'docs/guide.md']
 ```
 
 ### Listing Routes
@@ -126,7 +155,8 @@ METHOD    PATTERN                   HANDLER
 ------------------------------------------------------------
 GET       /about                    AboutController@show
 GET       /archive/:year?/:month?   ArchiveController@show
-GET       /files/:path*             FileController@show
+GET       /assets/:resource+        AssetController@show
+GET       /downloads/:file*         DownloadController@show
 GET       /form                     FormController@handle
 POST      /form                     FormController@handle
 GET       /profile/:username?       ProfileController@show
@@ -168,10 +198,10 @@ $router->static = $routes['static'];
 
 ### Path Correction
 
-Trailing slashes are ignored, meaning both `/about` and `/about/` will match. While this is common behavior in most routers, you may prefer enforcing a single canonical URL. This can help prevent duplicate content for search engines, improve caching efficiency and simplify analytics.
+Trailing slashes are ignored, meaning both `/about` and `/about/` will be treated as the same route. While this is common behavior in most routers, you may prefer enforcing a single canonical URL. This can help prevent duplicate content for search engines, improve caching efficiency and simplify analytics.
 
 > [!CAUTION]    
-> Never use decoded paths (e.g from `rawurldecode()`) directly in HTTP headers. Decoded paths may contain dangerous characters (like `%0A` for newlines) that can lead to header injection vulnerabilities. Always use the original, encoded path when performing redirects.
+> Never use decoded paths e.g. from `rawurldecode()` directly in HTTP headers. Decoded paths may contain dangerous characters (like `%0A` for newlines) that can lead to header injection vulnerabilities. Always use the original, encoded path when performing redirects.
 
 
 #### Normalizing Consecutive Slashes
@@ -188,7 +218,14 @@ if (str_contains($path, '//')) {
 
 #### Trailing Slash Convention
 
-This ensures the request path’s trailing slash matches the route pattern. For example, accessing `/files/:folder` when `/files/:folder/` is registered will redirect to the trailing slash.
+This ensures the request path’s trailing slash matches the route pattern. For example, accessing `/explore` when `/explore/` is registered will redirect to the trailing slash.
+
+> [!NOTE]   
+> This example assumes you are already [Normalizing Consecutive Slashes](#normalizing-consecutive-slashes) as it will not correct multiple trailing slashes at the end.
+
+> [!NOTE]   
+> For Integrators: This option should be configurable as sometimes you may wish to have multiple trailing slash conventions in a single route. E.g. `/files/:path*` would want to differentiate between files and directories. 
+
 
 ```php
 // ...existing code...
@@ -235,7 +272,7 @@ switch ($result['code']) {
 
         // Add necessary headers if this is an OPTIONS request
         if ($method === 'OPTIONS') {
-            $allowedMethods = $router->methods($path);
+            $allowedMethods = $router->methods($decodedPath);
             header('Allow: ' . implode(',', $allowedMethods));
             // Add CORS headers here if needed, e.g.:
             // if (isset($_SERVER['HTTP_ORIGIN'])) {
@@ -266,6 +303,12 @@ switch ($result['code']) {
 }
 ```
 
+### Handling HEAD Requests 
+
+If you are running outside of a traditional SAPI environment (like a custom server), ensure your GET routes also respond correctly to HEAD requests. Responses to HEAD requests must not include a message body.
+
+This is usually done by converting HEAD to GET and returning just the headers, no body.
+
 ### Extending HTTP Methods
 
 You may wish to support more HTTP methods than the default ones, for example if you are going to create a WebDAV server.
@@ -295,15 +338,10 @@ array_merge(
 );
 ```
 
-### Handling HEAD Requests 
-
-If you are running outside of a traditional SAPI environment (like a custom server), ensure your GET routes also respond correctly to HEAD requests. Responses to HEAD requests must not include a message body.
-
-This is usually done by converting HEAD to GET and returning just the headers, no body.
-
 ## Benchmarks
 
 All benchmarks are single-threaded and run on an Intel Xeon Gold 6138, PHP 8.4.11.
+
 
 - **Lookups:** Measures in-memory route matching speed.
 - **Mem:** Peak memory usage during the in-memory lookup benchmark.

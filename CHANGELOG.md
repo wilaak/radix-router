@@ -2,6 +2,26 @@
 
 Notable changes to this project goes here
 
+## [v3.4.0] - 18.0.2025
+
+This release provides an important bug fix for users running v3.2.0 and v3.3.0. This could cause valid routes to be missed and result in incorrect 404 responses. If your application uses parameters that may be zero, upgrading is strongly recommended.
+
+### Added
+
+- Support for required wildcard parameters (e.g. `/assets/:resource+`).
+- Path traversal warnings for wildcard examples in README
+- Examples for using required wildcard parameters in README
+
+### Improved
+
+- Expanded test suite coverage for edge cases and advanced route patterns.
+
+### Fixed
+
+- Fixed an issue where required parameters failed to match when the value was 0 (introduced v3.2.0). 
+- Corrected a typo in the exception message for route conflicts.
+
+
 ## [v3.3.0] - 16.09.2025
 
 ### Added
@@ -129,7 +149,7 @@ This is a re-release of v2.0.0 which was quickly removed due to incorrect wildca
 
 ### Added
 
-- Ability to chain optional parameters (e.g `/:param?/:param?`).
+- Ability to chain optional parameters (e.g. `/:param?/:param?`).
 - Wildcard fallback for overlapping dynamic routes.
 
 ### Changed
