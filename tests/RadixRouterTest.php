@@ -626,4 +626,38 @@ class RadixRouterTest extends TestCase
         ];
         $this->assertEquals($expected, $routes);
     }
+
+    public function testMixingWildcardAndOptionalMarker() 
+    {
+        $router = new RadixRouter();
+        $this->expectException(\InvalidArgumentException::class);
+        $router->add('GET', '/foo/:bar*?', 'bad_handler');
+    }
+
+    public function testRequiredParameterEvaluation()
+    {
+        $router = new RadixRouter();
+
+        $router->add('GET', '/items/:id', 'handler');
+        $info1 = $router->lookup('GET', '/items/0');
+
+        $this->assertEquals(200, $info1['code']);
+    }
+
+    public function testListingMethodsForPath()
+    {
+        $router = new RadixRouter();
+
+        $router->add('GET', '/resource', 'get_handler');
+        $router->add('POST', '/resource', 'post_handler');
+        $router->add('DELETE', '/resource/:id', 'delete_handler');
+
+        $methods1 = $router->methods('/resource');
+        $methods2 = $router->methods('/resource/123');
+        $methods3 = $router->methods('/nonexistent');
+
+        $this->assertEqualsCanonicalizing(['GET', 'POST'], $methods1);
+        $this->assertEqualsCanonicalizing(['DELETE'], $methods2);
+        $this->assertEquals([], $methods3);
+    }
 }
