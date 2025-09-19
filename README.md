@@ -1,9 +1,15 @@
 # RadixRouter
 
 ![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)
-![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)
 
 This library provides a minimal radix tree based HTTP request router implementation (see [benchmarks](#benchmarks) and [integrations](#integrations))
+
+### Overview
+
+- High-performance dynamic route matching utilizing a radix tree algorithm.
+- Flexible route definitions with named parameters, supporting optional and wildcard types.
+- Convenient methods for listing registered routes and HTTP methods for paths.
+- A lightweight single-file routing solution that is only 330 lines of code.
 
 ## Install
 
@@ -15,19 +21,20 @@ Requires PHP 8.0 or newer
 
 ## Usage
 
-Below is a basic usage example to get you started.
+Below is an example to get you started.
 
 ```PHP
 $router = new Wilaak\Http\RadixRouter;
 
-$router->add(['GET'], '/:name?', function ($name = 'World') {
-    echo "Hello, $name!";
+// The handler can be any value, here we use an anonymous function
+$router->add('GET', '/:name?', function ($name = 'World') {
+    echo "Hello, {$name}!";
 });
 
 // Get the request HTTP method (GET, POST, etc.)
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Get the request path, removing any query parameters (?foo=bar)
+// Get the request path, removing any query parameters (e.g. ?foo=bar)
 $path = strtok($_SERVER['REQUEST_URI'], '?');
 $decodedPath = rawurldecode($path);
 
@@ -48,6 +55,10 @@ switch ($result['code']) {
     case 405:
         // Method not allowed for this route
         header('Allow: ' . implode(',', $result['allowed_methods']));
+        if ($method === 'OPTIONS') {
+            http_response_code(204);
+            break;
+        }
         http_response_code(405);
         echo '405 Method Not Allowed';
         break;
@@ -57,11 +68,6 @@ switch ($result['code']) {
 ### Route Configuration
 
 You can provide any value as the handler. The order of route matching is: static > parameter > wildcard.
-
-> [!NOTE]   
-> Patterns are normalized meaning `/about` and `/about/` are treated as the same route. Read more in [path correction](#path-correction).
-
-#### Basic Routing
 
 ```php
 // Simple GET route
@@ -91,20 +97,20 @@ Matches whether the segment is present or not.
 // Single optional parameter
 $router->add(['GET'], '/profile/:username?', 'ProfileController@show');
 // Example requests:
-//   /profile         -> [] (no parameters)
-//   /profile/jane    -> ['username' => 'jane']
+//   /profile      -> [] (no parameters)
+//   /profile/jane -> ['username' => 'jane']
 
 // Chained optional parameters
 $router->add(['GET'], '/archive/:year?/:month?', 'ArchiveController@show');
 // Example requests:
-//   /archive             -> [] (no parameters)
-//   /archive/1974        -> ['year' => '1974']
-//   /archive/1974/06     -> ['year' => '1974', 'month' => '06']
+//   /archive         -> [] (no parameters)
+//   /archive/1974    -> ['year' => '1974']
+//   /archive/1974/06 -> ['year' => '1974', 'month' => '06']
 ```
 
 #### Wildcard Parameters
 
-Also known as catch-all, splat, greedy, rest, or path remainder parameters. These capture all remaining path segments.
+Also known as catch-all, splat, greedy, rest, or path remainder parameters.
 
 > [!CAUTION]    
 > When using wildcard parameters to access files or directories, always validate and sanitize user input. Never use captured path segments directly in filesystem operations. Path traversal attacks (e.g. `../` or absolute paths) can expose sensitive files or directories. Use functions like `realpath()` and restrict access to a safe base directory.
@@ -114,9 +120,9 @@ Also known as catch-all, splat, greedy, rest, or path remainder parameters. Thes
 // Matches any path under /assets with at least one segment
 $router->add(['GET'], '/assets/:resource+', 'AssetController@show');
 // Example requests:
-//   /assets                 -> no match
-//   /assets/logo.png        -> ['resource' => 'logo.png']
-//   /assets/img/banner.jpg  -> ['resource' => 'img/banner.jpg']
+//   /assets                -> no match
+//   /assets/logo.png       -> ['resource' => 'logo.png']
+//   /assets/img/banner.jpg -> ['resource' => 'img/banner.jpg']
 
 // Optional wildcard parameter (zero or more segments)
 // Matches /downloads and any subpath under it
@@ -194,66 +200,6 @@ if (!file_exists($cache)) {
 $routes = require $cache;
 $router->tree   = $routes['tree'];
 $router->static = $routes['static'];
-```
-
-### Path Correction
-
-Trailing slashes are ignored, meaning both `/about` and `/about/` will be treated as the same route. While this is common behavior in most routers, you may prefer enforcing a single canonical URL. This can help prevent duplicate content for search engines, improve caching efficiency and simplify analytics.
-
-> [!CAUTION]    
-> Never use decoded paths e.g. from `rawurldecode()` directly in HTTP headers. Decoded paths may contain dangerous characters (like `%0A` for newlines) that can lead to header injection vulnerabilities. Always use the original, encoded path when performing redirects.
-
-
-#### Normalizing Consecutive Slashes
-
-This finds multiple consecutive slashes in the path and replaces them with a single slash. For example, accessing `/user//123` will redirect to `/user/123`.
-
-```php
-if (str_contains($path, '//')) {
-    $path = preg_replace('#/+#', '/', $path);
-    header("Location: {$path}", true, 301);
-    exit;
-}
-```
-
-#### Trailing Slash Convention
-
-This ensures the request path’s trailing slash matches the route pattern. For example, accessing `/explore` when `/explore/` is registered will redirect to the trailing slash.
-
-> [!NOTE]   
-> This example assumes you are already [Normalizing Consecutive Slashes](#normalizing-consecutive-slashes) as it will not correct multiple trailing slashes at the end.
-
-> [!NOTE]   
-> For Integrators: This option should be configurable as sometimes you may wish to have multiple trailing slash conventions in a single route. E.g. `/files/:path*` would want to differentiate between files and directories. 
-
-
-```php
-// ...existing code...
-
-switch ($result['code']) {
-    case 200:
-        // Follow trailing slash convention of the route pattern
-        $trailing = str_ends_with($result['pattern'], '/');
-        if (str_ends_with($path, '/') !== $trailing) {
-            $canonical = rtrim($path, '/');
-            if ($trailing) {
-                $canonical = "{$canonical}/";
-            }
-            header("Location: {$canonical}", true, 301);
-            break;
-        }
-
-        // ...existing code...
-        break;
-
-    case 404:
-        // ...existing code...
-        break;
-
-    case 405:
-        // ...existing code...
-        break;
-}
 ```
 
 ### Handling OPTIONS Requests and CORS
@@ -338,6 +284,66 @@ array_merge(
 );
 ```
 
+### Path Correction
+
+Trailing slashes are ignored, meaning both `/about` and `/about/` will be treated as the same route. While this is common behavior in most routers, you may prefer enforcing a single canonical URL. This can help prevent duplicate content for search engines, improve caching efficiency and simplify analytics.
+
+> [!CAUTION]    
+> Never use decoded paths e.g. from `rawurldecode()` directly in HTTP headers. Decoded paths may contain dangerous characters (like `%0A` for newlines) that can lead to header injection vulnerabilities. Always use the original, encoded path when performing redirects.
+
+
+#### Normalizing Consecutive Slashes
+
+This finds multiple consecutive slashes in the path and replaces them with a single slash. For example, accessing `/user//123` will redirect to `/user/123`.
+
+```php
+if (str_contains($path, '//')) {
+    $path = preg_replace('#/+#', '/', $path);
+    header("Location: {$path}", true, 301);
+    exit;
+}
+```
+
+#### Trailing Slash Convention
+
+This ensures the request path’s trailing slash matches the route pattern. For example, accessing `/explore` when `/explore/` is registered will redirect to the trailing slash.
+
+> [!NOTE]   
+> This example assumes you are already [Normalizing Consecutive Slashes](#normalizing-consecutive-slashes) as it will not correct multiple trailing slashes at the end.
+
+> [!NOTE]   
+> For Integrators: This option should be configurable as sometimes you may wish to have multiple trailing slash conventions in a single route. E.g. `/files/:path*` would want to differentiate between files and directories. 
+
+
+```php
+// ...existing code...
+
+switch ($result['code']) {
+    case 200:
+        // Follow trailing slash convention of the route pattern
+        $trailing = str_ends_with($result['pattern'], '/');
+        if (str_ends_with($path, '/') !== $trailing) {
+            $canonical = rtrim($path, '/');
+            if ($trailing) {
+                $canonical = "{$canonical}/";
+            }
+            header("Location: {$canonical}", true, 301);
+            break;
+        }
+
+        // ...existing code...
+        break;
+
+    case 404:
+        // ...existing code...
+        break;
+
+    case 405:
+        // ...existing code...
+        break;
+}
+```
+
 ## Benchmarks
 
 All benchmarks are single-threaded and run on an Intel Xeon Gold 6138, PHP 8.4.11.
@@ -352,9 +358,9 @@ All benchmarks are single-threaded and run on an Intel Xeon Gold 6138, PHP 8.4.1
 
 | Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Register (ms)   |
 |------|------------------------------|--------------------|---------------|------------|-----------------|
-|    1 |  🏆 **RadixRouter (cached)** | JIT=tracing        |     3,890,120 |      424.9 |           0.006 |
-|    2 |  🥈 **RadixRouter**        | JIT=tracing        |     3,649,340 |      499.5 |           0.042 |
-|    3 |  🥉 **FastRoute (cached)** | JIT=tracing        |     2,815,138 |      446.6 |           0.033 |
+|    1 |  **RadixRouter (cached)** | JIT=tracing        |     3,890,120 |      424.9 |           0.006 |
+|    2 |  **RadixRouter**        | JIT=tracing        |     3,649,340 |      499.5 |           0.042 |
+|    3 |  **FastRoute (cached)** | JIT=tracing        |     2,815,138 |      446.6 |           0.033 |
 |    4 |  **FastRoute**               | JIT=tracing        |     2,739,099 |      439.5 |           0.211 |
 |    5 |  **RadixRouter (cached)**    | OPcache            |     2,519,738 |      339.2 |           0.007 |
 |    6 |  **RadixRouter**             | OPcache            |     2,403,765 |      384.2 |           0.050 |
@@ -375,9 +381,9 @@ All benchmarks are single-threaded and run on an Intel Xeon Gold 6138, PHP 8.4.1
 
 | Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Register (ms)   |
 |------|------------------------------|--------------------|---------------|------------|-----------------|
-|    1 |  🏆 **RadixRouter (cached)** | JIT=tracing        |     2,326,472 |      339.7 |           0.006 |
-|    2 |  🥈 **RadixRouter**        | JIT=tracing        |     2,189,298 |      726.6 |           0.358 |
-|    3 |  🥉 **Symfony (cached)**   | JIT=tracing        |     1,728,377 |      347.9 |           0.069 |
+|    1 |  **RadixRouter (cached)** | JIT=tracing        |     2,326,472 |      339.7 |           0.006 |
+|    2 |  **RadixRouter**        | JIT=tracing        |     2,189,298 |      726.6 |           0.358 |
+|    3 |  **Symfony (cached)**   | JIT=tracing        |     1,728,377 |      347.9 |           0.069 |
 |    4 |  **RadixRouter (cached)**    | OPcache            |     1,682,310 |      339.7 |           0.009 |
 |    5 |  **RadixRouter**             | OPcache            |     1,579,697 |      726.6 |           0.332 |
 |    6 |  **RadixRouter**             | No OPcache         |     1,504,520 |     1820.5 |           0.333 |
@@ -398,9 +404,9 @@ All benchmarks are single-threaded and run on an Intel Xeon Gold 6138, PHP 8.4.1
 
 | Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Register (ms)   |
 |------|------------------------------|--------------------|---------------|------------|-----------------|
-|    1 |  🏆 **RadixRouter (cached)** | JIT=tracing        |     1,786,478 |      339.7 |           0.013 |
-|    2 |  🥈 **RadixRouter**        | JIT=tracing        |     1,664,734 |      652.0 |           0.389 |
-|    3 |  🥉 **RadixRouter (cached)** | OPcache            |     1,319,106 |      339.7 |           0.014 |
+|    1 |  **RadixRouter (cached)** | JIT=tracing        |     1,786,478 |      339.7 |           0.013 |
+|    2 |  **RadixRouter**        | JIT=tracing        |     1,664,734 |      652.0 |           0.389 |
+|    3 |  **RadixRouter (cached)** | OPcache            |     1,319,106 |      339.7 |           0.014 |
 |    4 |  **RadixRouter**             | OPcache            |     1,244,529 |      652.0 |           0.523 |
 |    5 |  **RadixRouter**             | No OPcache         |     1,191,630 |     1742.1 |           0.311 |
 |    6 |  **RadixRouter (cached)**    | No OPcache         |     1,143,738 |     1796.6 |           0.727 |
@@ -423,9 +429,9 @@ Randomly generated routes containing at least 1 dynamic segment with depth rangi
 
 | Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Register (ms)   |
 |------|------------------------------|--------------------|---------------|------------|-----------------|
-|    1 |  🏆 **RadixRouter (cached)** | JIT=tracing        |     1,769,118 |      339.3 |           0.012 |
-|    2 |  🥈 **RadixRouter**        | JIT=tracing        |     1,520,189 |     1724.6 |           0.698 |
-|    3 |  🥉 **RadixRouter (cached)** | OPcache            |     1,298,703 |      339.3 |           0.009 |
+|    1 |  **RadixRouter (cached)** | JIT=tracing        |     1,769,118 |      339.3 |           0.012 |
+|    2 |  **RadixRouter**        | JIT=tracing        |     1,520,189 |     1724.6 |           0.698 |
+|    3 |  **RadixRouter (cached)** | OPcache            |     1,298,703 |      339.3 |           0.009 |
 |    4 |  **RadixRouter**             | OPcache            |     1,199,993 |     1724.6 |           0.973 |
 |    5 |  **RadixRouter**             | No OPcache         |     1,131,474 |     2834.5 |           0.805 |
 |    6 |  **RadixRouter (cached)**    | No OPcache         |     1,021,850 |     2945.6 |           2.254 |
