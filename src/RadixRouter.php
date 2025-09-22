@@ -44,7 +44,7 @@ class RadixRouter
         if (\is_array($methods)) {
             if (empty($methods)) {
                 throw new InvalidArgumentException(
-                    "Invalid HTTP Method: Got empty array for pattern '{$pattern}'."
+                    "Invalid HTTP Method: Got empty array for pattern '{$pattern}'"
                 );
             }
             foreach ($methods as $method) {
@@ -57,17 +57,17 @@ class RadixRouter
 
         if (!\in_array($method, $this->allowedMethods, true)) {
             throw new InvalidArgumentException(
-                "Invalid HTTP Method: [{$method}] '{$pattern}': Allowed methods: " . \implode(', ', $this->allowedMethods) . '.'
+                "Invalid HTTP Method: [{$method}] '{$pattern}': Allowed methods: " . \implode(', ', $this->allowedMethods)
             );
         }
         if (!\str_starts_with($pattern, '/')) {
             throw new InvalidArgumentException(
-                "Invalid Pattern: [{$method}] '{$pattern}': Must start with a forward slash (e.g., '/about')."
+                "Invalid Pattern: [{$method}] '{$pattern}': Must start with a forward slash (e.g., '/about')"
             );
         }
         if (\str_contains($pattern, '//')) {
             throw new InvalidArgumentException(
-                "Invalid Pattern: [{$method}] '{$pattern}': Empty segments are not allowed (e.g., '//')."
+                "Invalid Pattern: [{$method}] '{$pattern}': Empty segments are not allowed (e.g., '//')"
             );
         }
 
@@ -79,8 +79,8 @@ class RadixRouter
                 $attempted = $this->optionalPattern ?? $pattern;
                 $conflicting = $this->static[$normalizedPattern][$method]['pattern'];
                 throw new InvalidArgumentException(
-                    "Route Conflict: [{$method}] '{$attempted}': Path is already registered."
-                    . ($attempted !== $conflicting ? " (conflicts with '{$conflicting}')." : '')
+                    "Route Conflict: [{$method}] '{$attempted}': Path is already registered"
+                    . ($attempted !== $conflicting ? " (conflicts with '{$conflicting}')" : '')
                 );
             }
             $this->static[$normalizedPattern][$method] = [
@@ -99,7 +99,7 @@ class RadixRouter
         foreach ($segments as $i => &$segment) {
             if ($isOptional && !\str_ends_with($segment, '?')) {
                 throw new InvalidArgumentException(
-                    "Invalid Pattern: [{$method}] '{$pattern}': Optional parameters are only allowed in the last trailing segments."
+                    "Invalid Pattern: [{$method}] '{$pattern}': Optional parameters are only allowed in the last trailing segments"
                 );
             }
             if (!\str_starts_with($segment, ':')) {
@@ -112,12 +112,12 @@ class RadixRouter
             if (!\preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $name)) {
                 throw new InvalidArgumentException(
                     "Invalid Pattern: [{$method}] '{$pattern}': "
-                    . "Parameter name '{$name}' must start with a letter or underscore and contain only letters, digits, or underscores."
+                    . "Parameter name '{$name}' must start with a letter or underscore and contain only letters, digits, or underscores"
                 );
             }
             if (isset($parameters[$name])) {
                 throw new InvalidArgumentException(
-                    "Invalid Pattern: [{$method}] '{$pattern}': Parameter name '{$name}' cannot be used more than once."
+                    "Invalid Pattern: [{$method}] '{$pattern}': Parameter name '{$name}' cannot be used more than once"
                 );
             }
             $parameters[$name] = $name;
@@ -129,7 +129,7 @@ class RadixRouter
             if (\str_ends_with($segment, '*') || \str_ends_with($segment, '+')) {
                 if ($i !== \array_key_last($segments)) {
                     throw new InvalidArgumentException(
-                        "Invalid Pattern: [{$method}] '{$pattern}': Wildcard parameters are only allowed as the last segment."
+                        "Invalid Pattern: [{$method}] '{$pattern}': Wildcard parameters are only allowed as the last segment"
                     );
                 }
                 $segment = self::NODE_WILDCARD;
@@ -158,8 +158,8 @@ class RadixRouter
             $attempted = $this->optionalPattern ?? $pattern;
             $conflicting = $node[self::NODE_ROUTES][$method]['pattern'];
             throw new InvalidArgumentException(
-                "Route Conflict: [{$method}] '{$attempted}': Path is already registered."
-                . ($attempted !== $conflicting ? " (conflicts with '{$conflicting}')." : '')
+                "Route Conflict: [{$method}] '{$attempted}': Path is already registered"
+                . ($attempted !== $conflicting ? " (conflicts with '{$conflicting}')" : '')
             );
         }
         $node[self::NODE_ROUTES][$method] = [
