@@ -2,11 +2,24 @@
 
 Notable changes to this project goes here
 
+## [v3.4.2] - 24.09.2025
+
+### Changed
+
+- Exception messages no longer end with periods, following PHP conventions.
+- Adjusted baseline memory usage in benchmarks.
+- Updated registration time benchmark for more realistic results.
+
+### Removed
+
+- Path correction section in README
+
+
 ## [v3.4.1] - 18.09.2025
 
 ### Fixed
 
-- Fixed bug causing incorrect prioritization and grouping of wildcard parameters under certain conditions. ([#2](https://github.com/Wilaak/RadixRouter/issues/2))
+- Fixed bug causing incorrect prioritization when mixing wildcard parameters under certain conditions. ([#2](https://github.com/Wilaak/RadixRouter/issues/2))
 
 ## [v3.4.0] - 18.09.2025
 
@@ -38,7 +51,7 @@ This release provides an important bug fix for users running v3.2.0 and v3.3.0. 
 ### Changed
 
 - Updated benchmarking scripts for more realistic results and added options for convenience.
-- Section for path correction now references the new method in README.
+- Section for handling OPTIONS requests now references the new method in README.
 
 ### Fixed
 
