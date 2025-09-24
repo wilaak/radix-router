@@ -105,6 +105,7 @@ class RadixRouter
             if (!\str_starts_with($segment, ':')) {
                 continue;
             }
+
             $name = \substr($segment, 1);
             if (\str_ends_with($name, '?') || \str_ends_with($name, '*') || \str_ends_with($name, '+')) {
                 $name = \substr($name, 0, -1);
