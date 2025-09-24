@@ -2,14 +2,7 @@
 
 ![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)
 
-This library provides a minimal radix tree based HTTP request router implementation (see [benchmarks](#benchmarks) and [integrations](#integrations))
-
-### Overview
-
-- High-performance dynamic route matching utilizing a radix tree algorithm.
-- Flexible route definitions with named parameters, supporting optional and wildcard types.
-- Convenient methods for listing registered routes and HTTP methods for paths.
-- A lightweight single-file routing solution that is only 330 lines of code.
+This library provides a minimal high-performance radix tree based HTTP request router implementation (see [benchmarks](#benchmarks) and [integrations](#integrations))
 
 ## Install
 
@@ -26,15 +19,12 @@ Below is an example to get you started.
 ```PHP
 $router = new Wilaak\Http\RadixRouter;
 
-// The handler can be any value, here we use an anonymous function
 $router->add('GET', '/:name?', function ($name = 'World') {
     echo "Hello, {$name}!";
 });
 
-// Get the request HTTP method (GET, POST, etc.)
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Get the request path, removing any query parameters (e.g. ?foo=bar)
 $path = strtok($_SERVER['REQUEST_URI'], '?');
 $decodedPath = rawurldecode($path);
 
@@ -55,10 +45,6 @@ switch ($result['code']) {
     case 405:
         // Method not allowed for this route
         header('Allow: ' . implode(',', $result['allowed_methods']));
-        if ($method === 'OPTIONS') {
-            http_response_code(204);
-            break;
-        }
         http_response_code(405);
         echo '405 Method Not Allowed';
         break;
@@ -68,6 +54,8 @@ switch ($result['code']) {
 ### Route Configuration
 
 You can provide any value as the handler. The order of route matching is: static > parameter > wildcard.
+
+#### Basic Routing
 
 ```php
 // Simple GET route
@@ -113,11 +101,10 @@ $router->add(['GET'], '/archive/:year?/:month?', 'ArchiveController@show');
 Also known as catch-all, splat, greedy, rest, or path remainder parameters.
 
 > [!CAUTION]    
-> When using wildcard parameters to access files or directories, always validate and sanitize user input. Never use captured path segments directly in filesystem operations. Path traversal attacks (e.g. `../` or absolute paths) can expose sensitive files or directories. Use functions like `realpath()` and restrict access to a safe base directory.
+> Never use captured path segments directly in filesystem operations. Path traversal attacks can expose sensitive files or directories. Use functions like `realpath()` and restrict access to a safe base directory.
 
 ```php
 // Required wildcard parameter (one or more segments)
-// Matches any path under /assets with at least one segment
 $router->add(['GET'], '/assets/:resource+', 'AssetController@show');
 // Example requests:
 //   /assets                -> no match
@@ -125,7 +112,6 @@ $router->add(['GET'], '/assets/:resource+', 'AssetController@show');
 //   /assets/img/banner.jpg -> ['resource' => 'img/banner.jpg']
 
 // Optional wildcard parameter (zero or more segments)
-// Matches /downloads and any subpath under it
 $router->add(['GET'], '/downloads/:file*', 'DownloadController@show');
 // Example requests:
 //   /downloads               -> ['file' => ''] (empty string)
@@ -253,7 +239,7 @@ switch ($result['code']) {
 
 If you are running outside of a traditional SAPI environment (like a custom server), ensure your GET routes also respond correctly to HEAD requests. Responses to HEAD requests must not include a message body.
 
-This is usually done by converting HEAD to GET and returning just the headers, no body.
+Typically, this is achieved by internally treating HEAD requests as GET requests, but only returning the headers and omitting the response body. However, you should still allow developers to explicitly register HEAD routes when custom behavior is needed.
 
 ### Extending HTTP Methods
 
@@ -282,66 +268,6 @@ array_merge(
     $router->allowedMethods,
     $webdavMethods
 );
-```
-
-### Path Correction
-
-Trailing slashes are ignored, meaning both `/about` and `/about/` will be treated as the same route. While this is common behavior in most routers, you may prefer enforcing a single canonical URL. This can help prevent duplicate content for search engines, improve caching efficiency and simplify analytics.
-
-> [!CAUTION]    
-> Never use decoded paths e.g. from `rawurldecode()` directly in HTTP headers. Decoded paths may contain dangerous characters (like `%0A` for newlines) that can lead to header injection vulnerabilities. Always use the original, encoded path when performing redirects.
-
-
-#### Normalizing Consecutive Slashes
-
-This finds multiple consecutive slashes in the path and replaces them with a single slash. For example, accessing `/user//123` will redirect to `/user/123`.
-
-```php
-if (str_contains($path, '//')) {
-    $path = preg_replace('#/+#', '/', $path);
-    header("Location: {$path}", true, 301);
-    exit;
-}
-```
-
-#### Trailing Slash Convention
-
-This ensures the request path’s trailing slash matches the route pattern. For example, accessing `/explore` when `/explore/` is registered will redirect to the trailing slash.
-
-> [!NOTE]   
-> This example assumes you are already [Normalizing Consecutive Slashes](#normalizing-consecutive-slashes) as it will not correct multiple trailing slashes at the end.
-
-> [!NOTE]   
-> For Integrators: This option should be configurable as sometimes you may wish to have multiple trailing slash conventions in a single route. E.g. `/files/:path*` would want to differentiate between files and directories. 
-
-
-```php
-// ...existing code...
-
-switch ($result['code']) {
-    case 200:
-        // Follow trailing slash convention of the route pattern
-        $trailing = str_ends_with($result['pattern'], '/');
-        if (str_ends_with($path, '/') !== $trailing) {
-            $canonical = rtrim($path, '/');
-            if ($trailing) {
-                $canonical = "{$canonical}/";
-            }
-            header("Location: {$canonical}", true, 301);
-            break;
-        }
-
-        // ...existing code...
-        break;
-
-    case 404:
-        // ...existing code...
-        break;
-
-    case 405:
-        // ...existing code...
-        break;
-}
 ```
 
 ## Benchmarks
