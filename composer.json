@@ -5,8 +5,8 @@
     "license": "WTFPL",
     "authors": [
         {
-            "name": "Wilaak",
-            "email": "54738571+Wilaak@users.noreply.github.com"
+            "name": "wilaak",
+            "email": "54738571+wilaak@users.noreply.github.com"
         }
     ],
     "minimum-stability": "stable",
@@ -31,16 +31,14 @@
         "php",
         "http"
     ],
-    "homepage": "https://github.com/Wilaak/RadixRouter",
+    "homepage": "https://github.com/wilaak/radix-router",
     "support": {
-        "issues": "https://github.com/Wilaak/RadixRouter/issues",
-        "source": "https://github.com/Wilaak/RadixRouter"
+        "issues": "https://github.com/wilaak/radix-router/issues",
+        "source": "https://github.com/wilaak/radix-router"
     },
     "require-dev": {
         "php": ">=8.3",
         "phpunit/phpunit": "^11.0",
-        "nikic/fast-route": "^1.3",
-        "symfony/routing": "^7.3",
         "friendsofphp/php-cs-fixer": "^3.87",
         "phpstan/phpstan": "^2.1"
     },
