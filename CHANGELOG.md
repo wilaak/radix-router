@@ -2,7 +2,7 @@
 
 Notable changes to this project goes here
 
-## [v3.4.2] - 24.09.2025
+## [v3.4.2] - 25.09.2025
 
 ### Changed
 
