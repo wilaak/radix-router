@@ -41,6 +41,10 @@ class RadixRouter
      */
     public function add(string|array $methods, string $pattern, mixed $handler): self
     {
+        if (!\str_starts_with($pattern, '/')) {
+            $pattern = "/{$pattern}";
+        }
+
         if (\is_array($methods)) {
             if (empty($methods)) {
                 throw new InvalidArgumentException(
@@ -58,11 +62,6 @@ class RadixRouter
         if (!\in_array($method, $this->allowedMethods, true)) {
             throw new InvalidArgumentException(
                 "Invalid HTTP Method: [{$method}] '{$pattern}': Allowed methods: " . \implode(', ', $this->allowedMethods)
-            );
-        }
-        if (!\str_starts_with($pattern, '/')) {
-            throw new InvalidArgumentException(
-                "Invalid Pattern: [{$method}] '{$pattern}': Must start with a forward slash (e.g., '/about')"
             );
         }
         if (\str_contains($pattern, '//')) {

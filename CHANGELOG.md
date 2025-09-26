@@ -2,6 +2,12 @@
 
 Notable changes to this project goes here
 
+## [v.3.4.3] - 26.09.2025
+
+### Changed
+
+- Allow route patterns to start without a leading slash again.
+
 ## [v3.4.2] - 25.09.2025
 
 ### Changed

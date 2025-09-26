@@ -284,11 +284,13 @@ class RadixRouterTest extends TestCase
         $router->add('GET', '/foo/:bar?/baz', 'bad_handler');
     }
 
-    public function testEmptyPatternThrows()
+    public function testPatternWithoutLeadingSlash()
     {
         $router = new RadixRouter();
-        $this->expectException(\InvalidArgumentException::class);
-        $router->add('GET', '', 'root_handler');
+        $router->add('GET', 'test/path', 'root_handler');
+
+        $info = $router->lookup('GET', '/test/path');
+        $this->assertEquals(200, $info['code']);
     }
 
     public function testMultipleMethodsArray()
