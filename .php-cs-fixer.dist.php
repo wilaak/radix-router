@@ -16,5 +16,6 @@ return (new PhpCsFixer\Config())
         'blank_line_after_namespace' => true,
         'blank_line_after_opening_tag' => true,
         'no_extra_blank_lines' => true,
+        'no_whitespace_in_blank_line' => true
     ])
     ->setFinder($finder);
