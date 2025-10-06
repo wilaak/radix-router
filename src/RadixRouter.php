@@ -224,7 +224,7 @@ class RadixRouter
         }
 
         $routes = $node[self::NODE_WILDCARD][self::NODE_ROUTES] ?? null;
-        if ($routes) {
+        if (isset($routes)) {
             if (isset($routes[$method])) {
                 $result = $routes[$method];
                 $pattern = $result['pattern'];
