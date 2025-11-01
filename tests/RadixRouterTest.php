@@ -693,4 +693,16 @@ class RadixRouterTest extends TestCase
 
         $this->assertCount(1, $routes);
     }
+
+    public function testDisablingMethodRestriction()
+    {
+        $router = new RadixRouter(restrictMethods: false);
+
+        $router->add('non_standard_method', '/resource', 'handler');
+
+        $info = $router->lookup('NON_STANDARD_METHOD', '/resource');
+
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('handler', $info['handler']);
+    }
 }
