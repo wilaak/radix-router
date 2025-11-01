@@ -16,7 +16,7 @@ class RadixRouter
 {
     public array $tree = [];
     public array $static = [];
-    public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD', '*'];
+    public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
 
     /**
      * Node types in the routing tree.
@@ -29,14 +29,6 @@ class RadixRouter
      * Tracks the original pattern when expanding optional parameters.
      */
     private ?string $optionalPattern = null;
-
-    /**
-     * @param bool $restrictMethods Whether to restrict to standard HTTP methods.
-     */
-    public function __construct(
-        private bool $restrictMethods = true,
-    ) {
-    }
 
     /**
      * Registers a route for one or more HTTP methods.
@@ -67,7 +59,7 @@ class RadixRouter
 
         $method = \strtoupper($methods);
 
-        if (!\in_array($method, $this->allowedMethods, true) && $this->restrictMethods) {
+        if (!\in_array($method, $this->allowedMethods, true) && $method !== '*') {
             throw new InvalidArgumentException(
                 "Invalid HTTP Method: [{$method}] '{$pattern}': Allowed methods: " . \implode(', ', $this->allowedMethods)
             );
@@ -193,7 +185,7 @@ class RadixRouter
         $routes = $this->static[$path] ?? null;
         if (isset($routes)) {
             $result = $routes[$method] ?? $routes['*'] ?? null;
-            if (isset($result)) {
+            if (isset($result) && $method !== '*') {
                 return $result;
             }
             return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
@@ -224,7 +216,7 @@ class RadixRouter
         $routes = $node[self::NODE_ROUTES] ?? null;
         if (isset($routes)) {
             $result = $routes[$method] ?? $routes['*'] ?? null;
-            if (isset($result)) {
+            if (isset($result) && $method !== '*') {
                 $result['params'] = \array_combine($result['params'], $params);
                 return $result;
             }
@@ -234,7 +226,7 @@ class RadixRouter
         $routes = $node[self::NODE_WILDCARD][self::NODE_ROUTES] ?? null;
         if (isset($routes)) {
             $result = $routes[$method] ?? $routes['*'] ?? null;
-            if (isset($result)) {
+            if (isset($result) && $method !== '*') {
                 $pattern = $result['pattern'];
                 if (\str_ends_with($pattern, '*') || \str_ends_with($pattern, '*/')) {
                     $params[] = '';
@@ -257,7 +249,7 @@ class RadixRouter
         $routes = $wildcardNode[self::NODE_ROUTES] ?? null;
         if (isset($routes)) {
             $result = $routes[$method] ?? $routes['*'] ?? null;
-            if (isset($result)) {
+            if (isset($result) && $method !== '*') {
                 $params = \array_merge(
                     $wildcardParams,
                     [\implode('/', \array_slice($segments, $wildcardOffset))]
@@ -288,7 +280,7 @@ class RadixRouter
         $routes = [];
 
         if (isset($path)) {
-            $result = $this->lookup('ANALPROBE', $path);
+            $result = $this->lookup('*', $path);
             if ($result['code'] !== 405) {
                 return [];
             }
@@ -339,7 +331,11 @@ class RadixRouter
      */
     public function methods(string $path): array
     {
-        return $this->lookup('ANALPROBE', $path)['allowed_methods'] ?? [];
+        $methods = $this->lookup('*', $path)['allowed_methods'] ?? [];
+        if (\in_array('*', $methods, true)) {
+            return $this->allowedMethods;
+        }
+        return $methods;
     }
 
     /**

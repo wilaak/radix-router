@@ -6,8 +6,7 @@ Notable changes to this project goes here
 
 ### Added
 
-- Ability to disable HTTP method restrictions when registering routes.
-- New special fallback method `*` to match any method during lookups.
+- Special fallback method `*` to match any HTTP method during lookups.
 
 ## [v3.4.3] - 26.09.2025
 

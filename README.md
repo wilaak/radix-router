@@ -18,9 +18,7 @@ Requires PHP 8.0 or newer
 Below is an example to get you started.
 
 ```PHP
-$router = new Wilaak\Http\RadixRouter(
-    restrictMethods: false
-);
+$router = new Wilaak\Http\RadixRouter;
 
 $router->add('GET', '/:name?', function ($name = 'World') {
     echo "Hello, {$name}!";
@@ -274,12 +272,6 @@ array_merge(
     $router->allowedMethods,
     $webdavMethods
 );
-```
-
-You may also disable HTTP method restrictions entirely when constructing the router:
-
-```php
-$router = new RadixRouter(restrictMethods: false);
 ```
 
 ## Benchmarks

@@ -694,18 +694,6 @@ class RadixRouterTest extends TestCase
         $this->assertCount(1, $routes);
     }
 
-    public function testDisablingMethodRestriction()
-    {
-        $router = new RadixRouter(restrictMethods: false);
-
-        $router->add('non_standard_method', '/resource', 'handler');
-
-        $info = $router->lookup('NON_STANDARD_METHOD', '/resource');
-
-        $this->assertEquals(200, $info['code']);
-        $this->assertEquals('handler', $info['handler']);
-    }
-
     public function testSpecialAnyMethodFallback()
     {
         $router = new RadixRouter();
@@ -721,5 +709,24 @@ class RadixRouterTest extends TestCase
         $info = $router->lookup('GET', '/resource');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('get_handler', $info['handler']);
+
+        $router->add('*', '/fallback', 'any');
+        $router->add('GET', '/fallback', 'get');
+
+        $this->assertEquals(true, $router->methods('/fallback') == $router->allowedMethods);
+
+        $list = $router->list('/fallback');
+        $this->assertEquals([
+            [
+                'method' => '*',
+                'pattern' => '/fallback',
+                'handler' => 'any',
+            ],
+            [
+                'method' => 'GET',
+                'pattern' => '/fallback',
+                'handler' => 'get',
+            ],
+        ], $list);
     }
 }
