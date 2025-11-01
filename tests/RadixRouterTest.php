@@ -698,35 +698,63 @@ class RadixRouterTest extends TestCase
     {
         $router = new RadixRouter();
 
-        $router->add('*', '/resource', 'all_methods_handler');
-        $router->add('GET', '/resource', 'get_handler');
-
-        $info = $router->lookup('POST', '/resource');
-
-        $this->assertEquals(200, $info['code']);
-        $this->assertEquals('all_methods_handler', $info['handler']);
-
-        $info = $router->lookup('GET', '/resource');
-        $this->assertEquals(200, $info['code']);
-        $this->assertEquals('get_handler', $info['handler']);
-
-        $router->add('*', '/fallback', 'any');
-        $router->add('GET', '/fallback', 'get');
-
-        $this->assertEquals(true, $router->methods('/fallback') == $router->allowedMethods);
-
-        $list = $router->list('/fallback');
-        $this->assertEquals([
+        $types = [
             [
-                'method' => '*',
-                'pattern' => '/fallback',
-                'handler' => 'any',
+                'pattern' => '/resource/:param',
+                'lookup' => '/resource/value',
+                'params' => ['param' => 'value'],
+                'desc' => 'required parameter',
             ],
             [
-                'method' => 'GET',
-                'pattern' => '/fallback',
-                'handler' => 'get',
+                'pattern' => '/resource/:opt?',
+                'lookup' => '/resource/value',
+                'params' => ['opt' => 'value'],
+                'desc' => 'optional parameter',
             ],
-        ], $list);
+            [
+                'pattern' => '/resource/:wildcard*',
+                'lookup' => '/resource/one/two',
+                'params' => ['wildcard' => 'one/two'],
+                'desc' => 'wildcard parameter',
+            ],
+            [
+                'pattern' => '/resource/:wildcard+',
+                'lookup' => '/resource/one/two',
+                'params' => ['wildcard' => 'one/two'],
+                'desc' => 'required wildcard parameter',
+            ],
+        ];
+
+        foreach ($types as $type) {
+            $router = new RadixRouter();
+            $router->add('*', $type['pattern'], 'all_methods_handler');
+            $router->add('GET', $type['pattern'], 'get_handler');
+
+            $info = $router->lookup('POST', $type['lookup']);
+            $this->assertEquals(200, $info['code'], $type['desc'] . ' POST fallback');
+            $this->assertEquals('all_methods_handler', $info['handler'], $type['desc'] . ' POST fallback handler');
+            $this->assertEquals($type['params'], $info['params'], $type['desc'] . ' POST fallback params');
+
+            $info = $router->lookup('GET', $type['lookup']);
+            $this->assertEquals(200, $info['code'], $type['desc'] . ' GET');
+            $this->assertEquals('get_handler', $info['handler'], $type['desc'] . ' GET handler');
+            $this->assertEquals($type['params'], $info['params'], $type['desc'] . ' GET params');
+
+            $this->assertEquals(true, $router->methods($type['lookup']) == $router->allowedMethods, $type['desc'] . ' methods listing');
+
+            $list = $router->list($type['lookup']);
+            $this->assertEquals([
+                [
+                    'method' => '*',
+                    'pattern' => $type['pattern'],
+                    'handler' => 'all_methods_handler',
+                ],
+                [
+                    'method' => 'GET',
+                    'pattern' => $type['pattern'],
+                    'handler' => 'get_handler',
+                ],
+            ], $list, $type['desc'] . ' route listing');
+        }
     }
 }
