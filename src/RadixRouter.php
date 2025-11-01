@@ -16,7 +16,7 @@ class RadixRouter
 {
     public array $tree = [];
     public array $static = [];
-    public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
+    public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD', '*'];
 
     /**
      * Node types in the routing tree.
@@ -192,7 +192,7 @@ class RadixRouter
 
         $routes = $this->static[$path] ?? null;
         if (isset($routes)) {
-            $result = $routes[$method] ?? null;
+            $result = $routes[$method] ?? $routes['*'] ?? null;
             if (isset($result)) {
                 return $result;
             }
@@ -223,7 +223,7 @@ class RadixRouter
 
         $routes = $node[self::NODE_ROUTES] ?? null;
         if (isset($routes)) {
-            $result = $routes[$method] ?? null;
+            $result = $routes[$method] ?? $routes['*'] ?? null;
             if (isset($result)) {
                 $result['params'] = \array_combine($result['params'], $params);
                 return $result;
@@ -233,8 +233,8 @@ class RadixRouter
 
         $routes = $node[self::NODE_WILDCARD][self::NODE_ROUTES] ?? null;
         if (isset($routes)) {
-            if (isset($routes[$method])) {
-                $result = $routes[$method];
+            $result = $routes[$method] ?? $routes['*'] ?? null;
+            if (isset($result)) {
                 $pattern = $result['pattern'];
                 if (\str_ends_with($pattern, '*') || \str_ends_with($pattern, '*/')) {
                     $params[] = '';
@@ -256,7 +256,7 @@ class RadixRouter
 
         $routes = $wildcardNode[self::NODE_ROUTES] ?? null;
         if (isset($routes)) {
-            $result = $routes[$method] ?? null;
+            $result = $routes[$method] ?? $routes['*'] ?? null;
             if (isset($result)) {
                 $params = \array_merge(
                     $wildcardParams,

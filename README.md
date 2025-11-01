@@ -62,10 +62,13 @@ You can provide any value as the handler. The order of route matching is: static
 
 ```php
 // Simple GET route
-$router->add(['GET'], '/about', 'AboutController@show');
+$router->add('GET', '/about', 'handler');
 
 // Multiple HTTP methods
-$router->add(['GET', 'POST'], '/form', 'FormController@handle');
+$router->add(['GET', 'POST'], '/form', 'handler');
+
+// Any HTTP method
+$router->add('*', '/fallback', 'handler');
 ```
 
 #### Required Parameters
@@ -284,9 +287,9 @@ $router = new RadixRouter(restrictMethods: false);
 All benchmarks are single-threaded and run on an Intel Xeon Gold 6138, PHP 8.4.11.
 
 
-- **Lookups:** Measures in-memory route matching speed.
-- **Mem:** Peak memory usage during the in-memory lookup benchmark.
-- **Register:** Time required to setup the router and make the first lookup.
+- Lookups: Measures in-memory route matching speed.
+- Mem: Peak memory usage during the in-memory lookup benchmark.
+- Register: Time required to setup the router and make the first lookup.
 
 #### Simple (33 routes)
 | Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Register (ms)   |

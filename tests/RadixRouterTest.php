@@ -705,4 +705,21 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('handler', $info['handler']);
     }
+
+    public function testSpecialAnyMethodFallback()
+    {
+        $router = new RadixRouter();
+
+        $router->add('*', '/resource', 'all_methods_handler');
+        $router->add('GET', '/resource', 'get_handler');
+
+        $info = $router->lookup('POST', '/resource');
+
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('all_methods_handler', $info['handler']);
+
+        $info = $router->lookup('GET', '/resource');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('get_handler', $info['handler']);
+    }
 }
