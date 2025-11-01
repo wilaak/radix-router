@@ -2,7 +2,13 @@
 
 Notable changes to this project goes here
 
-## [v.3.4.3] - 26.09.2025
+## [v3.5.0] - unreleased
+
+### Added
+
+- Support for disabling HTTP method restrictions when registering routes.
+
+## [v3.4.3] - 26.09.2025
 
 ### Changed
 

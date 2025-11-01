@@ -1,14 +1,15 @@
 # RadixRouter
 
 ![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)
+![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)
 
 This library provides a minimal high-performance radix tree based HTTP request router implementation (see [benchmarks](#benchmarks) and [integrations](#integrations))
 
 ## Install
 
-Install with composer:
-
-    composer require wilaak/radix-router
+```bash
+composer require wilaak/radix-router
+```
 
 Requires PHP 8.0 or newer
 
@@ -17,7 +18,9 @@ Requires PHP 8.0 or newer
 Below is an example to get you started.
 
 ```PHP
-$router = new Wilaak\Http\RadixRouter;
+$router = new Wilaak\Http\RadixRouter(
+    restrictMethods: false
+);
 
 $router->add('GET', '/:name?', function ($name = 'World') {
     echo "Hello, {$name}!";
@@ -268,6 +271,12 @@ array_merge(
     $router->allowedMethods,
     $webdavMethods
 );
+```
+
+You may also disable HTTP method restrictions entirely when constructing the router:
+
+```php
+$router = new RadixRouter(restrictMethods: false);
 ```
 
 ## Benchmarks

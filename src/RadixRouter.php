@@ -31,6 +31,14 @@ class RadixRouter
     private ?string $optionalPattern = null;
 
     /**
+     * @param bool $restrictMethods Whether to restrict to standard HTTP methods.
+     */
+    public function __construct(
+        private bool $restrictMethods = true,
+    ) {
+    }
+
+    /**
      * Registers a route for one or more HTTP methods.
      *
      * @param string|array<int, string> $methods HTTP methods (e.g., ['GET', 'POST']).
@@ -59,7 +67,7 @@ class RadixRouter
 
         $method = \strtoupper($methods);
 
-        if (!\in_array($method, $this->allowedMethods, true)) {
+        if (!\in_array($method, $this->allowedMethods, true) && $this->restrictMethods) {
             throw new InvalidArgumentException(
                 "Invalid HTTP Method: [{$method}] '{$pattern}': Allowed methods: " . \implode(', ', $this->allowedMethods)
             );
@@ -79,7 +87,7 @@ class RadixRouter
                 $conflicting = $this->static[$normalizedPattern][$method]['pattern'];
                 throw new InvalidArgumentException(
                     "Route Conflict: [{$method}] '{$attempted}': Path is already registered"
-                    . ($attempted !== $conflicting ? " (conflicts with '{$conflicting}')" : '')
+                        . ($attempted !== $conflicting ? " (conflicts with '{$conflicting}')" : '')
                 );
             }
             $this->static[$normalizedPattern][$method] = [
@@ -112,7 +120,7 @@ class RadixRouter
             if (!\preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $name)) {
                 throw new InvalidArgumentException(
                     "Invalid Pattern: [{$method}] '{$pattern}': "
-                    . "Parameter name '{$name}' must start with a letter or underscore and contain only letters, digits, or underscores"
+                        . "Parameter name '{$name}' must start with a letter or underscore and contain only letters, digits, or underscores"
                 );
             }
             if (isset($parameters[$name])) {
@@ -159,7 +167,7 @@ class RadixRouter
             $conflicting = $node[self::NODE_ROUTES][$method]['pattern'];
             throw new InvalidArgumentException(
                 "Route Conflict: [{$method}] '{$attempted}': Path is already registered"
-                . ($attempted !== $conflicting ? " (conflicts with '{$conflicting}')" : '')
+                    . ($attempted !== $conflicting ? " (conflicts with '{$conflicting}')" : '')
             );
         }
         $node[self::NODE_ROUTES][$method] = [
