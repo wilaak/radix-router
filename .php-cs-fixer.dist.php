@@ -8,7 +8,7 @@ return (new PhpCsFixer\Config())
         '@PSR12' => true,
         'array_syntax' => ['syntax' => 'short'],
         'no_unused_imports' => true,
-        'native_function_invocation' => ['include' => ['@all'], 'strict' => true],
+        'native_function_invocation' => ['include' => ['@internal'], 'strict' => true],
         'trailing_comma_in_multiline' => ['elements' => ['arrays']],
         'phpdoc_align' => ['align' => 'left'],
         'declare_strict_types' => true,
