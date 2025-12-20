@@ -183,15 +183,16 @@ POST      /contact                  ContactController@submit
 
 ### Route Caching
 
+Route caching is beneficial for classic PHP deployments (e.g., FPM, mod_php), where scripts are reloaded on every request. In these environments, caching routes in a PHP file allows OPcache to keep them in memory, improving performance.
+
+For persistent environments such as ReactPHP, AMPHP, Swoole or FrankenPHP in worker mode, where the application and its routes remain in memory between requests, route caching is generally unnecessary.
+
 > [!IMPORTANT]  
 > You must only provide serializable handlers such as strings or arrays. Closures and anonymous functions are not supported for route caching.
 
 > [!WARNING]   
 > Care should be taken to avoid race conditions when rebuilding the cache file. Ensure that the cache is written atomically so that each request can always fully load a valid cache file without errors or partial data.
 
-Route caching is beneficial for classic PHP deployments (e.g., FPM, mod_php), where scripts are reloaded on every request. In these environments, caching routes in a PHP file allows OPcache to keep them in memory, improving performance.
-
-For persistent environments such as ReactPHP, AMPHP, Swoole or FrankenPHP in worker mode, where the application and its routes remain in memory between requests, route caching is generally unnecessary.
 
 ```php
 $cache = __DIR__ . '/radixrouter.cache.php';
