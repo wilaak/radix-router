@@ -1,9 +1,17 @@
-# RadixRouter
-
 ![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)
 ![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)
 
-This library provides a minimal high-performance radix tree based HTTP request router implementation (see [benchmarks](#benchmarks) and [integrations](#integrations))
+<p align="center"><img width="200" src="./assets/graph.svg"></p>
+
+# RadixRouter
+
+This library provides a minimal HTTP request router implementation (see [benchmarks](#benchmarks) and [integrations](#integrations)).
+
+### Overview
+
+- Fast $O(k)$ dynamic route matching where $k$ is the number of segments in the request path
+- Supports route parameters, including optional and wildcard variants
+- Small with no external dependencies (~370 lines of code)
 
 ## Install
 
@@ -11,41 +19,51 @@ This library provides a minimal high-performance radix tree based HTTP request r
 composer require wilaak/radix-router
 ```
 
-Requires PHP 8.0 or newer
+Requires PHP 8.0 or newer.
 
 ## Usage
 
 Below is an example to get you started.
 
 ```PHP
-$router = new Wilaak\Http\RadixRouter;
+$router = new Wilaak\Http\RadixRouter();
 
 $router->add('GET', '/:name?', function ($name = 'World') {
     echo "Hello, {$name}!";
 });
 
 $method = $_SERVER['REQUEST_METHOD'];
+$path   = rawurldecode(strtok($_SERVER['REQUEST_URI'], '?'));
 
-$path = strtok($_SERVER['REQUEST_URI'], '?');
-$decodedPath = rawurldecode($path);
-
-$result = $router->lookup($method, $decodedPath);
+$result = $router->lookup($method, $path);
 
 switch ($result['code']) {
-    case 200:
-        // Route found, call the handler with parameters
+    case 200: // Route found
+
+        // Optionally add headers for OPTIONS requests
+        if ($method === 'OPTIONS') {
+            $allowedMethods = $router->methods($path);
+            header('Allow: ' . implode(',', $allowedMethods));
+        }
+
         $result['handler'](...$result['params']);
         break;
 
-    case 404:
-        // No matching route found
+    case 404: // No route found
         http_response_code(404);
         echo '404 Not Found';
         break;
 
-    case 405:
-        // Method not allowed for this route
-        header('Allow: ' . implode(',', $result['allowed_methods']));
+    case 405: // Method not allowed
+        $allowedMethods = $result['allowed_methods'];
+        header('Allow: ' . implode(',', $allowedMethods));
+
+        // Optionally upgrade OPTIONS requests
+        if ($method === 'OPTIONS') {
+            http_response_code(204);
+            break;
+        }
+
         http_response_code(405);
         echo '405 Method Not Allowed';
         break;
@@ -60,13 +78,13 @@ You can provide any value as the handler. The order of route matching is: static
 
 ```php
 // Simple GET route
-$router->add('GET', '/about', 'handler');
+$router->add('GET', '/about', 'AboutController@show');
 
 // Multiple HTTP methods
-$router->add(['GET', 'POST'], '/form', 'handler');
+$router->add(['GET', 'POST'], '/contact', 'ContactController@submit');
 
 // Any HTTP method
-$router->add('*', '/fallback', 'handler');
+$router->add('*', '/maintenance', 'MaintenanceController@handle');
 ```
 
 #### Required Parameters
@@ -75,7 +93,7 @@ Matches only when the segment is present and not empty.
 
 ```php
 // Required parameter
-$router->add(['GET'], '/users/:id', 'UserController@show');
+$router->add(['GET'], '/users/:id', 'UserController@profile');
 // Example requests:
 //   /users     -> no match
 //   /users/123 -> ['id' => '123']
@@ -87,17 +105,17 @@ Matches whether the segment is present or not.
 
 ```php
 // Single optional parameter
-$router->add(['GET'], '/profile/:username?', 'ProfileController@show');
+$router->add(['GET'], '/blog/:slug?', 'BlogController@view');
 // Example requests:
-//   /profile      -> [] (no parameters)
-//   /profile/jane -> ['username' => 'jane']
+//   /blog         -> [] (no parameters)
+//   /blog/hello   -> ['slug' => 'hello']
 
 // Chained optional parameters
-$router->add(['GET'], '/archive/:year?/:month?', 'ArchiveController@show');
+$router->add(['GET'], '/archive/:year?/:month?', 'ArchiveController@list');
 // Example requests:
 //   /archive         -> [] (no parameters)
-//   /archive/1974    -> ['year' => '1974']
-//   /archive/1974/06 -> ['year' => '1974', 'month' => '06']
+//   /archive/2022    -> ['year' => '2022']
+//   /archive/2022/12 -> ['year' => '2022', 'month' => '12']
 ```
 
 #### Wildcard Parameters
@@ -138,7 +156,7 @@ foreach ($routes as $route) {
 
 // List routes for specific path
 printf("%s\n", str_repeat('-', 60));
-$filtered = $router->list('/form');
+$filtered = $router->list('/contact');
 foreach ($filtered as $route) {
     printf("%-8s  %-24s  %s\n", $route['method'], $route['pattern'], $route['handler']);
 }
@@ -150,27 +168,30 @@ Example Output:
 METHOD    PATTERN                   HANDLER
 ------------------------------------------------------------
 GET       /about                    AboutController@show
-GET       /archive/:year?/:month?   ArchiveController@show
+GET       /archive/:year?/:month?   ArchiveController@list
 GET       /assets/:resource+        AssetController@show
+GET       /blog/:slug?              BlogController@view
+GET       /contact                  ContactController@submit
+POST      /contact                  ContactController@submit
 GET       /downloads/:file*         DownloadController@show
-GET       /form                     FormController@handle
-POST      /form                     FormController@handle
-GET       /profile/:username?       ProfileController@show
-GET       /users/:id                UserController@show
+*         /maintenance              MaintenanceController@handle
+GET       /users/:id                UserController@profile
 ------------------------------------------------------------
-GET       /form                     FormController@handle
-POST      /form                     FormController@handle
+GET       /contact                  ContactController@submit
+POST      /contact                  ContactController@submit
 ```
-
-
-## Advanced Usage 
 
 ### Route Caching
 
-By storing your routes in a PHP file you let OPcache keep it in memory between requests.
-
 > [!IMPORTANT]  
 > You must only provide serializable handlers such as strings or arrays. Closures and anonymous functions are not supported for route caching.
+
+> [!WARNING]   
+> Care should be taken to avoid race conditions when rebuilding the cache file. Ensure that the cache is written atomically so that each request can always fully load a valid cache file without errors or partial data.
+
+Route caching is beneficial for classic PHP deployments (e.g., FPM, mod_php), where scripts are reloaded on every request. In these environments, caching routes in a PHP file allows OPcache to keep them in memory, improving performance.
+
+For persistent environments such as ReactPHP, AMPHP, Swoole or FrankenPHP in worker mode, where the application and its routes remain in memory between requests, route caching is generally unnecessary.
 
 ```php
 $cache = __DIR__ . '/radixrouter.cache.php';
@@ -192,73 +213,17 @@ $router->tree   = $routes['tree'];
 $router->static = $routes['static'];
 ```
 
-### Handling OPTIONS Requests and CORS
-
-For OPTIONS requests you should always inform the client which HTTP methods are allowed for the path by setting the Allow header. You can enable this behavior by upgrading a 405 response and injecting the headers for registered routes.
-
-> [!NOTE]   
-> For Integrators: One might wish to modify automatic responses to OPTIONS requests, e.g. to support [CORS Preflight requests](https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request) or to set other custom headers. You should handle this via configuration or middleware in your integration.
-
-```php
-// ...existing code...
-
-switch ($result['code']) {
-    case 200:
-        // ...existing code...
-
-        // Add necessary headers if this is an OPTIONS request
-        if ($method === 'OPTIONS') {
-            $allowedMethods = $router->methods($decodedPath);
-            header('Allow: ' . implode(',', $allowedMethods));
-            // Add CORS headers here if needed, e.g.:
-            // if (isset($_SERVER['HTTP_ORIGIN'])) {
-            //     header('Access-Control-Allow-Origin: *');
-            //     header('Access-Control-Allow-Headers: ...');
-            //     header('Access-Control-Allow-Methods: ...');
-            // }
-        }
-
-        // ...existing code...
-        break;
-
-    case 404:
-        // ...existing code...
-        break;
-
-    case 405:
-        // Method not allowed for this route
-        header('Allow: ' . implode(',', $result['allowed_methods']));
-        if ($method === 'OPTIONS') {
-            http_response_code(204);
-            // Add CORS headers here if needed
-            break;
-        }
-        http_response_code(405);
-        echo '405 Method Not Allowed';
-        break;
-}
-```
-
-### Handling HEAD Requests 
-
-If you are running outside of a traditional SAPI environment (like a custom server), ensure your GET routes also respond correctly to HEAD requests. Responses to HEAD requests must not include a message body.
-
-Typically, this is achieved by internally treating HEAD requests as GET requests, but only returning the headers and omitting the response body. However, you should still allow developers to explicitly register HEAD routes when custom behavior is needed.
-
 ### Extending HTTP Methods
 
 The HTTP specification allows for custom methods. You can extend the list of allowed methods by modifying the `allowedMethods` property.
-
-By default, the router supports the following methods: GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD.
 
 > [!NOTE]   
 > Methods must be uppercase and are only validated when adding routes.
 
 ```php
-$router->allowedMethods = array_merge(
-    $router->allowedMethods,
-    ['PURGE', 'REPORT'] // Add custom methods here
-);
+// Add custom HTTP methods to the allowedMethods property
+$customMethods = ['PURGE', 'REPORT'];
+$router->allowedMethods = array_merge($router->allowedMethods, $customMethods);
 ```
 
 You may also register a route with the fallback `*` method to match any HTTP method.
@@ -266,8 +231,8 @@ You may also register a route with the fallback `*` method to match any HTTP met
 ```php
 $router->add('*', '/somewhere', 'handler');
 
-// Will return all methods in the allowedMethods list
-$router->methods('/somewhere');
+// Will return all methods in allowedMethods
+$allowedMethods = $router->methods('/somewhere');
 ```
 
 ## Benchmarks
