@@ -83,8 +83,11 @@ $router->add('GET', '/about', 'AboutController@show');
 // Multiple HTTP methods
 $router->add(['GET', 'POST'], '/contact', 'ContactController@submit');
 
-// Any HTTP method
+// Any HTTP method (allowed or not)
 $router->add('*', '/maintenance', 'MaintenanceController@handle');
+
+// Any allowed HTTP method
+$router->add($router->allowedMethods, '/maintenance', 'MaintenanceController@handle');
 ```
 
 #### Required Parameters
