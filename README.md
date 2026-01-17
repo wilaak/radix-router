@@ -38,32 +38,18 @@ $path = rawurldecode(strtok($_SERVER['REQUEST_URI'], '?'));
 $result = $router->lookup($method, $path);
 
 switch ($result['code']) {
-    case 200: // Route found
-
-        // Optionally add headers for OPTIONS requests
-        if ($method === 'OPTIONS') {
-            $allowedMethods = $router->methods($path);
-            header('Allow: ' . implode(',', $allowedMethods));
-        }
-
+    case 200:
         $result['handler'](...$result['params']);
         break;
 
-    case 404: // No route found
+    case 404:
         http_response_code(404);
         echo '404 Not Found';
         break;
 
-    case 405: // Method not allowed
+    case 405:
         $allowedMethods = $result['allowed_methods'];
         header('Allow: ' . implode(',', $allowedMethods));
-
-        // Optionally upgrade OPTIONS requests
-        if ($method === 'OPTIONS') {
-            http_response_code(204);
-            break;
-        }
-
         http_response_code(405);
         echo '405 Method Not Allowed';
         break;
@@ -186,16 +172,14 @@ POST      /contact                  ContactController@submit
 
 ### Route Caching
 
-Route caching is beneficial for classic PHP deployments (e.g. FPM, mod_php), where scripts are reloaded on every request. In these environments, caching routes in a PHP file allows OPcache to keep them in memory, improving performance.
+Route caching is beneficial for classic PHP deployments where scripts are reloaded on every request. In these environments, caching routes in a PHP file allows OPcache to keep them in memory, improving performance.
 
-For persistent environments such as ReactPHP, AMPHP, Swoole or FrankenPHP in worker mode, where the application and its routes remain in memory between requests, route caching is generally unnecessary.
+For persistent environments such as Swoole or FrankenPHP in worker mode, where the application and its routes remain in memory between requests, route caching is generally unnecessary.
 
 > [!IMPORTANT]  
 > You must only provide serializable handlers such as strings or arrays. Closures and anonymous functions are not supported for route caching.
-
-> [!WARNING]   
+> 
 > Care should be taken to avoid race conditions when rebuilding the cache file. Ensure that the cache is written atomically so that each request can always fully load a valid cache file without errors or partial data.
-
 
 ```php
 $cache = __DIR__ . '/radixrouter.cache.php';
@@ -213,37 +197,31 @@ if (!file_exists($cache)) {
 }
 
 $routes = require $cache;
-$router->tree   = $routes['tree'];
+$router->tree = $routes['tree'];
 $router->static = $routes['static'];
 ```
 
 ### Extending HTTP Methods
 
-The HTTP specification allows for custom methods. You can extend the list of allowed methods by modifying the `allowedMethods` property.
+The HTTP specification allows for custom methods.
 
 > [!NOTE]   
 > Methods must be uppercase and are only validated when adding routes.
 
 ```php
-// Add custom HTTP methods to the allowedMethods property
 $customMethods = ['PURGE', 'REPORT'];
 $router->allowedMethods = array_merge($router->allowedMethods, $customMethods);
 ```
 
-You may also register a route with the fallback `*` method to match any HTTP method.
+You may also register a route with the fallback method to match any HTTP method.
 
 ```php
 $router->add('*', '/somewhere', 'handler');
-
-// Will return all methods in allowedMethods
-$allowedMethods = $router->methods('/somewhere');
 ```
 
 ### Note on HEAD requests
 
 The HTTP spec requires servers to [support both GET and HEAD methods.](http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1)
-
-> The methods GET and HEAD MUST be supported by all general-purpose servers
 
 To avoid having to manually register HEAD routes for each resource we fallback to matching an available GET route for a given resource. The PHP web SAPI transparently removes the entity body from HEAD responses so this behavior has no effect on the vast majority of users.
 
@@ -253,7 +231,7 @@ Finally, note that applications MAY always specify their own HEAD method route f
 
 ## Benchmarks
 
-Benchmarking is hard so take this with a grain of salt. Most likely the router is never going to be the bottleneck of your application. If you are having performance issues use profilers with flamegraphs instead of spending too much time on micro-optimizations! (Unless you like that kinda thing)
+Most likely the router is never going to be the bottleneck of your application. Use profilers with flamegraphs instead of wasting too much time on micro-optimizations! (Unless you're into that kinda thing)
 
 These benchmarks are single-threaded and run on an **Intel Xeon E3-1220L** (20 Watt CPU from 2011), **PHP 8.4.13**, **Debian 11**.
 
@@ -367,4 +345,4 @@ These are third-party integrations so evaluate and use them at your own discreti
 
 ## License
 
-This library is licensed under the **WTFPL-2.0** license. Do whatever you want with it.
+This library is licensed under the WTFPL-2.0 license. Do whatever you want with it.
