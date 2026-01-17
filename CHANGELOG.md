@@ -2,6 +2,12 @@
 
 Notable changes to this project goes here
 
+## [v3.6.0] - 17.01.2026
+
+### Added
+
+- HEAD requests now automatically fallback to the GET route if no explicit HEAD route is defined.
+
 ## [v3.5.0] - 01.11.2025 
 
 ### Added

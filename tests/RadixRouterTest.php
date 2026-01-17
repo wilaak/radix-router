@@ -236,7 +236,7 @@ class RadixRouterTest extends TestCase
 
         $info = $router->lookup('PUT', '/foo');
         $this->assertEquals(405, $info['code']);
-        $this->assertEqualsCanonicalizing(['GET', 'POST'], $info['allowed_methods']);
+        $this->assertEqualsCanonicalizing(['GET', 'POST', 'HEAD'], $info['allowed_methods']);
     }
 
     public function testRouteConflictThrows()
@@ -658,9 +658,15 @@ class RadixRouterTest extends TestCase
         $methods2 = $router->methods('/resource/123');
         $methods3 = $router->methods('/nonexistent');
 
-        $this->assertEqualsCanonicalizing(['GET', 'POST'], $methods1);
+        $this->assertEqualsCanonicalizing(['GET', 'HEAD', 'POST'], $methods1);
         $this->assertEqualsCanonicalizing(['DELETE'], $methods2);
         $this->assertEquals([], $methods3);
+
+        $router->add('PUT', '/something', 'put_handler');
+        $router->add('PATCH', '/something', 'patch_handler');
+
+        $methods4 = $router->methods('/something');
+        $this->assertEqualsCanonicalizing(['PUT', 'PATCH'], $methods4);
     }
 
     public function testOptionalWildcardPrioritization()
@@ -756,5 +762,45 @@ class RadixRouterTest extends TestCase
                 ],
             ], $list, $type['desc'] . ' route listing');
         }
+    }
+
+    public function testHeadMethodFallback()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/resource', 'get_handler');
+
+        $info = $router->lookup('HEAD', '/resource');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('get_handler', $info['handler']);
+
+        $methods = $router->methods('/resource');
+        $this->assertEqualsCanonicalizing(['GET', 'HEAD'], $methods);
+
+        $router->add('HEAD', '/resource', 'head_handler');
+        $info = $router->lookup('HEAD', '/resource');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('head_handler', $info['handler']);
+
+        $methods = $router->methods('/resource');
+        $this->assertEqualsCanonicalizing(['GET', 'HEAD'], $methods);
+    }
+
+    public function testCanStillRegisterHeadExplicitly()
+    {
+        $router = new RadixRouter();
+
+        $router->add('GET', '/explicit', 'get_handler');
+        $router->add('HEAD', '/explicit', 'head_handler');
+
+        $info = $router->lookup('HEAD', '/explicit');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('head_handler', $info['handler']);
+
+        $info = $router->lookup('GET', '/explicit');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('get_handler', $info['handler']);
+
+        $methods = $router->methods('/explicit');
+        $this->assertEqualsCanonicalizing(['GET', 'HEAD'], $methods);
     }
 }

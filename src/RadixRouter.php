@@ -16,18 +16,13 @@ class RadixRouter
 {
     public array $tree = [];
     public array $static = [];
+
     public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
 
-    /**
-     * Node types in the routing tree.
-     */
     private const NODE_WILDCARD = '/w';
     private const NODE_PARAMETER = '/p';
     private const NODE_ROUTES = '/r';
 
-    /**
-     * Tracks the original pattern when expanding optional parameters.
-     */
     private ?string $optionalPattern = null;
 
     /**
@@ -181,86 +176,18 @@ class RadixRouter
     public function lookup(string $method, string $path): array
     {
         $path = \rtrim($path, '/');
-
-        $routes = $this->static[$path] ?? null;
-        if (isset($routes)) {
-            $result = $routes[$method] ?? $routes['*'] ?? null;
-            if (isset($result) && $method !== '*') {
-                return $result;
-            }
-            return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
+        $result = $this->matchRoute($method, $path);
+        if ($result['code'] !== 405) {
+            return $result;
         }
-
-        $segments = \explode('/', $path);
-        $params = [];
-        $node = $this->tree;
-        $wildcardNode = $wildcardParams = $wildcardOffset = null;
-
-        foreach ($segments as $i => $segment) {
-            if (isset($node[self::NODE_WILDCARD])) {
-                $wildcardNode = $node[self::NODE_WILDCARD];
-                $wildcardParams = $params;
-                $wildcardOffset = $i;
+        $routes = $result['_routes'];
+        if (isset($routes['GET']) && !isset($routes['HEAD'])) {
+            if ($method === 'HEAD') {
+                return $routes['GET'];
             }
-            if (isset($node[$segment])) {
-                $node = $node[$segment];
-            } elseif ($segment !== '' && isset($node[self::NODE_PARAMETER])) {
-                $node = $node[self::NODE_PARAMETER];
-                $params[] = $segment;
-            } else {
-                unset($node);
-                break;
-            }
+            $result['allowed_methods'][] = 'HEAD';
         }
-
-        $routes = $node[self::NODE_ROUTES] ?? null;
-        if (isset($routes)) {
-            $result = $routes[$method] ?? $routes['*'] ?? null;
-            if (isset($result) && $method !== '*') {
-                $result['params'] = \array_combine($result['params'], $params);
-                return $result;
-            }
-            return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
-        }
-
-        $routes = $node[self::NODE_WILDCARD][self::NODE_ROUTES] ?? null;
-        if (isset($routes)) {
-            $result = $routes[$method] ?? $routes['*'] ?? null;
-            if (isset($result) && $method !== '*') {
-                $pattern = $result['pattern'];
-                if (\str_ends_with($pattern, '*') || \str_ends_with($pattern, '*/')) {
-                    $params[] = '';
-                    $result['params'] = \array_combine($result['params'], $params);
-                    return $result;
-                }
-            }
-
-            $optionalRoutes = \array_filter($routes, function ($result) {
-                $pattern = $result['pattern'];
-                return \str_ends_with($pattern, '*') || \str_ends_with($pattern, '*/');
-            });
-
-            if (!empty($optionalRoutes)) {
-                $allowedMethods = \array_keys($optionalRoutes);
-                return ['code' => 405, 'allowed_methods' => $allowedMethods, '_routes' => $optionalRoutes];
-            }
-        }
-
-        $routes = $wildcardNode[self::NODE_ROUTES] ?? null;
-        if (isset($routes)) {
-            $result = $routes[$method] ?? $routes['*'] ?? null;
-            if (isset($result) && $method !== '*') {
-                $params = \array_merge(
-                    $wildcardParams,
-                    [\implode('/', \array_slice($segments, $wildcardOffset))]
-                );
-                $result['params'] = \array_combine($result['params'], $params);
-                return $result;
-            }
-            return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
-        }
-
-        return ['code' => 404];
+        return $result;
     }
 
     /**
@@ -338,15 +265,89 @@ class RadixRouter
         return $methods;
     }
 
-    /**
-     * Generates all variants of a route pattern with optional parameters.
-     *
-     * Example:
-     *   '/users/:id?/:action?' turns into ['/users', '/users/:id', '/users/:id/:action']
-     *
-     * @param string $pattern Route pattern with optional parameters.
-     * @return list<string> List of route pattern variants.
-     */
+    private function matchRoute(string $method, string $path): array
+    {
+        $routes = $this->static[$path] ?? null;
+        if (isset($routes)) {
+            $result = $routes[$method] ?? $routes['*'] ?? null;
+            if (isset($result) && $method !== '*') {
+                return $result;
+            }
+            return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
+        }
+
+        $segments = \explode('/', $path);
+        $params = [];
+        $node = $this->tree;
+        $wildcardNode = $wildcardParams = $wildcardOffset = null;
+
+        foreach ($segments as $i => $segment) {
+            if (isset($node[self::NODE_WILDCARD])) {
+                $wildcardNode = $node[self::NODE_WILDCARD];
+                $wildcardParams = $params;
+                $wildcardOffset = $i;
+            }
+            if (isset($node[$segment])) {
+                $node = $node[$segment];
+            } elseif ($segment !== '' && isset($node[self::NODE_PARAMETER])) {
+                $node = $node[self::NODE_PARAMETER];
+                $params[] = $segment;
+            } else {
+                unset($node);
+                break;
+            }
+        }
+
+        $routes = $node[self::NODE_ROUTES] ?? null;
+        if (isset($routes)) {
+            $result = $routes[$method] ?? $routes['*'] ?? null;
+            if (isset($result) && $method !== '*') {
+                $result['params'] = \array_combine($result['params'], $params);
+                return $result;
+            }
+            return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
+        }
+
+        $routes = $node[self::NODE_WILDCARD][self::NODE_ROUTES] ?? null;
+        if (isset($routes)) {
+            $result = $routes[$method] ?? $routes['*'] ?? null;
+            if (isset($result) && $method !== '*') {
+                $pattern = $result['pattern'];
+                if (\str_ends_with($pattern, '*') || \str_ends_with($pattern, '*/')) {
+                    $params[] = '';
+                    $result['params'] = \array_combine($result['params'], $params);
+                    return $result;
+                }
+            }
+
+            $optionalWildcards = \array_filter($routes, function ($result) {
+                $pattern = $result['pattern'];
+                return \str_ends_with($pattern, '*') || \str_ends_with($pattern, '*/');
+            });
+
+            if (!empty($optionalWildcards)) {
+                $allowedMethods = \array_keys($optionalWildcards);
+                return ['code' => 405, 'allowed_methods' => $allowedMethods, '_routes' => $optionalWildcards];
+            }
+        }
+
+        $routes = $wildcardNode[self::NODE_ROUTES] ?? null;
+        if (isset($routes)) {
+            $result = $routes[$method] ?? $routes['*'] ?? null;
+            if (isset($result) && $method !== '*') {
+                $params = \array_merge(
+                    $wildcardParams,
+                    [\implode('/', \array_slice($segments, $wildcardOffset))]
+                );
+                $result['params'] = \array_combine($result['params'], $params);
+                return $result;
+            }
+            return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
+        }
+
+        return ['code' => 404];
+    }
+
     private function getOptionalVariants(string $pattern): array
     {
         $segments = \explode('/', \trim($pattern, '/'));
