@@ -1,17 +1,13 @@
+# <img alt="RadixRouter" width="200" src="./assets/radx.svg">
+
 ![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)
 ![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)
 
-<p align="center"><img width="200" src="./assets/graph.svg"></p>
+PHP Radix Router (or RadX Router) is an HTTP routing library focused on providing just the essentials with high-performance. It makes an excellent choice for simple applications or as the foundation for building your own custom more featureful router (see third-party [integrations](#integrations)).
 
-# RadixRouter
+It features fast $O(k)$ dynamic route matching ($k$ = segments in path), path parameters (optional, wildcard; one per segment), simple API for listing routes/methods (for OPTIONS support), 405 method not allowed handling and it's all in a package weighing in at only ~370 lines of code with no external dependencies.
 
-This library provides a minimal HTTP request router implementation (see [benchmarks](#benchmarks) and [integrations](#integrations)).
-
-### Overview
-
-- Fast $O(k)$ dynamic route matching where $k$ is the number of segments in the request path
-- Supports route parameters, including optional and wildcard variants
-- Small with no external dependencies (~370 lines of code)
+To see how this router compares to other implementations in terms of raw routing performance see the [benchmarks](#benchmarks) section.
 
 ## Install
 
@@ -21,7 +17,7 @@ composer require wilaak/radix-router
 
 Requires PHP 8.0 or newer.
 
-## Usage
+## Usage 
 
 Below is an example to get you started.
 
@@ -42,7 +38,7 @@ switch ($result['code']) {
         $result['handler'](...$result['params']);
         break;
 
-    case 404:
+    case 404: 
         http_response_code(404);
         echo '404 Not Found';
         break;
@@ -56,9 +52,11 @@ switch ($result['code']) {
 }
 ```
 
-### Route Configuration
+## Route Configuration
 
-You can provide any value as the handler. The order of route matching is: static > parameter > wildcard.
+The router has a predictable route ordering where the most specific pattern wins. The router does not support regex patterns and it's recommended that you do this validation in your handlers for clarity. If you absolutely need this you can use a more suitable router of which there are plenty (see [FastRoute](https://github.com/nikic/FastRoute)).
+
+You can provide any value as the handler. For these examples we will only use a string however you could just as well use an array with extra information such as middleware etc but keep in mind that if you want to support [route caching](#route-caching) you need to use serializable data.
 
 #### Basic Routing
 
@@ -69,12 +67,16 @@ $router->add('GET', '/about', 'AboutController@show');
 // Multiple HTTP methods
 $router->add(['GET', 'POST'], '/contact', 'ContactController@submit');
 
-// Any HTTP method (allowed or not)
-$router->add('*', '/maintenance', 'MaintenanceController@handle');
-
 // Any allowed HTTP method
 $router->add($router->allowedMethods, '/maintenance', 'MaintenanceController@handle');
+
+// Any HTTP method (allowed or not)
+$router->add('*', '/maintenance', 'MaintenanceController@handle');
 ```
+
+### Path Parameters
+
+Path parameters let you capture segments of the request path by specifying named placeholders in your route pattern. The router extracts these values and returns them as a map, with each value bound to its corresponding parameter name.
 
 #### Required Parameters
 
@@ -82,73 +84,83 @@ Matches only when the segment is present and not empty.
 
 ```php
 // Required parameter
-$router->add(['GET'], '/users/:id', 'UserController@profile');
+$router->add('GET', '/users/:id', 'UserController@profile');
 // Example requests:
 //   /users     -> no match
 //   /users/123 -> ['id' => '123']
+
+// You can have as many as you want, but keep it sane
+$router->add('GET', '/users/:id/:favorite_food/:spirit_animal', 'UserController@profile');
 ```
 
 #### Optional Parameters
 
-Matches whether the segment is present or not.
+These match whether the segment is present or not. While this can be useful, in most cases you’re better off using query parameters instead of restricting yourself to a single filtering option in the path.
 
 ```php
 // Single optional parameter
-$router->add(['GET'], '/blog/:slug?', 'BlogController@view');
+$router->add('GET', '/blog/:slug?', 'BlogController@view');
 // Example requests:
 //   /blog         -> [] (no parameters)
 //   /blog/hello   -> ['slug' => 'hello']
 
 // Chained optional parameters
-$router->add(['GET'], '/archive/:year?/:month?', 'ArchiveController@list');
+$router->add('GET', '/archive/:year?/:month?', 'ArchiveController@list');
 // Example requests:
 //   /archive         -> [] (no parameters)
 //   /archive/2022    -> ['year' => '2022']
 //   /archive/2022/12 -> ['year' => '2022', 'month' => '12']
+
+// Mixing required and optional parameters
+$router->add('GET', '/shop/:category/:item?', 'ShopController@view');
+// Example requests:
+//   /shop/books         -> ['category' => 'books']
+//   /shop/books/novel   -> ['category' => 'books', 'item' => 'novel']
 ```
 
 #### Wildcard Parameters
 
-Also known as catch-all, splat, greedy, rest, or path remainder parameters.
+Also known as catch-all, splat, greedy, rest, or path remainder parameters, wildcards capture everything after their position in the path including slashes. Note that the router trims trailing slashes from incoming paths, so you won’t see empty segments at the end of your results.
 
 > [!CAUTION]    
 > Never use captured path segments directly in filesystem operations. Path traversal attacks can expose sensitive files or directories. Use functions like `realpath()` and restrict access to a safe base directory.
 
 ```php
 // Required wildcard parameter (one or more segments)
-$router->add(['GET'], '/assets/:resource+', 'AssetController@show');
+$router->add('GET', '/assets/:resource+', 'AssetController@show');
 // Example requests:
 //   /assets                -> no match
 //   /assets/logo.png       -> ['resource' => 'logo.png']
 //   /assets/img/banner.jpg -> ['resource' => 'img/banner.jpg']
 
 // Optional wildcard parameter (zero or more segments)
-$router->add(['GET'], '/downloads/:file*', 'DownloadController@show');
+$router->add('GET', '/downloads/:file*', 'DownloadController@show');
 // Example requests:
 //   /downloads               -> ['file' => ''] (empty string)
 //   /downloads/report.pdf    -> ['file' => 'report.pdf']
 //   /downloads/docs/guide.md -> ['file' => 'docs/guide.md']
 ```
 
-### Listing Routes
+### Route Listing
 
 The router provides a convenient method for listing routes and their associated handlers.
 
 ```php
-// List all routes
-printf("%-8s  %-24s  %s\n", 'METHOD', 'PATTERN', 'HANDLER');
-printf("%s\n", str_repeat('-', 60));
-$routes = $router->list();
-foreach ($routes as $route) {
-    printf("%-8s  %-24s  %s\n", $route['method'], $route['pattern'], $route['handler']);
+// Print a formatted table of all routes
+function printRoutesTable($routes) {
+    printf("%-8s  %-24s  %s\n", 'METHOD', 'PATTERN', 'HANDLER');
+    printf("%s\n", str_repeat('-', 60));
+    foreach ($routes as $route) {
+        printf("%-8s  %-24s  %s\n", $route['method'], $route['pattern'], $route['handler']);
+    }
+    printf("%s\n", str_repeat('-', 60));
 }
 
-// List routes for specific path
-printf("%s\n", str_repeat('-', 60));
-$filtered = $router->list('/contact');
-foreach ($filtered as $route) {
-    printf("%-8s  %-24s  %s\n", $route['method'], $route['pattern'], $route['handler']);
-}
+// List all routes
+printRoutesTable($router->list());
+
+// List routes for a specific path
+printRoutesTable($router->list('/contact'));
 ```
 
 Example Output:
@@ -202,41 +214,41 @@ $router->tree = $routes['tree'];
 $router->static = $routes['static'];
 ```
 
-### Extending HTTP Methods
+### Custom HTTP methods
 
-The HTTP specification allows for custom methods.
+You can easily add custom HTTP methods to the router, just make sure the method names are uppercase as validation only happens when you add routes.
 
-> [!NOTE]   
-> Methods must be uppercase and are only validated when adding routes.
+
+For example, to support methods like PURGE or REPORT:
 
 ```php
 $customMethods = ['PURGE', 'REPORT'];
 $router->allowedMethods = array_merge($router->allowedMethods, $customMethods);
 ```
 
-You may also register a route with the fallback method to match any HTTP method.
+If you want a route to match any HTTP method (including custom ones), use the fallback method:
 
 ```php
 $router->add('*', '/somewhere', 'handler');
 ```
 
-### Note on HEAD requests
+## Important note for HEAD requests
 
-The HTTP specification requires servers to support the HEAD method on a GET resource but without sending an entity body.
+By specification, servers must support the HEAD method for any GET resource, but without returning an entity body. In this router HEAD requests will automatically fall back to a GET route if you haven’t defined a specific HEAD route.
 
-For convenience, HEAD lookups will automatically fallback to a GET route unless you explicitly define a HEAD route.
-
-The PHP SAPI removes the entity body from HEAD responses. However, implementers outside the web SAPI environment (e.g. a custom server) MUST NOT send entity bodies generated in response to HEAD requests.
+If you’re using PHP’s built-in web SAPI, the entity body is removed for HEAD responses automatically. If you’re implementing a custom server outside the web SAPI be sure not to send any entity body in response to HEAD requests.
 
 ## Benchmarks
 
-Most likely the router is never going to be the bottleneck of your application. Use profilers with flamegraphs instead of wasting too much time on micro-optimizations! (Unless you're into that kinda thing)
+Benchmarking is hard so take these results with a grain of salt. In most real world situations application performance relies on many different factors, these benchmarks capture the raw routing speed for only single segment required path parameters (no wildcards) but does not test workload or congestion performance.
+
+As the name suggests, Radix Router uses a radix tree structure for dynamic route matching, which contributes to its efficient performance. Most likely the router is not going to be the bottleneck of your application. You should use profilers instead of spending too much time on micro-optimizations. Do not base your entire decision on routing performance alone, nevertheless this router is very performant at these tasks.
 
 These benchmarks are single-threaded and run on an Intel Xeon E3-1220L (20 Watt CPU from 2011), PHP 8.4.13.
 
-- Lookups: Measures in-memory route matching speed.
-- Mem: Peak memory usage during the in-memory lookup benchmark.
-- Register: Time required to setup the router and make the first lookup. (What matters for PHP SAPI)
+- **Lookups:** Measures raw in-memory route matching speed
+- **Mem:** Peak memory usage during the in-memory lookup benchmark
+- **Register:** Time taken to setup the router and make the first lookup
 
 #### Simple (33 routes)
 
@@ -337,10 +349,10 @@ Randomly generated routes containing at least 1 dynamic segment with depth rangi
 
 These are third-party integrations so evaluate and use them at your own discretion.
 
-| Library | Description | Maintainer |
-|---------|-------------|------------|
-| [Mezzio](https://github.com/sirix777/mezzio-radixrouter) | Integration for Mezzio framework | [sirix777](https://github.com/sirix777) |
-| [Yii](https://github.com/sirix777/yii-radixrouter) | Integration for the Yii Framework   | [sirix777](https://github.com/sirix777) |
+| Package | Maintainer |
+|---------|-------------|
+| [Mezzio RadixRouter](https://github.com/sirix777/mezzio-radixrouter) | [sirix777](https://github.com/sirix777) |
+| [Yii RadixRouter Adapter](https://github.com/sirix777/yii-radixrouter) | [sirix777](https://github.com/sirix777) |
 
 ## License
 
