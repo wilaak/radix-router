@@ -3,11 +3,14 @@
 ![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)
 ![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)
 
-PHP Radix Router (or RadX Router) is an HTTP routing library focused on providing just the essentials with high-performance. It makes an excellent choice for simple applications or as the foundation for building your own custom more featureful router (see third-party [integrations](#integrations)).
+> [!NOTE]   
+>  As of v3.6.0 RadixRouter is deemed to be feature complete. No major API changes are planned; only maintenance and bug fixes will be provided.
+
+RadixRouter (or RadXRouter) is a lightweight HTTP routing library for PHP focused on providing the essentials while being fast and small. It makes an excellent choice for simple applications or as the foundation for building your own custom more featureful router (see third-party [integrations](#integrations)).
 
 It features fast $O(k)$ dynamic route matching ($k$ = segments in path), path parameters (optional, wildcard; one per segment), simple API for listing routes/methods (for OPTIONS support), 405 method not allowed handling and it's all in a package weighing in at only ~370 lines of code with no external dependencies.
 
-To see how this router compares to other implementations in terms of raw routing performance see the [benchmarks](#benchmarks) section.
+RadixRouter consistently ranks as one of the fastest PHP routers. To see how this router compares to other implementations in routing performance see the [benchmarks](#benchmarks) section.
 
 ## Install
 
@@ -54,11 +57,9 @@ switch ($result['code']) {
 
 ## Route Configuration
 
-The router has a predictable route ordering where the most specific pattern wins. The router does not support regex patterns and it's recommended that you do this validation in your handlers for clarity. If you absolutely need this you can use a more suitable router of which there are plenty (see [FastRoute](https://github.com/nikic/FastRoute)).
+Routes are matched in a predictable order, always favoring the most specific pattern. Handlers can be any value you choose. In these examples, we use strings for simplicity, but you’re free to use arrays with extra details like middleware or other metadata. Just remember: if you plan to use [route caching](#route-caching), your handlers must be serializable.
 
-You can provide any value as the handler. For these examples we will only use a string however you could just as well use an array with extra information such as middleware etc but keep in mind that if you want to support [route caching](#route-caching) you need to use serializable data.
-
-#### Basic Routing
+The router does not support regex patterns and it's recommended that you do this validation in your handlers. Regular expressions allow for highly flexible matching which can make route resolution order less predictable. If you absolutely need this you can use a more suitable router of which there are plenty (e.g., [FastRoute](https://github.com/nikic/FastRoute)).
 
 ```php
 // Simple GET route
@@ -90,12 +91,16 @@ $router->add('GET', '/users/:id', 'UserController@profile');
 //   /users/123 -> ['id' => '123']
 
 // You can have as many as you want, but keep it sane
-$router->add('GET', '/users/:id/:favorite_food/:spirit_animal', 'UserController@profile');
+$router->add('GET', '/users/:id/orders/:order_id', 'OrderController@details');
 ```
 
 #### Optional Parameters
 
-These match whether the segment is present or not. While this can be useful, in most cases you’re better off using query parameters instead of restricting yourself to a single filtering option in the path.
+These match whether the segment is present or not. 
+
+> [!TIP]   
+> Use sparingly! In most cases you’re probably better off using query parameters instead of restricting yourself to a single filtering option in the path.
+
 
 ```php
 // Single optional parameter
@@ -147,7 +152,7 @@ The router provides a convenient method for listing routes and their associated 
 
 ```php
 // Print a formatted table of all routes
-function printRoutesTable($routes) {
+function print_routes_table($routes) {
     printf("%-8s  %-24s  %s\n", 'METHOD', 'PATTERN', 'HANDLER');
     printf("%s\n", str_repeat('-', 60));
     foreach ($routes as $route) {
@@ -157,10 +162,10 @@ function printRoutesTable($routes) {
 }
 
 // List all routes
-printRoutesTable($router->list());
+print_routes_table($router->list());
 
 // List routes for a specific path
-printRoutesTable($router->list('/contact'));
+print_routes_table($router->list('/contact'));
 ```
 
 Example Output:
@@ -184,7 +189,7 @@ POST      /contact                  ContactController@submit
 
 ### Route Caching
 
-Route caching is beneficial for classic PHP deployments where scripts are reloaded on every request. In these environments, caching routes in a PHP file allows OPcache to keep them in memory, improving performance.
+Route caching can be beneficial for classic PHP deployments where scripts are reloaded on every request. In these environments, caching routes in a PHP file allows OPcache to keep them in memory, improving performance.
 
 For persistent environments such as Swoole or FrankenPHP in worker mode, where the application and its routes remain in memory between requests, route caching is generally unnecessary.
 
@@ -218,9 +223,6 @@ $router->static = $routes['static'];
 
 You can easily add custom HTTP methods to the router, just make sure the method names are uppercase as validation only happens when you add routes.
 
-
-For example, to support methods like PURGE or REPORT:
-
 ```php
 $customMethods = ['PURGE', 'REPORT'];
 $router->allowedMethods = array_merge($router->allowedMethods, $customMethods);
@@ -232,6 +234,12 @@ If you want a route to match any HTTP method (including custom ones), use the fa
 $router->add('*', '/somewhere', 'handler');
 ```
 
+### Canonical URLs
+
+The router does not perform any automatic trailing slash redirects. Trailing slashes at the end of the request path are automatically trimmed before route matching, so both `/about` and `/about/` will match the same route.
+
+When a route is successfully matched, the lookup method returns the canonical pattern of the matched route, allowing you to implement your own logic to enforce a specific URL format or redirect as needed.
+
 ## Important note for HEAD requests
 
 By specification, servers must support the HEAD method for any GET resource, but without returning an entity body. In this router HEAD requests will automatically fall back to a GET route if you haven’t defined a specific HEAD route.
@@ -240,9 +248,9 @@ If you’re using PHP’s built-in web SAPI, the entity body is removed for HEAD
 
 ## Benchmarks
 
-Benchmarking is hard so take these results with a grain of salt. In most real world situations application performance relies on many different factors, these benchmarks capture the raw routing speed for only single segment required path parameters (no wildcards) but does not test workload or congestion performance.
+In most real world situations application performance relies on many different factors, these benchmarks capture the raw routing speed for only single segment required path parameters (no wildcards) but does not test workload or congestion performance.
 
-As the name suggests, Radix Router uses a radix tree structure for dynamic route matching, which contributes to its efficient performance. Most likely the router is not going to be the bottleneck of your application. You should use profilers instead of spending too much time on micro-optimizations. Do not base your entire decision on routing performance alone, nevertheless this router is very performant at these tasks.
+Most likely the router is not going to be the bottleneck of your application. You should use profilers instead of spending too much time on micro-optimizations. Do not base your entire decision on routing performance alone, nevertheless this router is very performant at these tasks.
 
 These benchmarks are single-threaded and run on an Intel Xeon E3-1220L (20 Watt CPU from 2011), PHP 8.4.13.
 
@@ -351,8 +359,8 @@ These are third-party integrations so evaluate and use them at your own discreti
 
 | Package | Maintainer |
 |---------|-------------|
-| [Mezzio RadixRouter](https://github.com/sirix777/mezzio-radixrouter) | [sirix777](https://github.com/sirix777) |
-| [Yii RadixRouter Adapter](https://github.com/sirix777/yii-radixrouter) | [sirix777](https://github.com/sirix777) |
+| [Mezzio Framework](https://github.com/sirix777/mezzio-radixrouter) | [sirix777](https://github.com/sirix777) |
+| [Yii Framework](https://github.com/sirix777/yii-radixrouter) | [sirix777](https://github.com/sirix777) |
 
 ## License
 
