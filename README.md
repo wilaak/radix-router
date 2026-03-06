@@ -1,7 +1,7 @@
 # <img alt="RadixRouter" width="200" src="./assets/radx.svg">
 
 > [!NOTE]   
->  As of v3.6.0 RadixRouter is deemed as feature complete. No major API changes are planned; only maintenance and bug fixes will be provided.
+>  As of v3.6.0 RadixRouter is seen as feature complete. No major API changes are planned; only maintenance and bug fixes will be provided.
 
 RadixRouter (or RadXRouter) is a lightweight HTTP routing library for PHP focused on providing the essentials while being fast and small. It makes an excellent choice for simple applications or as the foundation for building your own custom more featureful router (see third-party [integrations](#integrations)).
 
