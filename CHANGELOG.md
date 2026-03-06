@@ -2,7 +2,7 @@
 
 Notable changes to this project goes here
 
-## [v3.6.1] - Unreleased
+## [v3.6.1] - 06.03.2026
 
 - Fixed a long standing bug in which valid routes would become shadowed and unreachable. ([#5](https://github.com/wilaak/radix-router/issues/5))
 

@@ -5,7 +5,7 @@
 
 RadixRouter (or RadXRouter) is a lightweight HTTP routing library for PHP focused on providing the essentials while being fast and small. It makes an excellent choice for simple applications or as the foundation for building your own custom more featureful router (see third-party [integrations](#integrations)).
 
-It features fast $O(k)$ dynamic route matching ($k$ = segments in path), path parameters (optional, wildcard; one per segment), simple API for listing routes/methods (for OPTIONS support), 405 method not allowed handling and it's all in a package weighing in at only ~370 lines of code with no external dependencies.
+It features fast $O(k)$ dynamic route matching ($k$ = segments in path), path parameters (optional, wildcard; one per segment), simple API for listing routes/methods (for OPTIONS support), 405 method not allowed handling and it's all in a package weighing in at only ~400 lines of code with no external dependencies.
 
 RadixRouter consistently ranks as being one of the fastest (if not *the* fastest) PHP routers out there. To see how this router compares to other implementations in routing performance see the [benchmarks](#benchmarks) section.
 
@@ -68,7 +68,7 @@ $router->add(['GET', 'POST'], '/contact', 'ContactController@submit');
 // Any allowed HTTP method
 $router->add($router->allowedMethods, '/maintenance', 'MaintenanceController@handle');
 
-// Fallback HTTP method (allowed or not)
+// Special fallback HTTP method (allowed or not)
 $router->add('*', '/maintenance', 'MaintenanceController@handle');
 ```
 
@@ -249,13 +249,14 @@ If you’re using PHP’s built-in web SAPI, the entity body is removed for HEAD
 
 Most likely the router will not be your application's bottleneck. Instead of focusing on micro-optimizations, you should use profilers to identify performance issues (unless you're into that kinda thing).
 
-These benchmarks are single-threaded and run on an Ryzen AI PRO 350, PHP 8.4.15.
+These benchmarks are single-threaded and run on an AMD Ryzen AI PRO 350, PHP 8.4.15.
 
 - **Lookups:** Measures raw in-memory route matching speed
 - **Mem:** Peak memory usage during the in-memory lookup benchmark
 - **Register:** Time taken to setup the router and make the first lookup
 
 #### Simple (33 routes)
+
 | Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Register (ms)   |
 |------|------------------------------|--------------------|---------------|------------|-----------------|
 |    1 |  **RadixRouter (cached)** | JIT=tracing        |     7,674,396 |      173.3 |           0.048 |
@@ -351,7 +352,6 @@ Randomly generated routes containing at least 1 dynamic segment with depth rangi
 ## Integrations
 
 If this router is a bit too minimalistic, you might try one of the following more high-level integrations. These are third-party so evaluate and use them at your own risk.
-
 
 | Package | Maintainer |
 |---------|-------------|
