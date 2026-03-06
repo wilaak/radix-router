@@ -88,7 +88,7 @@ class RadixRouter
 
         $segments = \explode('/', $normalizedPattern);
         $isOptional = false;
-        $parameters = [];
+        $params = [];
 
         foreach ($segments as $i => &$segment) {
             if ($isOptional && !\str_ends_with($segment, '?')) {
@@ -110,12 +110,12 @@ class RadixRouter
                         . "Parameter name '{$name}' must start with a letter or underscore and contain only letters, digits, or underscores"
                 );
             }
-            if (isset($parameters[$name])) {
+            if (isset($params[$name])) {
                 throw new InvalidArgumentException(
                     "Invalid Pattern: [{$method}] '{$pattern}': Parameter name '{$name}' cannot be used more than once"
                 );
             }
-            $parameters[$name] = $name;
+            $params[$name] = $name;
 
             if (\str_ends_with($segment, '?')) {
                 $isOptional = true;
@@ -135,7 +135,7 @@ class RadixRouter
         unset($segment);
 
         if ($isOptional) {
-            $variants = $this->getOptionalVariants($pattern);
+            $variants = $this->expandOptionalTrailingSegments($pattern);
             $this->optionalPattern = $pattern;
             foreach ($variants as $variant) {
                 $this->add($method, $variant, $handler);
@@ -144,50 +144,26 @@ class RadixRouter
             return $this;
         }
 
-        $node = &$this->tree;
+        $currentNode = &$this->tree;
         foreach ($segments as $segment) {
-            $node = &$node[$segment];
+            $currentNode = &$currentNode[$segment];
         }
 
-        if (isset($node[self::NODE_ROUTES][$method])) {
+        if (isset($currentNode[self::NODE_ROUTES][$method])) {
             $attempted = $this->optionalPattern ?? $pattern;
-            $conflicting = $node[self::NODE_ROUTES][$method]['pattern'];
+            $conflicting = $currentNode[self::NODE_ROUTES][$method]['pattern'];
             throw new InvalidArgumentException(
                 "Route Conflict: [{$method}] '{$attempted}': Path is already registered"
                     . ($attempted !== $conflicting ? " (conflicts with '{$conflicting}')" : '')
             );
         }
-        $node[self::NODE_ROUTES][$method] = [
+        $currentNode[self::NODE_ROUTES][$method] = [
             'code' => 200,
             'handler' => $handler,
-            'params' => $parameters,
+            'params' => $params,
             'pattern' => $this->optionalPattern ?? $pattern,
         ];
         return $this;
-    }
-
-    /**
-     * Looks up a route based on the HTTP method and path.
-     *
-     * @param string $method HTTP method (e.g., 'GET', 'POST').
-     * @param string $path Request path (e.g., '/users/123').
-     * @return array{code: int, handler?: mixed, params?: array<string, string>, pattern?: string, allowed_methods?: list<string>}
-     */
-    public function lookup(string $method, string $path): array
-    {
-        $path = \rtrim($path, '/');
-        $result = $this->matchRoute($method, $path);
-        if ($result['code'] !== 405) {
-            return $result;
-        }
-        $routes = $result['_routes'];
-        if (isset($routes['GET']) && !isset($routes['HEAD'])) {
-            if ($method === 'HEAD') {
-                return $routes['GET'];
-            }
-            $result['allowed_methods'][] = 'HEAD';
-        }
-        return $result;
     }
 
     /**
@@ -223,23 +199,23 @@ class RadixRouter
             }
         }
 
-        $collect = function ($node) use (&$collect, &$routes, $formatRoute): void {
-            if (isset($node[self::NODE_ROUTES])) {
-                foreach ($node[self::NODE_ROUTES] as $method => $route) {
+        $collect = function ($currentNode) use (&$collect, &$routes, $formatRoute): void {
+            if (isset($currentNode[self::NODE_ROUTES])) {
+                foreach ($currentNode[self::NODE_ROUTES] as $method => $route) {
                     $routes[] = $formatRoute($method, $route);
                 }
             }
-            foreach ($node as $segment => $child) {
+            foreach ($currentNode as $segment => $child) {
                 if (\str_starts_with($segment, '/')) {
                     continue;
                 }
                 $collect($child);
             }
-            if (isset($node[self::NODE_WILDCARD])) {
-                $collect($node[self::NODE_WILDCARD]);
+            if (isset($currentNode[self::NODE_WILDCARD])) {
+                $collect($currentNode[self::NODE_WILDCARD]);
             }
-            if (isset($node[self::NODE_PARAMETER])) {
-                $collect($node[self::NODE_PARAMETER]);
+            if (isset($currentNode[self::NODE_PARAMETER])) {
+                $collect($currentNode[self::NODE_PARAMETER]);
             }
         };
         $collect($this->tree);
@@ -265,6 +241,36 @@ class RadixRouter
         return $methods;
     }
 
+    /**
+     * Retrieve route for a given HTTP method and path.
+     *
+     * @param string $method HTTP method (e.g., 'GET', 'POST').
+     * @param string $path Request path (e.g., '/users/123').
+     * @return array{
+     *   code: int,
+     *   handler?: mixed,
+     *   params?: array<string, string>,
+     *   pattern?: string,
+     *   allowed_methods?: list<string>
+     * }
+     */
+    public function lookup(string $method, string $path): array
+    {
+        $path = \rtrim($path, '/');
+        $result = $this->matchRoute($method, $path);
+        if ($result['code'] !== 405) {
+            return $result;
+        }
+        $routes = $result['_routes'];
+        if (isset($routes['GET']) && !isset($routes['HEAD'])) {
+            if ($method === 'HEAD') {
+                return $routes['GET'];
+            }
+            $result['allowed_methods'][] = 'HEAD';
+        }
+        return $result;
+    }
+
     private function matchRoute(string $method, string $path): array
     {
         $routes = $this->static[$path] ?? null;
@@ -278,27 +284,34 @@ class RadixRouter
 
         $segments = \explode('/', $path);
         $params = [];
-        $node = $this->tree;
-        $wildcardNode = $wildcardParams = $wildcardOffset = null;
+        $currentNode = $this->tree;
 
         foreach ($segments as $i => $segment) {
-            if (isset($node[self::NODE_WILDCARD])) {
-                $wildcardNode = $node[self::NODE_WILDCARD];
+            $lastStaticNode = null;
+
+            if (isset($currentNode[self::NODE_WILDCARD])) {
+                $wildcardNode = $currentNode[self::NODE_WILDCARD];
                 $wildcardParams = $params;
                 $wildcardOffset = $i;
             }
-            if (isset($node[$segment])) {
-                $node = $node[$segment];
-            } elseif ($segment !== '' && isset($node[self::NODE_PARAMETER])) {
-                $node = $node[self::NODE_PARAMETER];
-                $params[] = $segment;
-            } else {
-                unset($node);
-                break;
+
+            if (isset($currentNode[$segment])) {
+                $lastStaticNode = $currentNode;
+                $lastStaticSegment = $segment;
+                $currentNode = $currentNode[$segment];
+                continue;
             }
+
+            if ($segment !== '' && isset($currentNode[self::NODE_PARAMETER])) {
+                $currentNode = $currentNode[self::NODE_PARAMETER];
+                $params[] = $segment;
+                continue;
+            }
+            unset($currentNode);
+            break;
         }
 
-        $routes = $node[self::NODE_ROUTES] ?? null;
+        $routes = $currentNode[self::NODE_ROUTES] ?? null;
         if (isset($routes)) {
             $result = $routes[$method] ?? $routes['*'] ?? null;
             if (isset($result) && $method !== '*') {
@@ -308,7 +321,18 @@ class RadixRouter
             return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
         }
 
-        $routes = $node[self::NODE_WILDCARD][self::NODE_ROUTES] ?? null;
+        $routes = $lastStaticNode[self::NODE_PARAMETER][self::NODE_ROUTES] ?? null;
+        if (isset($routes)) {
+            $result = $routes[$method] ?? $routes['*'] ?? null;
+            if (isset($result) && $method !== '*') {
+                $params[] = $lastStaticSegment;
+                $result['params'] = \array_combine($result['params'], $params);
+                return $result;
+            }
+            return ['code' => 405, 'allowed_methods' => \array_keys($routes), '_routes' => $routes];
+        }
+
+        $routes = $currentNode[self::NODE_WILDCARD][self::NODE_ROUTES] ?? null;
         if (isset($routes)) {
             $result = $routes[$method] ?? $routes['*'] ?? null;
             if (isset($result) && $method !== '*') {
@@ -348,21 +372,23 @@ class RadixRouter
         return ['code' => 404];
     }
 
-    private function getOptionalVariants(string $pattern): array
+    private function expandOptionalTrailingSegments(string $pattern): array
     {
         $segments = \explode('/', \trim($pattern, '/'));
-        $firstOptional = null;
         $count = \count($segments);
+
+        $firstOptional = null;
         for ($i = 0; $i < $count; $i++) {
             if (\str_ends_with($segments[$i], '?')) {
                 $firstOptional = $i;
                 break;
             }
         }
+
         $variants = [];
-        for ($variantEnd = $firstOptional; $variantEnd <= $count; $variantEnd++) {
+        for ($end = $firstOptional; $end <= $count; $end++) {
             $parts = [];
-            foreach (\array_slice($segments, 0, $variantEnd) as $segment) {
+            foreach (\array_slice($segments, 0, $end) as $segment) {
                 $parts[] = \rtrim($segment, '?');
             }
             $variants[] = '/' . \implode('/', $parts);
