@@ -1,16 +1,13 @@
 # <img alt="RadixRouter" width="200" src="./assets/radx.svg">
 
-![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)
-![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)
-
 > [!NOTE]   
->  As of v3.6.0 RadixRouter is deemed to be feature complete. No major API changes are planned; only maintenance and bug fixes will be provided.
+>  As of v3.6.0 RadixRouter is deemed as feature complete. No major API changes are planned; only maintenance and bug fixes will be provided.
 
 RadixRouter (or RadXRouter) is a lightweight HTTP routing library for PHP focused on providing the essentials while being fast and small. It makes an excellent choice for simple applications or as the foundation for building your own custom more featureful router (see third-party [integrations](#integrations)).
 
 It features fast $O(k)$ dynamic route matching ($k$ = segments in path), path parameters (optional, wildcard; one per segment), simple API for listing routes/methods (for OPTIONS support), 405 method not allowed handling and it's all in a package weighing in at only ~370 lines of code with no external dependencies.
 
-RadixRouter consistently ranks as one of the fastest PHP routers. To see how this router compares to other implementations in routing performance see the [benchmarks](#benchmarks) section.
+RadixRouter consistently ranks as being one of the fastest (if not *the* fastest) PHP routers out there. To see how this router compares to other implementations in routing performance see the [benchmarks](#benchmarks) section.
 
 ## Install
 
@@ -71,7 +68,7 @@ $router->add(['GET', 'POST'], '/contact', 'ContactController@submit');
 // Any allowed HTTP method
 $router->add($router->allowedMethods, '/maintenance', 'MaintenanceController@handle');
 
-// Any HTTP method (allowed or not)
+// Fallback HTTP method (allowed or not)
 $router->add('*', '/maintenance', 'MaintenanceController@handle');
 ```
 
@@ -189,9 +186,11 @@ POST      /contact                  ContactController@submit
 
 ### Route Caching
 
-Route caching can be beneficial for classic PHP deployments where scripts are reloaded on every request. In these environments, caching routes in a PHP file allows OPcache to keep them in memory, improving performance.
+Route caching can be beneficial for classic PHP deployments where scripts are reloaded on every request. In these environments, caching routes in a PHP file allows OPcache to keep them in shared memory, significantly reducing script startup time by eliminating the need to recompile route definitions on each request.
 
-For persistent environments such as Swoole or FrankenPHP in worker mode, where the application and its routes remain in memory between requests, route caching is generally unnecessary.
+An additional benefit of storing routes in PHP files is that PHP’s engine automatically interns identical string literals at compile time. This means that when multiple routes share the same pattern, method or handler name, only a single instance of each unique string is stored in memory, reducing memory usage and access latency.
+
+For persistent environments such as Swoole or FrankenPHP in worker mode, where the application and its routes remain in memory between requests, route caching is generally unnecessary. However you may still gain some performance uplift from the aforementioned interning, which you may also notice in the [benchmark](#benchmarks) results.
 
 > [!NOTE]  
 > You must only provide serializable handlers such as strings or arrays. Closures and anonymous functions are not supported for route caching.
@@ -240,7 +239,7 @@ The router does not perform any automatic trailing slash redirects. Trailing sla
 
 When a route is successfully matched, the lookup method returns the canonical pattern of the matched route, allowing you to implement your own logic to enforce a specific URL format or redirect as needed.
 
-## Important note for HEAD requests
+## Important note on HEAD requests
 
 By specification, servers must support the HEAD method for any GET resource, but without returning an entity body. In this router HEAD requests will automatically fall back to a GET route if you haven’t defined a specific HEAD route.
 
@@ -248,9 +247,7 @@ If you’re using PHP’s built-in web SAPI, the entity body is removed for HEAD
 
 ## Benchmarks
 
-In most real world situations application performance relies on many different factors, these benchmarks capture the raw routing speed for only single segment required path parameters (no wildcards) but does not test workload or congestion performance.
-
-Most likely the router is not going to be the bottleneck of your application. You should use profilers instead of spending too much time on micro-optimizations. Do not base your entire decision on routing performance alone, nevertheless this router is very performant at these tasks.
+Most likely the router will not be your application's bottleneck. Instead of focusing on micro-optimizations, you should use profilers to identify performance issues (unless you're into that kinda thing).
 
 These benchmarks are single-threaded and run on an Intel Xeon E3-1220L (20 Watt CPU from 2011), PHP 8.4.13.
 
@@ -355,7 +352,8 @@ Randomly generated routes containing at least 1 dynamic segment with depth rangi
 
 ## Integrations
 
-These are third-party integrations so evaluate and use them at your own discretion.
+If this router is a bit too minimalistic, you might try one of the following more high-level integrations. These are third-party so evaluate and use them at your own risk.
+
 
 | Package | Maintainer |
 |---------|-------------|
