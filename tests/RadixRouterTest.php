@@ -803,4 +803,50 @@ class RadixRouterTest extends TestCase
         $methods = $router->methods('/explicit');
         $this->assertEqualsCanonicalizing(['GET', 'HEAD'], $methods);
     }
+
+    public function testStaticNodeFallbackToParameterNode()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/test/:test', function ($test) {
+            return "Second: /test/:test, param = $test";
+        });
+        $router->add('GET', '/:test', function ($test) {
+            return "First: /:test, param = $test";
+        });
+
+        // Static nodes take precedence over parameter nodes.
+        // When matching /test, the router traverses to the static node (/test)
+        // but finds no handler since the parameter node requires a non-empty segment
+        
+        // This test ensures that if no route is found at a static node we will
+        // fall back to the parameter node at the same path level.
+
+        $info = $router->lookup('GET', '/test');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals("First: /:test, param = test", $info['handler'](...$info['params']));
+
+        $info = $router->lookup('GET', '/test/foo');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals("Second: /test/:test, param = foo", $info['handler'](...$info['params']));
+
+        $info = $router->lookup('GET', '/foo');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals("First: /:test, param = foo", $info['handler'](...$info['params']));
+
+        $router = new RadixRouter();
+        $router->add('GET', '/:foo', function ($foo) {
+            return "Foo";
+        });
+        $router->add('GET', '/bar/:foo*', function ($foo) {
+            return "Bar";
+        });
+
+        $info = $router->lookup('GET', '/bar');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals("Foo", $info['handler'](...$info['params']));
+
+        $info = $router->lookup('GET', '/bar/foo');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals("Bar", $info['handler'](...$info['params']));
+    }
 }
