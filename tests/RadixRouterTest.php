@@ -5,6 +5,84 @@ use Wilaak\Http\RadixRouter;
 
 class RadixRouterTest extends TestCase
 {
+    private static function patternTypes(): array
+    {
+        return [
+            [
+                'pattern' => '/resource',
+                'lookup'  => '/resource',
+                'params'  => [],
+                'desc'    => 'static',
+            ],
+            [
+                'pattern' => '/resource/:id',
+                'lookup'  => '/resource/123',
+                'params'  => ['id' => '123'],
+                'desc'    => 'required param',
+            ],
+            [
+                'pattern' => '/resource/:opt?',
+                'lookup'  => '/resource/value',
+                'params'  => ['opt' => 'value'],
+                'desc'    => 'optional param',
+            ],
+            [
+                'pattern' => '/resource/:opt?/:opt2?/:opt3?',
+                'lookup'  => '/resource/value1/value2',
+                'params'  => ['opt' => 'value1', 'opt2' => 'value2'],
+                'desc'    => 'multiple optional params',
+            ],
+            [
+                'pattern' => '/resource/:opt?/:opt2?/:opt3?',
+                'lookup'  => '/resource/value1/value2/value3',
+                'params'  => ['opt' => 'value1', 'opt2' => 'value2', 'opt3' => 'value3'],
+                'desc'    => 'multiple optional params',
+            ],
+            [
+                'pattern' => '/resource/:opt?/:opt2?/:opt3?',
+                'lookup'  => '/resource/value1',
+                'params'  => ['opt' => 'value1'],
+                'desc'    => 'multiple optional params',
+            ],
+            [
+                'pattern' => '/resource/:rest*',
+                'lookup'  => '/resource/one/two',
+                'params'  => ['rest' => 'one/two'],
+                'desc'    => 'wildcard (*)',
+            ],
+            [
+                'pattern' => '/resource/:rest+',
+                'lookup'  => '/resource/one/two',
+                'params'  => ['rest' => 'one/two'],
+                'desc'    => 'required wildcard (+)',
+            ],
+            [
+                'pattern' => '/resource/:a/:b',
+                'lookup'  => '/resource/foo/bar',
+                'params'  => ['a' => 'foo', 'b' => 'bar'],
+                'desc'    => 'multiple required params',
+            ],
+            [
+                'pattern' => '/resource/:id/:opt?',
+                'lookup'  => '/resource/123/value',
+                'params'  => ['id' => '123', 'opt' => 'value'],
+                'desc'    => 'required + optional',
+            ],
+            [
+                'pattern' => '/resource/:id/:rest*',
+                'lookup'  => '/resource/123/one/two',
+                'params'  => ['id' => '123', 'rest' => 'one/two'],
+                'desc'    => 'required + wildcard (*)',
+            ],
+            [
+                'pattern' => '/resource/:id/:rest+',
+                'lookup'  => '/resource/123/one/two',
+                'params'  => ['id' => '123', 'rest' => 'one/two'],
+                'desc'    => 'required + required wildcard (+)',
+            ],
+        ];
+    }
+
     public function testBasicUsage()
     {
         $router = new RadixRouter();
@@ -230,13 +308,15 @@ class RadixRouterTest extends TestCase
 
     public function testMethodNotAllowed()
     {
-        $router = new RadixRouter();
-        $router->add('GET', '/foo', 'get_handler');
-        $router->add('POST', '/foo', 'post_handler');
+        foreach (self::patternTypes() as $type) {
+            $router = new RadixRouter();
+            $router->add('GET', $type['pattern'], 'get_handler');
+            $router->add('POST', $type['pattern'], 'post_handler');
 
-        $info = $router->lookup('PUT', '/foo');
-        $this->assertEquals(405, $info['code']);
-        $this->assertEqualsCanonicalizing(['GET', 'POST', 'HEAD'], $info['allowed_methods']);
+            $info = $router->lookup('PUT', $type['lookup']);
+            $this->assertEquals(405, $info['code'], $type['desc']);
+            $this->assertEqualsCanonicalizing(['GET', 'POST', 'HEAD'], $info['allowed_methods'], $type['desc']);
+        }
     }
 
     public function testRouteConflictThrows()
@@ -284,44 +364,99 @@ class RadixRouterTest extends TestCase
         $router->add('GET', '/foo/:bar?/baz', 'bad_handler');
     }
 
-    public function testPatternWithoutLeadingSlash()
+    public function testMixingWildcardAndOptionalMarker()
     {
         $router = new RadixRouter();
-        $router->add('GET', 'test/path', 'root_handler');
+        $this->expectException(\InvalidArgumentException::class);
+        $router->add('GET', '/foo/:bar*?', 'bad_handler');
+    }
 
-        $info = $router->lookup('GET', '/test/path');
-        $this->assertEquals(200, $info['code']);
+    public function testMixingRequiredWildcardAndOptionalMarker()
+    {
+        $router = new RadixRouter();
+        $this->expectException(\InvalidArgumentException::class);
+        $router->add('GET', '/foo/:bar+?', 'bad_handler');
+    }
+
+    public function testDuplicateParameterNameThrows()
+    {
+        $router = new RadixRouter();
+        $this->expectException(\InvalidArgumentException::class);
+        $router->add('GET', '/foo/:id/bar/:id', 'handler');
+    }
+
+    public function testDoubleSlashInPatternThrows()
+    {
+        $router = new RadixRouter();
+        $this->expectException(\InvalidArgumentException::class);
+        $router->add('GET', '//foo', 'handler');
+    }
+
+    public function testInvalidMethodThrows()
+    {
+        $router = new RadixRouter();
+        $this->expectException(\InvalidArgumentException::class);
+        $router->add('FOOBAR', '/bad', 'handler');
+    }
+
+    public function testEmptyMethodThrows()
+    {
+        $router = new RadixRouter();
+        $this->expectException(\InvalidArgumentException::class);
+        $router->add('', '/bad', 'handler');
+    }
+
+    public function testEmptyMethodArrayThrows()
+    {
+        $router = new RadixRouter();
+        $this->expectException(\InvalidArgumentException::class);
+        $router->add([], '/bad', 'handler');
+    }
+
+    public function testPatternWithoutLeadingSlash()
+    {
+        foreach (self::patternTypes() as $type) {
+            $router = new RadixRouter();
+            $router->add('GET', ltrim($type['pattern'], '/'), 'handler');
+            $info = $router->lookup('GET', $type['lookup']);
+            $this->assertEquals(200, $info['code'], $type['desc']);
+        }
     }
 
     public function testMultipleMethodsArray()
     {
-        $router = new RadixRouter();
-        $router->add(['GET', 'POST'], '/multi', 'multi_handler');
-        $info1 = $router->lookup('GET', '/multi');
-        $info2 = $router->lookup('POST', '/multi');
-        $this->assertEquals(200, $info1['code']);
-        $this->assertEquals(200, $info2['code']);
-        $this->assertEquals('multi_handler', $info1['handler']);
-        $this->assertEquals('multi_handler', $info2['handler']);
+        foreach (self::patternTypes() as $type) {
+            $router = new RadixRouter();
+            $router->add(['GET', 'POST'], $type['pattern'], 'multi_handler');
+
+            $info1 = $router->lookup('GET', $type['lookup']);
+            $info2 = $router->lookup('POST', $type['lookup']);
+            $this->assertEquals(200, $info1['code'], $type['desc'] . ': GET code');
+            $this->assertEquals(200, $info2['code'], $type['desc'] . ': POST code');
+            $this->assertEquals('multi_handler', $info1['handler'], $type['desc'] . ': GET handler');
+            $this->assertEquals('multi_handler', $info2['handler'], $type['desc'] . ': POST handler');
+        }
     }
 
     public function testCaseInsensitiveMethod()
     {
-        $router = new RadixRouter();
-        $router->add('get', '/case', 'handler');
-        $info = $router->lookup('GET', '/case');
-        $this->assertEquals(200, $info['code']);
-        $this->assertEquals('handler', $info['handler']);
+        foreach (self::patternTypes() as $type) {
+            $router = new RadixRouter();
+            $router->add('get', $type['pattern'], 'handler');
+            $info = $router->lookup('GET', $type['lookup']);
+            $this->assertEquals(200, $info['code'], $type['desc']);
+            $this->assertEquals('handler', $info['handler'], $type['desc']);
+        }
     }
 
     public function testTrailingSlashNormalization()
     {
-        $router = new RadixRouter();
-        $router->add('GET', '/slash', 'handler');
-        $info1 = $router->lookup('GET', '/slash/');
-        $info2 = $router->lookup('GET', '/slash');
-        $this->assertEquals(200, $info1['code']);
-        $this->assertEquals(200, $info2['code']);
+        foreach (self::patternTypes() as $type) {
+            $router = new RadixRouter();
+            $router->add('GET', $type['pattern'], 'handler');
+            $this->assertEquals(200, $router->lookup('GET', $type['lookup'] . '/')['code'], $type['desc'] . ': trailing slash');
+            $this->assertEquals(200, $router->lookup('GET', $type['lookup'])['code'], $type['desc'] . ': no trailing slash');
+        }
     }
 
     public function testParameterAndStaticConflict()
@@ -356,18 +491,42 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(['rest' => ''], $info['params']);
     }
 
-    public function testInvalidMethodThrows()
+    public function testParameterNameValidation()
     {
         $router = new RadixRouter();
-        $this->expectException(\InvalidArgumentException::class);
-        $router->add('FOOBAR', '/bad', 'handler');
-    }
 
-    public function testEmptyMethodThrows()
-    {
-        $router = new RadixRouter();
-        $this->expectException(\InvalidArgumentException::class);
-        $router->add('', '/bad', 'handler');
+        // Invalid parameter names
+        $invalidPatterns = [
+            '/foo/:',          // Empty parameter name
+            '/foo/:1bar',      // Starts with number
+            '/foo/:bar-baz',   // Contains dash
+            '/foo/:bar baz',   // Contains space
+            '/foo/:bar$',      // Contains special char
+        ];
+
+        foreach ($invalidPatterns as $pattern) {
+            try {
+                $router->add('GET', $pattern, 'handler');
+                $this->fail("Pattern '$pattern' should throw InvalidArgumentException");
+            } catch (\InvalidArgumentException $e) {
+                $this->assertTrue(true); // Exception thrown as expected
+            }
+        }
+
+        // Valid parameter names
+        $validPatterns = [
+            ['/foo/:_bar', ['_bar' => 'value'], '/foo/value'],
+            ['/foo/:bar123', ['bar123' => 'val'], '/foo/val'],
+            ['/foo/:_bar_123', ['_bar_123' => 'val'], '/foo/val'],
+            ['/foo/:BarBaz', ['BarBaz' => 'val'], '/foo/val'],
+        ];
+
+        foreach ($validPatterns as [$pattern, $expectedParams, $lookupPath]) {
+            $router = new RadixRouter();
+            $router->add('GET', $pattern, 'handler');
+            $info = $router->lookup('GET', $lookupPath);
+            $this->assertEquals($expectedParams, $info['params'], "Pattern '$pattern' failed");
+        }
     }
 
     public function testBenchmarking()
@@ -493,44 +652,6 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(['rest' => 'foo/bar/baz'], $info['params']);
     }
 
-    public function testParameterNameValidation()
-    {
-        $router = new RadixRouter();
-
-        // Invalid parameter names
-        $invalidPatterns = [
-            '/foo/:',          // Empty parameter name
-            '/foo/:1bar',      // Starts with number
-            '/foo/:bar-baz',   // Contains dash
-            '/foo/:bar baz',   // Contains space
-            '/foo/:bar$',      // Contains special char
-        ];
-
-        foreach ($invalidPatterns as $pattern) {
-            try {
-                $router->add('GET', $pattern, 'handler');
-                $this->fail("Pattern '$pattern' should throw InvalidArgumentException");
-            } catch (\InvalidArgumentException $e) {
-                $this->assertTrue(true); // Exception thrown as expected
-            }
-        }
-
-        // Valid parameter names
-        $validPatterns = [
-            ['/foo/:_bar', ['_bar' => 'value'], '/foo/value'],
-            ['/foo/:bar123', ['bar123' => 'val'], '/foo/val'],
-            ['/foo/:_bar_123', ['_bar_123' => 'val'], '/foo/val'],
-            ['/foo/:BarBaz', ['BarBaz' => 'val'], '/foo/val'],
-        ];
-
-        foreach ($validPatterns as [$pattern, $expectedParams, $lookupPath]) {
-            $router = new RadixRouter();
-            $router->add('GET', $pattern, 'handler');
-            $info = $router->lookup('GET', $lookupPath);
-            $this->assertEquals($expectedParams, $info['params'], "Pattern '$pattern' failed");
-        }
-    }
-
     public function testFallbackWildcardDoesNotGetDynamicParams()
     {
         $router = new RadixRouter();
@@ -554,13 +675,6 @@ class RadixRouterTest extends TestCase
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('wildcard_handler', $info['handler']);
         $this->assertEquals(['version' => 'v1', 'rest' => 'users/42/extra'], $info['params']);
-    }
-
-    public function testEmptyMethodArrayThrows()
-    {
-        $router = new RadixRouter();
-        $this->expectException(\InvalidArgumentException::class);
-        $router->add([], '/bad', 'handler');
     }
 
     public function testRouteList()
@@ -629,11 +743,33 @@ class RadixRouterTest extends TestCase
         $this->assertEquals($expected, $routes);
     }
 
-    public function testMixingWildcardAndOptionalMarker()
+    public function testListingMethodsForPath()
     {
+        // Multi-route scenario: verify methods() is specific to the matched route
         $router = new RadixRouter();
-        $this->expectException(\InvalidArgumentException::class);
-        $router->add('GET', '/foo/:bar*?', 'bad_handler');
+        $router->add('GET', '/resource', 'get_handler');
+        $router->add('POST', '/resource', 'post_handler');
+        $router->add('DELETE', '/resource/:id', 'delete_handler');
+
+        $this->assertEqualsCanonicalizing(['GET', 'HEAD', 'POST'], $router->methods('/resource'));
+        $this->assertEqualsCanonicalizing(['DELETE'], $router->methods('/resource/123'));
+        $this->assertEquals([], $router->methods('/nonexistent'));
+
+        $router->add('PUT', '/something', 'put_handler');
+        $router->add('PATCH', '/something', 'patch_handler');
+        $this->assertEqualsCanonicalizing(['PUT', 'PATCH'], $router->methods('/something'));
+
+        // Verify methods() returns correct results for every pattern type
+        foreach (self::patternTypes() as $type) {
+            $router = new RadixRouter();
+            $router->add('GET', $type['pattern'], 'get_handler');
+            $router->add('POST', $type['pattern'], 'post_handler');
+            $this->assertEqualsCanonicalizing(
+                ['GET', 'HEAD', 'POST'],
+                $router->methods($type['lookup']),
+                $type['desc']
+            );
+        }
     }
 
     public function testRequiredParameterEvaluation()
@@ -644,29 +780,6 @@ class RadixRouterTest extends TestCase
         $info1 = $router->lookup('GET', '/items/0');
 
         $this->assertEquals(200, $info1['code']);
-    }
-
-    public function testListingMethodsForPath()
-    {
-        $router = new RadixRouter();
-
-        $router->add('GET', '/resource', 'get_handler');
-        $router->add('POST', '/resource', 'post_handler');
-        $router->add('DELETE', '/resource/:id', 'delete_handler');
-
-        $methods1 = $router->methods('/resource');
-        $methods2 = $router->methods('/resource/123');
-        $methods3 = $router->methods('/nonexistent');
-
-        $this->assertEqualsCanonicalizing(['GET', 'HEAD', 'POST'], $methods1);
-        $this->assertEqualsCanonicalizing(['DELETE'], $methods2);
-        $this->assertEquals([], $methods3);
-
-        $router->add('PUT', '/something', 'put_handler');
-        $router->add('PATCH', '/something', 'patch_handler');
-
-        $methods4 = $router->methods('/something');
-        $this->assertEqualsCanonicalizing(['PUT', 'PATCH'], $methods4);
     }
 
     public function testOptionalWildcardPrioritization()
@@ -702,51 +815,22 @@ class RadixRouterTest extends TestCase
 
     public function testSpecialAnyMethodFallback()
     {
-        $router = new RadixRouter();
-
-        $types = [
-            [
-                'pattern' => '/resource/:param',
-                'lookup' => '/resource/value',
-                'params' => ['param' => 'value'],
-                'desc' => 'required parameter',
-            ],
-            [
-                'pattern' => '/resource/:opt?',
-                'lookup' => '/resource/value',
-                'params' => ['opt' => 'value'],
-                'desc' => 'optional parameter',
-            ],
-            [
-                'pattern' => '/resource/:wildcard*',
-                'lookup' => '/resource/one/two',
-                'params' => ['wildcard' => 'one/two'],
-                'desc' => 'wildcard parameter',
-            ],
-            [
-                'pattern' => '/resource/:wildcard+',
-                'lookup' => '/resource/one/two',
-                'params' => ['wildcard' => 'one/two'],
-                'desc' => 'required wildcard parameter',
-            ],
-        ];
-
-        foreach ($types as $type) {
+        foreach (self::patternTypes() as $type) {
             $router = new RadixRouter();
             $router->add('*', $type['pattern'], 'all_methods_handler');
             $router->add('GET', $type['pattern'], 'get_handler');
 
             $info = $router->lookup('POST', $type['lookup']);
-            $this->assertEquals(200, $info['code'], $type['desc'] . ' POST fallback');
-            $this->assertEquals('all_methods_handler', $info['handler'], $type['desc'] . ' POST fallback handler');
-            $this->assertEquals($type['params'], $info['params'], $type['desc'] . ' POST fallback params');
+            $this->assertEquals(200, $info['code'], $type['desc'] . ': POST fallback code');
+            $this->assertEquals('all_methods_handler', $info['handler'], $type['desc'] . ': POST fallback handler');
+            $this->assertEquals($type['params'], $info['params'], $type['desc'] . ': POST fallback params');
 
             $info = $router->lookup('GET', $type['lookup']);
-            $this->assertEquals(200, $info['code'], $type['desc'] . ' GET');
-            $this->assertEquals('get_handler', $info['handler'], $type['desc'] . ' GET handler');
-            $this->assertEquals($type['params'], $info['params'], $type['desc'] . ' GET params');
+            $this->assertEquals(200, $info['code'], $type['desc'] . ': GET code');
+            $this->assertEquals('get_handler', $info['handler'], $type['desc'] . ': GET handler');
+            $this->assertEquals($type['params'], $info['params'], $type['desc'] . ': GET params');
 
-            $this->assertEquals(true, $router->methods($type['lookup']) == $router->allowedMethods, $type['desc'] . ' methods listing');
+            $this->assertEquals(true, $router->methods($type['lookup']) == $router->allowedMethods, $type['desc'] . ': methods listing');
 
             $list = $router->list($type['lookup']);
             $this->assertEquals([
@@ -760,48 +844,51 @@ class RadixRouterTest extends TestCase
                     'pattern' => $type['pattern'],
                     'handler' => 'get_handler',
                 ],
-            ], $list, $type['desc'] . ' route listing');
+            ], $list, $type['desc'] . ': route listing');
         }
     }
 
     public function testHeadMethodFallback()
     {
-        $router = new RadixRouter();
-        $router->add('GET', '/resource', 'get_handler');
+        foreach (self::patternTypes() as $type) {
+            $router = new RadixRouter();
+            $router->add('GET', $type['pattern'], 'get_handler');
 
-        $info = $router->lookup('HEAD', '/resource');
-        $this->assertEquals(200, $info['code']);
-        $this->assertEquals('get_handler', $info['handler']);
+            $info = $router->lookup('HEAD', $type['lookup']);
+            $this->assertEquals(200, $info['code'], $type['desc'] . ': HEAD fallback code');
+            $this->assertEquals('get_handler', $info['handler'], $type['desc'] . ': HEAD fallback handler');
 
-        $methods = $router->methods('/resource');
-        $this->assertEqualsCanonicalizing(['GET', 'HEAD'], $methods);
+            $methods = $router->methods($type['lookup']);
+            $this->assertEqualsCanonicalizing(['GET', 'HEAD'], $methods, $type['desc'] . ': methods before explicit HEAD');
 
-        $router->add('HEAD', '/resource', 'head_handler');
-        $info = $router->lookup('HEAD', '/resource');
-        $this->assertEquals(200, $info['code']);
-        $this->assertEquals('head_handler', $info['handler']);
+            $router->add('HEAD', $type['pattern'], 'head_handler');
+            $info = $router->lookup('HEAD', $type['lookup']);
+            $this->assertEquals(200, $info['code'], $type['desc'] . ': explicit HEAD code');
+            $this->assertEquals('head_handler', $info['handler'], $type['desc'] . ': explicit HEAD handler');
 
-        $methods = $router->methods('/resource');
-        $this->assertEqualsCanonicalizing(['GET', 'HEAD'], $methods);
+            $methods = $router->methods($type['lookup']);
+            $this->assertEqualsCanonicalizing(['GET', 'HEAD'], $methods, $type['desc'] . ': methods after explicit HEAD');
+        }
     }
 
     public function testCanStillRegisterHeadExplicitly()
     {
-        $router = new RadixRouter();
+        foreach (self::patternTypes() as $type) {
+            $router = new RadixRouter();
+            $router->add('GET', $type['pattern'], 'get_handler');
+            $router->add('HEAD', $type['pattern'], 'head_handler');
 
-        $router->add('GET', '/explicit', 'get_handler');
-        $router->add('HEAD', '/explicit', 'head_handler');
+            $info = $router->lookup('HEAD', $type['lookup']);
+            $this->assertEquals(200, $info['code'], $type['desc'] . ': HEAD code');
+            $this->assertEquals('head_handler', $info['handler'], $type['desc'] . ': HEAD handler');
 
-        $info = $router->lookup('HEAD', '/explicit');
-        $this->assertEquals(200, $info['code']);
-        $this->assertEquals('head_handler', $info['handler']);
+            $info = $router->lookup('GET', $type['lookup']);
+            $this->assertEquals(200, $info['code'], $type['desc'] . ': GET code');
+            $this->assertEquals('get_handler', $info['handler'], $type['desc'] . ': GET handler');
 
-        $info = $router->lookup('GET', '/explicit');
-        $this->assertEquals(200, $info['code']);
-        $this->assertEquals('get_handler', $info['handler']);
-
-        $methods = $router->methods('/explicit');
-        $this->assertEqualsCanonicalizing(['GET', 'HEAD'], $methods);
+            $methods = $router->methods($type['lookup']);
+            $this->assertEqualsCanonicalizing(['GET', 'HEAD'], $methods, $type['desc'] . ': methods listing');
+        }
     }
 
     public function testStaticNodeFallbackToParameterNode()
@@ -817,7 +904,7 @@ class RadixRouterTest extends TestCase
         // Static nodes take precedence over parameter nodes.
         // When matching /test, the router traverses to the static node (/test)
         // but finds no handler since the parameter node requires a non-empty segment
-        
+
         // This test ensures that if no route is found at a static node we will
         // fall back to the parameter node at the same path level.
 
