@@ -15,9 +15,9 @@ class RadixRouterAdapter implements RouterInterface
     public function adapt(array $routes): array
     {
         // Convert curly braces to colon syntax for RadixRouter compatibility
-        foreach ($routes as &$path) {
-            $path = str_replace('{', ':', $path);
-            $path = str_replace('}', '', $path);
+        foreach ($routes as &$route) {
+            $route[1] = str_replace('{', ':', $route[1]);
+            $route[1] = str_replace('}', '', $route[1]);
         }
         return $routes;
     }
@@ -25,14 +25,14 @@ class RadixRouterAdapter implements RouterInterface
     public function register(array $adaptedRoutes): void
     {
         $this->router = new WilaakRadixRouter();
-        foreach ($adaptedRoutes as $pattern) {
-            $this->router->add('GET', $pattern, 'handler');
+        foreach ($adaptedRoutes as [$method, $pattern]) {
+            $this->router->add($method, $pattern, 'handler');
         }
     }
 
-    public function lookup(string $path): void
+    public function lookup(string $method, string $path): void
     {
-        $info = $this->router->lookup('GET', $path);
+        $info = $this->router->lookup($method, $path);
         if ($info['code'] !== 200) {
             throw new \RuntimeException("Route not found: $path");
         }

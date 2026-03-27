@@ -24,17 +24,17 @@ class FastRouteAdapter implements RouterInterface
     public function register(array $adaptedRoutes): void
     {
         $dispatcher = simpleDispatcher(function (RouteCollector $r) use ($adaptedRoutes) {
-            foreach ($adaptedRoutes as $pattern) {
-                $r->addRoute('GET', $pattern, 'handler');
+            foreach ($adaptedRoutes as [$method, $pattern]) {
+                $r->addRoute($method, $pattern, 'handler');
             }
         });
 
         $this->dispatcher = $dispatcher;
     }
 
-    public function lookup(string $path): void
+    public function lookup(string $method, string $path): void
     {
-        $info = $this->dispatcher->dispatch('GET', $path);
+        $info = $this->dispatcher->dispatch($method, $path);
         if ($info[0] !== Dispatcher::FOUND) {
             throw new \RuntimeException("Route not found: $path");
         }

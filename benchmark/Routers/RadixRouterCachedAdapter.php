@@ -17,9 +17,9 @@ class RadixRouterCachedAdapter implements RouterInterface
     public function adapt(array $routes): array
     {
         // Convert curly braces to colon syntax for RadixRouter compatibility
-        foreach ($routes as &$path) {
-            $path = str_replace('{', ':', $path);
-            $path = str_replace('}', '', $path);
+        foreach ($routes as &$route) {
+            $route[1] = str_replace('{', ':', $route[1]);
+            $route[1] = str_replace('}', '', $route[1]);
         }
         return $routes;
     }
@@ -32,8 +32,8 @@ class RadixRouterCachedAdapter implements RouterInterface
 
         if (!file_exists($cacheFile)) {
             // Build and register your routes here
-            foreach ($adaptedRoutes as $pattern) {
-                $this->router->add('GET', $pattern, 'handler');
+            foreach ($adaptedRoutes as [$method, $pattern]) {
+                $this->router->add($method, $pattern, 'handler');
             }
             // Prepare the data to cache
             $routes = [
@@ -56,10 +56,18 @@ class RadixRouterCachedAdapter implements RouterInterface
         $router->static = $routes[1];
     }
 
-    public function lookup(string $path): void
+    public function lookup(string $method, string $path): void
     {
-        $info = $this->router->lookup('GET', $path);
+        $info = $this->router->lookup($method, $path);
         if ($info['code'] !== 200) {
+            $routes = $this->router->list();
+            printf("%-8s  %-24s  %s\n", 'METHOD', 'PATTERN', 'HANDLER');
+            printf("%s\n", str_repeat('-', 60));
+            foreach ($routes as $route) {
+                printf("%-8s  %-24s  %s\n", $route['method'], $route['pattern'], $route['handler']);
+            }
+            printf("%s\n", str_repeat('-', 60));
+
             throw new \RuntimeException("Route not found: $path");
         }
     }

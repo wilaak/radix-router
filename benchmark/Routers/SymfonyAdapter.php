@@ -8,6 +8,7 @@ use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\Matcher\CompiledUrlMatcher;
 use Symfony\Component\Routing\Matcher\Dumper\CompiledUrlMatcherDumper;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
+use Symfony\Component\Routing\Exception\MethodNotAllowedException;
 
 class SymfonyAdapter implements RouterInterface
 {
@@ -26,8 +27,9 @@ class SymfonyAdapter implements RouterInterface
     public function register(array $adaptedRoutes): void
     {
         $routeCollection = new RouteCollection();
-        foreach ($adaptedRoutes as $path) {
-            $routeCollection->add($path, new Route($path, ['_controller' => 'handler']));
+        $i = 0;
+        foreach ($adaptedRoutes as [$method, $path]) {
+            $routeCollection->add($i++, new Route($path, ['_controller' => 'handler'], [], [], '', [], [$method]));
         }
         $context = new RequestContext('/');
         $dumper = new CompiledUrlMatcherDumper($routeCollection);
@@ -35,12 +37,15 @@ class SymfonyAdapter implements RouterInterface
         $this->matcher = new CompiledUrlMatcher($compiledRoutes, $context);
     }
 
-    public function lookup(string $path): void
+    public function lookup(string $method, string $path): void
     {
         try {
+            $this->matcher->getContext()->setMethod($method);
             $this->matcher->match($path);
         } catch (ResourceNotFoundException $e) {
             throw new \RuntimeException("Route not found: $path");
+        } catch (MethodNotAllowedException $e) {
+            throw new \RuntimeException("Method not allowed: $method $path");
         }
     }
 

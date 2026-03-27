@@ -3,3 +3,4 @@
 /composer.lock
 /.php-cs-fixer.cache
 /benchmark/cache
+/benchmark/results
