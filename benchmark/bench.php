@@ -223,7 +223,8 @@ function run_benchmarks(string $heading, array $suites, array $routers, array $m
 
     foreach ($suites as $suite) {
         foreach ($routers as $router_class) {
-            $router_name = normalize_router_name($router_class::details()['name']);
+            $router_real_name = $router_class::details()['name'];
+            $router_name = normalize_router_name($router_real_name);
             foreach ($modes as [$mode_label]) {
                 $label = sprintf('%-22s  %-10s  %-12s', $router_name, $suite, $mode_label);
                 $result = fetch_benchmark($servers[$mode_label]['port'], $suite, $router_class, $router_name, $iterations, $duration, $seed);
@@ -234,7 +235,8 @@ function run_benchmarks(string $heading, array $suites, array $routers, array $m
                 if ($store_results) {
                     $results[] = [
                         'suite'              => $suite,
-                        'router'             => $router_name,
+                        'router'             => $router_real_name,
+                        'router_name'        => $router_name,
                         'mode'               => $mode_label,
                         'lookups_per_second' => $result['lookups_per_second'] ?? 0,
                         'peak_memory_kb'     => $result['peak_memory_kb'] ?? 0,
@@ -256,10 +258,10 @@ function benchmark_registration(array &$results, array $servers, int $samples, f
     echo "\nBenchmarking registration times (averaged over $samples samples)\n";
 
     foreach ($results as &$row) {
-        $label = sprintf('%-22s  %-10s  %-12s', $row['router'], $row['suite'], $row['mode']);
+        $label = sprintf('%-22s  %-10s  %-12s', $row['router_name'], $row['suite'], $row['mode']);
         $times = [];
         for ($i = 0; $i < $samples; $i++) {
-            $result = fetch_benchmark($servers[$row['mode']]['port'], $row['suite'], $row['router_class'], $row['router'], 1, $duration, $seed);
+            $result = fetch_benchmark($servers[$row['mode']]['port'], $row['suite'], $row['router_class'], $row['router_name'], 1, $duration, $seed);
             if (isset($result['register_time_ms'])) $times[] = $result['register_time_ms'];
         }
         $row['register_time_ms'] = $times ? array_sum($times) / count($times) : null;

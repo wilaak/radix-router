@@ -260,74 +260,71 @@ These benchmarks are single-threaded and run on an AMD Ryzen AI PRO 350, PHP 8.4
 - **Mem (KB):** Peak memory usage during the steady state matching benchmark.
 - **Reg (ms):** Time taken to setup the router and make the first lookup.
 
-#### simple (33 routes)
-
-| Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Reg (ms)        |
-|------|------------------------------|--------------------|---------------|------------|-----------------|
-|    1 | radixrouter-cached           | JIT=tracing        |     8,919,978 |        0.3 |           0.014 |
-|    2 | radixrouter                  | JIT=tracing        |     8,507,178 |       59.0 |           0.105 |
-|    3 | fastroute-cached             | JIT=tracing        |     7,243,709 |        1.5 |           0.023 |
-|    4 | fastroute                    | JIT=tracing        |     6,740,163 |       31.3 |           0.265 |
-|    5 | radixrouter-cached           | OPcache            |     5,941,455 |        0.3 |           0.013 |
-|    6 | radixrouter                  | OPcache            |     5,581,843 |       59.0 |           0.053 |
-|    7 | fastroute-cached             | OPcache            |     5,062,444 |        1.5 |           0.021 |
-|    8 | fastroute                    | OPcache            |     4,970,107 |       30.0 |           0.185 |
-|    9 | symfony-cached               | JIT=tracing        |     3,326,811 |        2.2 |           0.037 |
-|   10 | symfony                      | JIT=tracing        |     3,265,890 |       87.4 |           0.852 |
-|   11 | symfony-cached               | OPcache            |     2,097,445 |        2.2 |           0.029 |
-|   12 | symfony                      | OPcache            |     2,045,713 |       87.4 |           0.642 |
-
-
 #### avatax (256 routes)
 
 | Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Reg (ms)        |
 |------|------------------------------|--------------------|---------------|------------|-----------------|
-|    1 | radixrouter-cached           | JIT=tracing        |     3,787,978 |        0.3 |           0.014 |
-|    2 | radixrouter                  | JIT=tracing        |     3,567,405 |      487.5 |           0.341 |
-|    3 | radixrouter-cached           | OPcache            |     2,720,837 |        0.3 |           0.014 |
-|    4 | radixrouter                  | OPcache            |     2,529,492 |      487.5 |           0.365 |
-|    5 | symfony-cached               | JIT=tracing        |     1,629,850 |        2.2 |           0.048 |
-|    6 | symfony                      | JIT=tracing        |     1,592,121 |      684.2 |           6.697 |
-|    7 | fastroute-cached             | JIT=tracing        |     1,312,124 |        1.5 |           0.022 |
-|    8 | fastroute                    | JIT=tracing        |     1,283,614 |      282.9 |           1.400 |
-|    9 | symfony-cached               | OPcache            |     1,242,108 |        2.2 |           0.037 |
-|   10 | symfony                      | OPcache            |     1,181,336 |      684.2 |           7.781 |
-|   11 | fastroute-cached             | OPcache            |     1,080,295 |        1.5 |           0.020 |
-|   12 | fastroute                    | OPcache            |     1,077,524 |      272.2 |           1.514 |
-
+|    1 | RadixRouter (cached)         | JIT=tracing        |     3,794,804 |        0.3 |           0.014 |
+|    2 | RadixRouter                  | JIT=tracing        |     3,488,322 |      487.5 |           0.333 |
+|    3 | RadixRouter (cached)         | OPcache            |     2,704,738 |        0.3 |           0.013 |
+|    4 | RadixRouter                  | OPcache            |     2,558,398 |      487.5 |           0.373 |
+|    5 | Symfony (cached)             | JIT=tracing        |     1,636,046 |        2.2 |           0.037 |
+|    6 | Symfony                      | JIT=tracing        |     1,620,686 |      684.2 |           6.530 |
+|    7 | FastRoute (cached)           | JIT=tracing        |     1,301,415 |        1.5 |           0.022 |
+|    8 | FastRoute                    | JIT=tracing        |     1,267,478 |      282.9 |           1.252 |
+|    9 | Symfony (cached)             | OPcache            |     1,240,379 |        2.2 |           0.029 |
+|   10 | Symfony                      | OPcache            |     1,198,298 |      684.2 |           7.766 |
+|   11 | FastRoute (cached)           | OPcache            |     1,075,436 |        1.5 |           0.020 |
+|   12 | FastRoute                    | OPcache            |     1,059,843 |      272.2 |           1.522 |
 #### bitbucket (177 routes)
 
 | Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Reg (ms)        |
 |------|------------------------------|--------------------|---------------|------------|-----------------|
-|    1 | radixrouter-cached           | JIT=tracing        |     3,024,664 |        0.3 |           0.014 |
-|    2 | radixrouter                  | JIT=tracing        |     2,817,981 |      384.1 |           0.326 |
-|    3 | radixrouter-cached           | OPcache            |     2,153,344 |        0.3 |           0.014 |
-|    4 | radixrouter                  | OPcache            |     1,998,713 |      384.1 |           0.339 |
-|    5 | symfony-cached               | JIT=tracing        |     1,290,028 |        2.2 |           0.046 |
-|    6 | symfony                      | JIT=tracing        |     1,251,022 |      495.8 |           5.890 |
-|    7 | symfony-cached               | OPcache            |       997,455 |        2.2 |           0.039 |
-|    8 | symfony                      | OPcache            |       956,704 |      495.8 |           6.356 |
-|    9 | fastroute-cached             | JIT=tracing        |       513,853 |        1.5 |           0.024 |
-|   10 | fastroute                    | JIT=tracing        |       510,039 |      272.7 |           1.078 |
-|   11 | fastroute-cached             | OPcache            |       466,358 |        1.5 |           0.026 |
-|   12 | fastroute                    | OPcache            |       458,986 |      271.7 |           0.875 |
-
+|    1 | RadixRouter (cached)         | JIT=tracing        |     2,994,402 |        0.3 |           0.017 |
+|    2 | RadixRouter                  | JIT=tracing        |     2,769,092 |      384.1 |           0.283 |
+|    3 | RadixRouter (cached)         | OPcache            |     2,155,614 |        0.3 |           0.013 |
+|    4 | RadixRouter                  | OPcache            |     2,032,977 |      384.1 |           0.329 |
+|    5 | Symfony (cached)             | JIT=tracing        |     1,289,280 |        2.2 |           0.036 |
+|    6 | Symfony                      | JIT=tracing        |     1,265,327 |      495.8 |           5.353 |
+|    7 | Symfony (cached)             | OPcache            |       986,946 |        2.2 |           0.031 |
+|    8 | Symfony                      | OPcache            |       960,464 |      495.8 |           6.551 |
+|    9 | FastRoute (cached)           | JIT=tracing        |       513,816 |        1.5 |           0.022 |
+|   10 | FastRoute                    | JIT=tracing        |       510,876 |      272.7 |           0.602 |
+|   11 | FastRoute (cached)           | OPcache            |       467,498 |        1.5 |           0.027 |
+|   12 | FastRoute                    | OPcache            |       460,381 |      271.7 |           0.797 |
 #### huge (500 routes)
 
 | Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Reg (ms)        |
 |------|------------------------------|--------------------|---------------|------------|-----------------|
-|    1 | radixrouter-cached           | JIT=tracing        |     3,583,349 |        0.3 |           0.015 |
-|    2 | radixrouter                  | JIT=tracing        |     3,175,191 |     1578.1 |           0.767 |
-|    3 | radixrouter-cached           | OPcache            |     2,427,043 |        0.3 |           0.017 |
-|    4 | radixrouter                  | OPcache            |     2,204,794 |     1578.1 |           0.897 |
-|    5 | symfony-cached               | JIT=tracing        |       825,245 |        2.2 |           0.043 |
-|    6 | symfony                      | JIT=tracing        |       786,530 |     1387.5 |          14.550 |
-|    7 | symfony-cached               | OPcache            |       669,823 |        2.2 |           0.036 |
-|    8 | symfony                      | OPcache            |       649,671 |     1387.5 |          17.197 |
-|    9 | fastroute-cached             | JIT=tracing        |       562,401 |        1.5 |           0.027 |
-|   10 | fastroute                    | JIT=tracing        |       560,932 |      740.1 |           1.254 |
-|   11 | fastroute                    | OPcache            |       492,542 |      740.1 |           1.469 |
-|   12 | fastroute-cached             | OPcache            |       488,840 |        1.5 |           0.020 |
+|    1 | RadixRouter (cached)         | JIT=tracing        |     3,383,164 |        0.3 |           0.015 |
+|    2 | RadixRouter                  | JIT=tracing        |     3,034,489 |     1578.1 |           0.706 |
+|    3 | RadixRouter (cached)         | OPcache            |     2,427,080 |        0.3 |           0.013 |
+|    4 | RadixRouter                  | OPcache            |     2,230,887 |     1578.1 |           0.890 |
+|    5 | Symfony (cached)             | JIT=tracing        |       813,751 |        2.2 |           0.037 |
+|    6 | Symfony                      | JIT=tracing        |       795,392 |     1387.5 |          13.982 |
+|    7 | Symfony (cached)             | OPcache            |       670,316 |        2.2 |           0.047 |
+|    8 | Symfony                      | OPcache            |       649,458 |     1387.5 |          17.311 |
+|    9 | FastRoute                    | JIT=tracing        |       549,125 |      740.1 |           1.115 |
+|   10 | FastRoute (cached)           | JIT=tracing        |       546,671 |        1.5 |           0.023 |
+|   11 | FastRoute                    | OPcache            |       477,158 |      740.1 |           1.422 |
+|   12 | FastRoute (cached)           | OPcache            |       475,693 |        1.5 |           0.021 |
+#### simple (33 routes)
+
+| Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Reg (ms)        |
+|------|------------------------------|--------------------|---------------|------------|-----------------|
+|    1 | RadixRouter (cached)         | JIT=tracing        |     8,656,299 |        0.3 |           0.013 |
+|    2 | RadixRouter                  | JIT=tracing        |     8,023,242 |       59.0 |           0.042 |
+|    3 | FastRoute (cached)           | JIT=tracing        |     7,728,428 |        1.5 |           0.023 |
+|    4 | FastRoute                    | JIT=tracing        |     7,205,504 |       31.3 |           0.114 |
+|    5 | RadixRouter (cached)         | OPcache            |     5,943,960 |        0.3 |           0.013 |
+|    6 | RadixRouter                  | OPcache            |     5,691,536 |       59.0 |           0.056 |
+|    7 | FastRoute (cached)           | OPcache            |     5,199,690 |        1.5 |           0.026 |
+|    8 | FastRoute                    | OPcache            |     5,071,771 |       30.0 |           0.136 |
+|    9 | Symfony                      | JIT=tracing        |     3,192,750 |       87.5 |           0.689 |
+|   10 | Symfony (cached)             | JIT=tracing        |     3,165,688 |        2.2 |           0.035 |
+|   11 | Symfony (cached)             | OPcache            |     2,089,209 |        2.2 |           0.029 |
+|   12 | Symfony                      | OPcache            |     2,052,239 |       87.4 |           0.635 |
+
 
 ## Integrations
 
