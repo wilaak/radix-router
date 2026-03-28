@@ -58,23 +58,28 @@ if (!is_dir(__DIR__ . "/../cache")) {
 // Router Registration (timed)
 //
 
-require __DIR__ . '/../../vendor/autoload.php';
 
 $memory_before    = memory_get_usage();
 $register_start   = hrtime(true);
+require __DIR__ . '/../../vendor/autoload.php';
 
 $router = new $router_class();
 $router->mount(__DIR__ . "/../cache/{$router_name}_{$suite}_{$seed}.php");
 $router->register($routes);
+$router->lookup($list_methods[0], $list_paths[0]);
 
-$register_time_ms = (hrtime(true) - $register_start) / 1e6;
-$router_memory_kb = (memory_get_usage() - $memory_before) / 1024;
+$register_time_ms   = (hrtime(true) - $register_start) / 1e6;
+$register_memory_kb = (memory_get_usage() - $memory_before) / 1024;
 
 //
 // Warmup
 //
 
 $router->lookup($list_methods[0], $list_paths[0]);
+
+if (function_exists('memory_reset_peak_usage')) {
+    memory_reset_peak_usage();
+}
 
 //
 // Benchmark
@@ -120,15 +125,17 @@ if ($iterations !== null && $iterations > 0) {
 //
 
 $lookups_per_second = $duration > 0 ? $total_iterations / $duration : 0;
+$peak_memory_kb     = memory_get_peak_usage() / 1024;
 
 echo json_encode([
-    'router'             => $router_name,
-    'router_class'       => $router_class,
-    'suite'              => $suite,
-    'lookups_per_second' => $lookups_per_second,
-    'total_iterations'   => $total_iterations,
-    'duration_seconds'   => $duration,
-    'peak_memory_kb'     => $router_memory_kb,
-    'register_time_ms'   => $register_time_ms,
+    'router'              => $router_name,
+    'router_class'        => $router_class,
+    'suite'               => $suite,
+    'lookups_per_second'  => $lookups_per_second,
+    'total_iterations'    => $total_iterations,
+    'duration_seconds'    => $duration,
+    'peak_memory_kb'      => $peak_memory_kb,
+    'register_memory_kb'  => $register_memory_kb,
+    'register_time_ms'    => $register_time_ms,
 ]);
 exit(0);

@@ -234,14 +234,15 @@ function run_benchmarks(string $heading, array $suites, array $routers, array $m
                 print_progress($done, $total, $label, number_format($result['lookups_per_second'] ?? 0) . '/s', $eta);
                 if ($store_results) {
                     $results[] = [
-                        'suite'              => $suite,
-                        'router'             => $router_real_name,
-                        'router_name'        => $router_name,
-                        'mode'               => $mode_label,
-                        'lookups_per_second' => $result['lookups_per_second'] ?? 0,
-                        'peak_memory_kb'     => $result['peak_memory_kb'] ?? 0,
-                        'register_time_ms'   => null,
-                        'router_class'       => $router_class,
+                        'suite'               => $suite,
+                        'router'              => $router_real_name,
+                        'router_name'         => $router_name,
+                        'mode'                => $mode_label,
+                        'lookups_per_second'  => $result['lookups_per_second'] ?? 0,
+                        'peak_memory_kb'      => $result['peak_memory_kb'] ?? 0,
+                        'register_memory_kb'  => $result['register_memory_kb'] ?? 0,
+                        'register_time_ms'    => null,
+                        'router_class'        => $router_class,
                     ];
                 }
             }
@@ -282,19 +283,24 @@ function print_results_table(array $results): void
     $by_suite = [];
     foreach ($results as $row) $by_suite[$row['suite']][] = $row;
 
-    $format    = '  %2s  %-22s  %-12s  %13s  %9s  %9s';
-    $header    = sprintf($format, '#', 'Router', 'Mode', 'Lookups/sec', 'Mem (KB)', 'Reg (ms)');
-    $separator = '  ' . implode('  ', array_map(fn($n) => str_repeat('-', $n), [2, 22, 12, 13, 9, 9]));
+    $format    = '  %2s  %-22s  %-12s  %13s  %13s  %13s  %12s  %9s';
+    $header    = sprintf($format, '#', 'Router', 'Mode', 'Steady RPS', 'Cold RPS', 'Mem Peak (KB)', 'Mem Reg (KB)', 'Reg (ms)');
+    $separator = str_repeat('─', strlen($header));
 
     foreach ($by_suite as $suite => $rows) {
         usort($rows, fn($a, $b) => $b['lookups_per_second'] <=> $a['lookups_per_second']);
-        echo "\n$suite  " . get_route_count($suite) . " routes\n$header\n$separator\n";
+        echo "\n$separator\n  $suite  ·  " . get_route_count($suite) . " routes\n$separator\n$header\n$separator\n";
         foreach ($rows as $rank => $row) {
+            $reg_ms = $row['register_time_ms'] ?? 0;
+            $cold_rps = $reg_ms > 0 ? 1000 / $reg_ms : 0;
             echo sprintf($format, $rank + 1, $row['router'], $row['mode'],
                 number_format($row['lookups_per_second']),
+                number_format($cold_rps),
                 number_format($row['peak_memory_kb'], 1),
-                number_format($row['register_time_ms'] ?? 0, 3)) . "\n";
+                number_format($row['register_memory_kb'] ?? 0, 1),
+                number_format($reg_ms, 3)) . "\n";
         }
+        echo "$separator\n";
     }
 }
 
@@ -312,41 +318,52 @@ function save_results_as_markdown(array $results, int $seed): string
     }
 
     $lines = ["## Benchmarks", ""];
-    foreach (array_filter([
-        'Date'    => date('Y-m-d H:i:s'),
-        'CPU'     => $cpu,
-        'PHP'     => PHP_VERSION,
-        'Suites'  => implode(', ', array_unique(array_column($results, 'suite'))),
-        'Routers' => implode(', ', array_unique(array_column($results, 'router'))),
-        'Modes'   => implode(', ', array_unique(array_column($results, 'mode'))),
-        'Seed'    => $seed,
-    ]) as $key => $value) {
-        $lines[] = "- **$key:** $value";
-    }
-    $lines[] = "";
+
     array_push($lines,
         "### Methodology", "",
-        "Each suite provides a set of URL paths. For each path, 1-3 HTTP methods are assigned using a weighted",
-        "distribution (GET 60%, POST 25%, PUT 10%, DELETE 5%) to reflect typical API traffic patterns.",
+        "Each suite provides a set of URL paths. For each path, 1-3 HTTP methods are assigned using a weighted " .
+        "distribution (GET 60%, POST 25%, PUT 10%, DELETE 5%) to reflect typical API traffic patterns. " .
         "Dynamic segments are pre-filled with random slugs or integers, seeded for reproducibility.",
         "",
-        "Lookups are drawn from a pre-generated list that follows a Zipf-like frequency distribution (exponent 0.9),",
-        "where a small number of routes receive the majority of traffic to simulate real-world hot-path behavior instead",
+        "Lookups are drawn from a pre-generated list that follows a Zipf-like frequency distribution (exponent 0.9), " .
+        "where a small number of routes receive the majority of traffic to simulate real-world hot-path behavior instead " .
         "of a uniform distribution. The list contains at least 2000 entries or 5x the route count, shuffled using the same seed.",
         "",
-        "Each router is benchmarked inside PHP's built-in web server under multiple configurations",
-        "to capture steady-state throughput. Each combination is warmed up before measurement, and registration time",
+        "Each router is benchmarked inside PHP's built-in web server under multiple configurations " .
+        "to capture steady-state throughput. Each combination is warmed up before measurement, and registration time " .
         "is averaged over multiple samples to reduce noise.",
         "",
     );
+
+    $lines[] = "### Setup";
+    $setup_rows = array_filter([
+        ['Date',        date('Y-m-d H:i:s')],
+        ['CPU',         $cpu],
+        ['PHP',         PHP_VERSION],
+        ['Suites',      implode(', ', array_unique(array_column($results, 'suite')))],
+        ['Routers',     implode(', ', array_unique(array_column($results, 'router')))],
+        ['Modes',       implode(', ', array_unique(array_column($results, 'mode')))],
+        ['Seed',        $seed],
+    ], fn($row) => $row[1] !== null || $row[0] !== null);
+
+    array_push($lines, "| Property | Value |", "|:---------|:------|");
+    foreach ($setup_rows as [$key, $value]) {
+        $lines[] = $value === null
+            ? "| | |"
+            : "| **$key** | $value |";
+    }
+
     array_push($lines,
+        "### Column Reference", "",
         "| Column | Description |",
-        "|--------|-------------|",
-        "| **Lookups/sec** | Steady state lookup speed in a long-running process |",
-        "| **Cold req/sec** | Estimated max requests/sec if routes are re-registered on every request (1000 / Boot ms) |",
-        "| **Mem (KB)** | Peak memory after route registration |",
-        "| **Boot (ms)** | Average time to register all routes |",
+        "|:-------|:------------|",
+        "| **Steady RPS** | Requests per second when routes are registered once and reused across many requests |",
+        "| **Cold RPS** | Requests per second if the router is fully re-bootstrapped on every request (1000 / Boot ms) |",
+        "| **Mem Peak (KB)** | Peak memory during the lookup benchmark |",
+        "| **Mem Reg (KB)** | Memory consumed by route registration |",
+        "| **Boot (ms)** | Time to register all routes and complete the first lookup |",
         "",
+        "### Results", "",
     );
 
     $by_suite = [];
@@ -356,19 +373,24 @@ function save_results_as_markdown(array $results, int $seed): string
         usort($rows, fn($a, $b) => $b['lookups_per_second'] <=> $a['lookups_per_second']);
         array_push($lines,
             "#### $suite (" . get_route_count($suite) . " routes)", "",
-            "| Rank | Router                       | Mode               | Lookups/sec   | Cold req/sec  | Mem (KB)   | Boot (ms)       |",
-            "|------|------------------------------|--------------------|---------------|---------------|------------|-----------------|",
+            "| Rank | Router | Mode | Steady RPS | Cold RPS | Mem Peak (KB) | Mem Reg (KB) | Boot (ms) |",
+            "|-----:|:-------|:-----|----------:|---------:|--------------:|-------------:|----------:|",
         );
         foreach ($rows as $rank => $row) {
             $reg_ms = $row['register_time_ms'] ?? 0;
-            $sapi_per_sec = $reg_ms > 0 ? 1000 / $reg_ms : 0;
-            $lines[] = sprintf("| %4s | %-28s | %-18s | %13s | %13s | %10.1f | %15.3f |",
-                $rank + 1, $row['router'], $row['mode'],
+            $cold_rps = $reg_ms > 0 ? 1000 / $reg_ms : 0;
+            $lines[] = sprintf("| %d | **%s** | %s | %s | %s | %s | %s | %s |",
+                $rank + 1,
+                $row['router'],
+                $row['mode'],
                 number_format($row['lookups_per_second']),
-                number_format($sapi_per_sec),
-                $row['peak_memory_kb'], $reg_ms
+                number_format($cold_rps),
+                number_format($row['peak_memory_kb'], 1),
+                number_format($row['register_memory_kb'] ?? 0, 1),
+                number_format($reg_ms, 3)
             );
         }
+        $lines[] = "";
     }
 
     $path = "$directory/benchmark_" . date('Y-m-d_H-i-s') . ".md";
