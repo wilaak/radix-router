@@ -298,20 +298,56 @@ function print_results_table(array $results): void
     }
 }
 
-function save_results_as_markdown(array $results): string
+function save_results_as_markdown(array $results, int $seed): string
 {
     $directory = __DIR__ . '/results';
     if (!is_dir($directory)) mkdir($directory, 0755, true);
 
-    $lines = ["# Benchmark Results", "", "| | |", "|---|---|"];
-    foreach (['Date' => date('Y-m-d H:i:s'), 'PHP' => PHP_VERSION,
+    $cpu = null;
+    if (is_readable('/proc/cpuinfo') && preg_match('/^model name\s*:\s*(.+)$/m', file_get_contents('/proc/cpuinfo'), $m)) {
+        $cpu = trim($m[1]);
+    } elseif (PHP_OS_FAMILY === 'Darwin') {
+        $result = shell_exec('sysctl -n machdep.cpu.brand_string 2>/dev/null');
+        if ($result !== null && $result !== '') $cpu = trim($result);
+    }
+
+    $lines = ["# Benchmarks", "", "| | |", "|---|---|"];
+    foreach (array_filter([
+        'Date'    => date('Y-m-d H:i:s'),
+        'CPU'     => $cpu,
+        'PHP'     => PHP_VERSION,
         'Suites'  => implode(', ', array_unique(array_column($results, 'suite'))),
         'Routers' => implode(', ', array_unique(array_column($results, 'router'))),
         'Modes'   => implode(', ', array_unique(array_column($results, 'mode'))),
-    ] as $key => $value) {
+        'Seed'    => $seed,
+    ]) as $key => $value) {
         $lines[] = "| **$key** | $value |";
     }
     $lines[] = "";
+    array_push($lines,
+        "## Methodology", "",
+        "Each suite provides a set of URL paths. For each path, 1-3 HTTP methods are assigned using a weighted",
+        "distribution (GET 60%, POST 25%, PUT 10%, DELETE 5%) to reflect typical API traffic patterns.",
+        "Dynamic segments are pre-filled with random slugs or integers, seeded for reproducibility.",
+        "",
+        "Lookups are drawn from a pre-generated list that follows a Zipf-like frequency distribution (exponent 0.9),",
+        "where a small number of routes receive the majority of traffic to simulate real-world hot-path behavior instead",
+        "of a uniform distribution. The list contains at least 2000 entries or 5x the route count, shuffled using the same seed.",
+        "",
+        "Each router is benchmarked inside PHP's built-in web server under multiple configurations",
+        "to capture steady-state throughput. Each combination is warmed up before measurement, and registration time",
+        "is averaged over multiple samples to reduce noise.",
+        "",
+    );
+    array_push($lines,
+        "| Column | Description |",
+        "|--------|-------------|",
+        "| **Lookups/sec** | Steady state lookup speed in a long-running process |",
+        "| **Cold req/sec** | Estimated max requests/sec if routes are re-registered on every request (1000 / Boot ms) |",
+        "| **Mem (KB)** | Peak memory after route registration |",
+        "| **Boot (ms)** | Average time to register all routes |",
+        "",
+    );
 
     $by_suite = [];
     foreach ($results as $row) $by_suite[$row['suite']][] = $row;
@@ -320,14 +356,17 @@ function save_results_as_markdown(array $results): string
         usort($rows, fn($a, $b) => $b['lookups_per_second'] <=> $a['lookups_per_second']);
         array_push($lines,
             "#### $suite (" . get_route_count($suite) . " routes)", "",
-            "| Rank | Router                       | Mode               | Lookups/sec   | Mem (KB)   | Reg (ms)        |",
-            "|------|------------------------------|--------------------|---------------|------------|-----------------|",
+            "| Rank | Router                       | Mode               | Lookups/sec   | Cold req/sec  | Mem (KB)   | Boot (ms)       |",
+            "|------|------------------------------|--------------------|---------------|---------------|------------|-----------------|",
         );
         foreach ($rows as $rank => $row) {
-            $lines[] = sprintf("| %4s | %-28s | %-18s | %13s | %10.1f | %15.3f |",
+            $reg_ms = $row['register_time_ms'] ?? 0;
+            $sapi_per_sec = $reg_ms > 0 ? 1000 / $reg_ms : 0;
+            $lines[] = sprintf("| %4s | %-28s | %-18s | %13s | %13s | %10.1f | %15.3f |",
                 $rank + 1, $row['router'], $row['mode'],
                 number_format($row['lookups_per_second']),
-                $row['peak_memory_kb'], $row['register_time_ms'] ?? 0
+                number_format($sapi_per_sec),
+                $row['peak_memory_kb'], $reg_ms
             );
         }
     }
@@ -465,5 +504,5 @@ $results = run_benchmarks("Running benchmarks", $suites, $routers, $modes, $serv
 benchmark_registration($results, $servers, $reg_samples, $reg_duration, $seed);
 
 print_results_table($results);
-$markdown_path = save_results_as_markdown($results);
+$markdown_path = save_results_as_markdown($results, $seed);
 echo "\nResults saved to: $markdown_path\n";
