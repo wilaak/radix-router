@@ -283,15 +283,16 @@ function print_results_table(array $results): void
     $by_suite = [];
     foreach ($results as $row) $by_suite[$row['suite']][] = $row;
 
-    $format    = '  %2s  %-22s  %-12s  %13s  %13s  %13s  %12s  %9s';
-    $header    = sprintf($format, '#', 'Router', 'Mode', 'Steady RPS', 'Cold RPS', 'Mem Peak (KB)', 'Mem Reg (KB)', 'Reg (ms)');
-    $separator = str_repeat('─', strlen($header));
+    $format    = '| %2s | %-22s | %-12s | %13s | %13s | %13s | %12s | %9s |';
+    $separator = '+' . implode('+', array_map(fn($w) => str_repeat('-', $w + 2), [2, 22, 12, 13, 13, 13, 12, 9])) . '+';
+    $header    = sprintf($format, '#', 'Router', 'Mode', 'RPS', 'Cold RPS', 'Peak (KB)', 'Reg (KB)', 'Boot (ms)');
 
     foreach ($by_suite as $suite => $rows) {
         usort($rows, fn($a, $b) => $b['lookups_per_second'] <=> $a['lookups_per_second']);
-        echo "\n$separator\n  $suite  ·  " . get_route_count($suite) . " routes\n$separator\n$header\n$separator\n";
+        echo "\n$suite — " . get_route_count($suite) . " routes\n";
+        echo "$separator\n$header\n$separator\n";
         foreach ($rows as $rank => $row) {
-            $reg_ms = $row['register_time_ms'] ?? 0;
+            $reg_ms   = $row['register_time_ms'] ?? 0;
             $cold_rps = $reg_ms > 0 ? 1000 / $reg_ms : 0;
             echo sprintf($format, $rank + 1, $row['router'], $row['mode'],
                 number_format($row['lookups_per_second']),
@@ -320,7 +321,6 @@ function save_results_as_markdown(array $results, int $seed): string
     $lines = ["## Benchmarks", ""];
 
     array_push($lines,
-        "### Methodology", "",
         "Each suite provides a set of URL paths. For each path, 1-3 HTTP methods are assigned using a weighted " .
         "distribution (GET 60%, POST 25%, PUT 10%, DELETE 5%) to reflect typical API traffic patterns. " .
         "Dynamic segments are pre-filled with random slugs or integers, seeded for reproducibility.",
@@ -335,7 +335,7 @@ function save_results_as_markdown(array $results, int $seed): string
         "",
     );
 
-    $lines[] = "### Setup";
+    array_push($lines, "### Setup", "");
     $setup_rows = array_filter([
         ['Date',        date('Y-m-d H:i:s')],
         ['CPU',         $cpu],
@@ -346,22 +346,19 @@ function save_results_as_markdown(array $results, int $seed): string
         ['Seed',        $seed],
     ], fn($row) => $row[1] !== null || $row[0] !== null);
 
-    array_push($lines, "| Property | Value |", "|:---------|:------|");
     foreach ($setup_rows as [$key, $value]) {
-        $lines[] = $value === null
-            ? "| | |"
-            : "| **$key** | $value |";
+        if ($value !== null) $lines[] = "- **$key:** $value";
     }
 
     array_push($lines,
         "### Column Reference", "",
         "| Column | Description |",
         "|:-------|:------------|",
-        "| **Steady RPS** | Requests per second when routes are registered once and reused across many requests |",
-        "| **Cold RPS** | Requests per second if the router is fully re-bootstrapped on every request (1000 / Boot ms) |",
-        "| **Mem Peak (KB)** | Peak memory during the lookup benchmark |",
-        "| **Mem Reg (KB)** | Memory consumed by route registration |",
-        "| **Boot (ms)** | Time to register all routes and complete the first lookup |",
+        "| **RPS** | Per second throughput for routes that are registered once and reused across many requests |",
+        "| **Cold RPS** | Estimated per second throughput if the router is re-bootstrapped on every request (1000 / Boot) |",
+        "| **Peak (KB)** | Peak memory during the lookup benchmark |",
+        "| **Reg (KB)** | Memory consumed by route registration |",
+        "| **Boot (ms)** | Time to register all routes and complete the first lookup, including autoload overhead |",
         "",
         "### Results", "",
     );
@@ -373,7 +370,7 @@ function save_results_as_markdown(array $results, int $seed): string
         usort($rows, fn($a, $b) => $b['lookups_per_second'] <=> $a['lookups_per_second']);
         array_push($lines,
             "#### $suite (" . get_route_count($suite) . " routes)", "",
-            "| Rank | Router | Mode | Steady RPS | Cold RPS | Mem Peak (KB) | Mem Reg (KB) | Boot (ms) |",
+            "| Rank | Router | Mode | RPS | Cold RPS | Peak (KB) | Reg (KB) | Boot (ms) |",
             "|-----:|:-------|:-----|----------:|---------:|--------------:|-------------:|----------:|",
         );
         foreach ($rows as $rank => $row) {
