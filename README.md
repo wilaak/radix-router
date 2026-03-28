@@ -239,7 +239,7 @@ $router->static = $routes['static'];
 
 ### Custom HTTP methods
 
-You can easily add custom HTTP methods to the router, just make sure the method names are uppercase as validation only happens when you add routes.
+You can easily add custom HTTP methods to the router, just make sure the method names are uppercase. This is only used for when adding routes and any method you pass to the `add()` method will be automatically converted to uppercase.
 
 ```php
 $customMethods = ['PURGE', 'REPORT'];
