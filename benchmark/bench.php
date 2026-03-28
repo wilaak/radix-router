@@ -311,7 +311,7 @@ function save_results_as_markdown(array $results, int $seed): string
         if ($result !== null && $result !== '') $cpu = trim($result);
     }
 
-    $lines = ["# Benchmarks", "", "| | |", "|---|---|"];
+    $lines = ["## Benchmarks", ""];
     foreach (array_filter([
         'Date'    => date('Y-m-d H:i:s'),
         'CPU'     => $cpu,
@@ -321,11 +321,11 @@ function save_results_as_markdown(array $results, int $seed): string
         'Modes'   => implode(', ', array_unique(array_column($results, 'mode'))),
         'Seed'    => $seed,
     ]) as $key => $value) {
-        $lines[] = "| **$key** | $value |";
+        $lines[] = "- **$key:** $value";
     }
     $lines[] = "";
     array_push($lines,
-        "## Methodology", "",
+        "### Methodology", "",
         "Each suite provides a set of URL paths. For each path, 1-3 HTTP methods are assigned using a weighted",
         "distribution (GET 60%, POST 25%, PUT 10%, DELETE 5%) to reflect typical API traffic patterns.",
         "Dynamic segments are pre-filled with random slugs or integers, seeded for reproducibility.",
