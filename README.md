@@ -287,9 +287,9 @@ where a small number of routes receive the majority of traffic, simulating real-
 | Column | Description |
 |:-------|:------------|
 | **Lookups/sec** | Steady state lookup speed in a persistent process. |
-| **Mem Peak (KB)** | Peak memory during the steady state lookup benchmark |
-| **Mem Boot (KB)** | Memory consumed after the boot process |
-| **Boot (ms)** | Time to load routes and make the first lookup, including autoload overhead |
+| **Mem Peak (KB)** | Peak memory during the steady state lookup benchmark. |
+| **Mem Boot (KB)** | Memory consumed after the boot process. |
+| **Boot (ms)** | Time to load routes and make the first lookup, including autoload overhead. |
 
 ### Results
 
