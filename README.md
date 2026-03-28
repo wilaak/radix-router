@@ -287,15 +287,15 @@ where a small number of routes receive the majority of traffic, simulating real-
 | Column | Description |
 |:-------|:------------|
 | **Lookups/sec** | Steady state lookup speed in a persistent process. |
-| **Mem Peak (KB)** | Peak memory during the steady state lookup benchmark. |
-| **Mem Boot (KB)** | Memory consumed after the boot process. |
+| **Peak (KB)** | Peak memory during the steady state lookup benchmark. |
+| **Boot (KB)** | Memory consumed after the boot process. |
 | **Boot (ms)** | Time to load routes and make the first lookup, including autoload overhead. |
 
 ### Results
 
 #### avatax (256 routes)
 
-| Rank | Router | Mode | Lookups/sec | Mem Peak (KB) | Mem Boot (KB) | Boot (ms) |
+| Rank | Router | Mode | Lookups/sec | Peak (KB) | Boot (KB) | Boot (ms) |
 |-----:|:-------|:-----|------------:|--------------:|-------------:|----------:|
 | 1 | **RadixRouter (cached)** | JIT=tracing | 3,937,761 | 489.8 | 5.7 | 0.066 |
 | 2 | **RadixRouter** | JIT=tracing | 3,572,481 | 951.3 | 492.7 | 0.380 |
@@ -312,7 +312,7 @@ where a small number of routes receive the majority of traffic, simulating real-
 
 #### bitbucket (177 routes)
 
-| Rank | Router | Mode | Lookups/sec | Mem Peak (KB) | Mem Boot (KB) | Boot (ms) |
+| Rank | Router | Mode | Lookups/sec | Peak (KB) | Boot (KB) | Boot (ms) |
 |-----:|:-------|:-----|------------:|--------------:|-------------:|----------:|
 | 1 | **RadixRouter (cached)** | JIT=tracing | 3,108,783 | 412.2 | 4.9 | 0.064 |
 | 2 | **RadixRouter** | JIT=tracing | 2,909,011 | 795.8 | 388.6 | 0.324 |
@@ -329,7 +329,7 @@ where a small number of routes receive the majority of traffic, simulating real-
 
 #### huge (500 routes)
 
-| Rank | Router | Mode | Lookups/sec | Mem Peak (KB) | Mem Boot (KB) | Boot (ms) |
+| Rank | Router | Mode | Lookups/sec | Peak (KB) | Boot (KB) | Boot (ms) |
 |-----:|:-------|:-----|------------:|--------------:|-------------:|----------:|
 | 1 | **RadixRouter (cached)** | JIT=tracing | 3,548,760 | 340.2 | 4.9 | 0.068 |
 | 2 | **RadixRouter** | JIT=tracing | 3,114,998 | 1,917.9 | 1,582.6 | 0.747 |
@@ -346,7 +346,7 @@ where a small number of routes receive the majority of traffic, simulating real-
 
 #### simple (33 routes)
 
-| Rank | Router | Mode | Lookups/sec | Mem Peak (KB) | Mem Boot (KB) | Boot (ms) |
+| Rank | Router | Mode | Lookups/sec | Peak (KB) | Boot (KB) | Boot (ms) |
 |-----:|:-------|:-----|------------:|--------------:|-------------:|----------:|
 | 1 | **RadixRouter (cached)** | JIT=tracing | 8,797,283 | 400.2 | 4.9 | 0.058 |
 | 2 | **RadixRouter** | JIT=tracing | 8,388,475 | 458.7 | 63.5 | 0.103 |
