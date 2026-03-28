@@ -79,7 +79,7 @@ class RadixRouterTest extends TestCase
                 'lookup'  => '/resource/123/one/two',
                 'params'  => ['id' => '123', 'rest' => 'one/two'],
                 'desc'    => 'required + required wildcard (+)',
-            ],
+            ]
         ];
     }
 
@@ -793,9 +793,11 @@ class RadixRouterTest extends TestCase
         $allowedMethods = $router->lookup('DELETE', '/')['allowed_methods'];
         $this->assertEquals(['POST'], $allowedMethods);
 
+        $allowedMethods = $router->lookup('GET', '/demo')['allowed_methods'];
+        $this->assertEquals(['DELETE', 'POST'], $allowedMethods);
+
         $info = $router->lookup('POST', '/demo');
         $this->assertEquals('optional', $info['handler']);
-
 
         $info = $router->lookup('DELETE', '/demo');
         $this->assertEquals('required', $info['handler']);
@@ -935,5 +937,25 @@ class RadixRouterTest extends TestCase
         $info = $router->lookup('GET', '/bar/foo');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals("Bar", $info['handler'](...$info['params']));
+    }
+
+    public function testEmptyStringPath()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '', 'root_handler');
+
+        $info = $router->lookup('GET', '');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('root_handler', $info['handler']);
+    }
+
+    public function testPathWithoutForwardSlashPrefix()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', 'no-slash', 'handler');
+
+        $info = $router->lookup('GET', 'no-slash');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals('handler', $info['handler']);
     }
 }

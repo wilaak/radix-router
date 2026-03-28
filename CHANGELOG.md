@@ -2,6 +2,11 @@
 
 Notable changes to this project goes here
 
+## [v3.6.3] - 28.03.2026
+
+- Empty path input no longer triggers a PHP warning in `lookup()`, `methods()`, and `list()`. (introduced v3.6.2)
+- Paths without a leading slash are now normalized before matching in `lookup()`, `methods()`, and `list()`.
+
 ## [v3.6.2] - 27.03.2026
 
 - Improved lookup performance and reduced memory usage.

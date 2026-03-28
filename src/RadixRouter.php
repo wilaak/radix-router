@@ -188,7 +188,7 @@ class RadixRouter
      */
     public function list(?string $path = null): array
     {
-        $formatRoute = fn (string $method, array $route): array => [
+        $formatRoute = fn(string $method, array $route): array => [
             'method' => $method,
             'pattern' => $route['pattern'],
             'handler' => $route['handler'],
@@ -239,7 +239,7 @@ class RadixRouter
         $collect($this->tree);
 
         $routes = \array_values(\array_unique($routes, SORT_REGULAR));
-        \usort($routes, fn ($a, $b): int => $a['pattern'] <=> $b['pattern'] ?: $a['method'] <=> $b['method']);
+        \usort($routes, fn($a, $b): int => $a['pattern'] <=> $b['pattern'] ?: $a['method'] <=> $b['method']);
 
         return $routes;
     }
@@ -274,8 +274,11 @@ class RadixRouter
      */
     public function lookup(string $method, string $path): array
     {
-        if ($path[-1] === '/') {
+        if ($path !== '' && $path[-1] === '/') {
             $path = \rtrim($path, '/');
+        }
+        if ($path !== '' && $path[0] !== '/') {
+            $path = "/{$path}";
         }
 
         $routes = $this->static[$path] ?? null;
