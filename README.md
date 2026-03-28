@@ -266,19 +266,17 @@ By specification, servers must support the HEAD method for any GET resource, but
 
 If you’re using PHP’s built-in web SAPI, the entity body is removed for HEAD responses automatically. If you’re implementing a custom server outside the web SAPI be sure not to send any entity body in response to HEAD requests.
 
-# Benchmarks
+## Benchmarks
 
-| | |
-|---|---|
-| **Date** | 2026-03-28 11:45:18 |
-| **CPU** | AMD Ryzen AI 7 PRO 350 w/ Radeon 860M |
-| **PHP** | 8.4.15 |
-| **Suites** | avatax, bitbucket, huge, simple |
-| **Routers** | FastRoute, FastRoute (cached), RadixRouter, RadixRouter (cached), Symfony, Symfony (cached) |
-| **Modes** | JIT=tracing, OPcache |
-| **Seed** | 42 |
+- **Date:** 2026-03-28 11:45:18
+- **CPU:** AMD Ryzen AI 7 PRO 350 w/ Radeon 860M
+- **PHP:** 8.4.15
+- **Suites:** avatax, bitbucket, huge, simple
+- **Routers:** FastRoute, FastRoute (cached), RadixRouter, RadixRouter (cached), Symfony, Symfony (cached)
+- **Modes:** JIT=tracing, OPcache
+- **Seed:** 42
 
-## Methodology
+### Methodology
 
 Each suite provides a set of URL paths. For each path, 1-3 HTTP methods are assigned using a weighted
 distribution (GET 60%, POST 25%, PUT 10%, DELETE 5%) to reflect typical API traffic patterns.
