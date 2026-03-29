@@ -285,7 +285,7 @@ function print_results_table(array $results): void
 
     $format    = '| %2s | %-22s | %-12s | %14s | %14s | %13s | %10s |';
     $separator = '+' . implode('+', array_map(fn($w) => str_repeat('-', $w + 2), [2, 22, 12, 14, 14, 13, 10])) . '+';
-    $header    = sprintf($format, '#', 'Router', 'Mode', 'Lookups/sec', 'Mem Peak (KB)', 'Mem Boot (KB)', 'Boot (ms)');
+    $header    = sprintf($format, '#', 'Router', 'Mode', 'Lookups/sec', 'Peak (KB)', 'Boot (KB)', 'Boot (ms)');
 
     foreach ($by_suite as $suite => $rows) {
         usort($rows, fn($a, $b) => $b['lookups_per_second'] <=> $a['lookups_per_second']);
@@ -348,8 +348,8 @@ function save_results_as_markdown(array $results, int $seed): string
         "| Column | Description |",
         "|:-------|:------------|",
         "| **Lookups/sec** | Steady state lookup speed in a persistent process. |",
-        "| **Mem Peak (KB)** | Peak memory during the steady state lookup benchmark. |",
-        "| **Mem Boot (KB)** | Memory consumed after the boot process. |",
+        "| **Peak (KB)** | Peak memory during the steady state lookup benchmark. |",
+        "| **Boot (KB)** | Memory consumed after the boot process. |",
         "| **Boot (ms)** | Time to load routes and make the first lookup, including autoload overhead. |",
         "",
         "### Results", "",
@@ -362,7 +362,7 @@ function save_results_as_markdown(array $results, int $seed): string
         usort($rows, fn($a, $b) => $b['lookups_per_second'] <=> $a['lookups_per_second']);
         array_push($lines,
             "#### $suite (" . get_route_count($suite) . " routes)", "",
-            "| Rank | Router | Mode | Lookups/sec | Mem Peak (KB) | Mem Boot (KB) | Boot (ms) |",
+            "| Rank | Router | Mode | Lookups/sec | Peak (KB) | Boot (KB) | Boot (ms) |",
             "|-----:|:-------|:-----|------------:|--------------:|--------------:|----------:|",
         );
         foreach ($rows as $rank => $row) {
