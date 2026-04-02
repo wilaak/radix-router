@@ -3,10 +3,7 @@
 ![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)
 ![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)
 
-> [!NOTE]   
->  As of v3.6.0 RadixRouter is seen as feature complete. No major API changes are planned; only maintenance and bug fixes will be provided.
-
-RadixRouter (or RadXRouter) is a lightweight HTTP routing library for PHP focused on providing the essentials while being fast and small. It makes an excellent choice for simple applications or as the foundation for building your own custom more featureful router (see third-party [integrations](#integrations)).
+RadixRouter (or RadXRouter) is a lightweight HTTP routing library focused on providing the essentials while being fast and small. It makes an excellent choice for simple applications or as the foundation for building your own custom more featureful router (see third-party [integrations](#integrations)).
 
 It features fast $O(k)$ dynamic route matching ($k$ = segments in path), path parameters (optional, wildcard; one per segment), simple API for listing routes/methods (for OPTIONS support), 405 method not allowed handling and it's all in a package weighing in at only 378 lines of code with no external dependencies.
 
@@ -25,6 +22,10 @@ Requires PHP 8.0 or newer.
 Below is an example to get you started using the PHP SAPI.
 
 ```PHP
+<?php
+
+require __DIR__ . '/../vendor/autoload.php';
+
 $router = new Wilaak\Http\RadixRouter();
 
 $router->add('GET', '/:name?', function ($name = 'World') {
@@ -63,16 +64,16 @@ The router does not support regex patterns and it's recommended that you do this
 
 ```php
 // Simple GET route
-$router->add('GET', '/about', 'AboutController@show');
+$router->add('GET', '/about', 'about');
 
 // Multiple HTTP methods
-$router->add(['GET', 'POST'], '/contact', 'ContactController@submit');
+$router->add(['GET', 'POST'], '/contact', 'contact');
 
 // Any allowed HTTP method
-$router->add($router->allowedMethods, '/maintenance', 'MaintenanceController@handle');
+$router->add($router->allowedMethods, '/maintenance', 'maintenance');
 
 // Special fallback HTTP method (allowed or not)
-$router->add('*', '/maintenance', 'MaintenanceController@handle');
+$router->add('*', '/maintenance', 'maintenance');
 ```
 
 ### Path Parameters
@@ -85,13 +86,13 @@ Matches only when the segment is present and not empty.
 
 ```php
 // Required parameter
-$router->add('GET', '/users/:id', 'UserController@profile');
+$router->add('GET', '/users/:id', 'get_user');
 // Example requests:
 //   /users     -> no match
 //   /users/123 -> ['id' => '123']
 
 // You can have as many as you want, but keep it sane
-$router->add('GET', '/users/:id/orders/:order_id', 'OrderController@details');
+$router->add('GET', '/users/:id/orders/:order_id', 'get_order');
 ```
 
 #### Optional Parameters
@@ -104,20 +105,20 @@ These match whether the segment is present or not.
 
 ```php
 // Single optional parameter
-$router->add('GET', '/blog/:slug?', 'BlogController@view');
+$router->add('GET', '/blog/:slug?', 'view_blog');
 // Example requests:
 //   /blog       -> [] (no parameters)
 //   /blog/hello -> ['slug' => 'hello']
 
 // Chained optional parameters
-$router->add('GET', '/archive/:year?/:month?', 'ArchiveController@list');
+$router->add('GET', '/archive/:year?/:month?', 'list_archive');
 // Example requests:
 //   /archive         -> [] (no parameters)
-//   /archive/2022    -> ['year' => '2022']
-//   /archive/2022/12 -> ['year' => '2022', 'month' => '12']
+//   /archive/1984    -> ['year' => '1984']
+//   /archive/1984/12 -> ['year' => '1984', 'month' => '12']
 
 // Mixing required and optional parameters
-$router->add('GET', '/shop/:category/:item?', 'ShopController@view');
+$router->add('GET', '/shop/:category/:item?', 'view_shop');
 // Example requests:
 //   /shop/books       -> ['category' => 'books']
 //   /shop/books/novel -> ['category' => 'books', 'item' => 'novel']
@@ -125,21 +126,21 @@ $router->add('GET', '/shop/:category/:item?', 'ShopController@view');
 
 #### Wildcard Parameters
 
-Also known as catch-all, splat, greedy, rest, or path remainder parameters, wildcards capture everything after their position in the path including slashes. Note that the router trims trailing slashes from incoming paths, so you won’t see empty segments at the end of your results.
+Also known as catch-all, splat, greedy, rest, or path remainder parameters, wildcards capture everything after their position in the path including slashes.
 
 > [!CAUTION]    
 > Never use captured path segments directly in filesystem operations. Path traversal attacks can expose sensitive files or directories. Use functions like `realpath()` and restrict access to a safe base directory.
 
 ```php
 // Required wildcard parameter (one or more segments)
-$router->add('GET', '/assets/:resource+', 'AssetController@show');
+$router->add('GET', '/assets/:resource+', 'serve_asset');
 // Example requests:
 //   /assets                -> no match
 //   /assets/logo.png       -> ['resource' => 'logo.png']
 //   /assets/img/banner.jpg -> ['resource' => 'img/banner.jpg']
 
 // Optional wildcard parameter (zero or more segments)
-$router->add('GET', '/downloads/:file*', 'DownloadController@show');
+$router->add('GET', '/downloads/:file*', 'serve_download');
 // Example requests:
 //   /downloads               -> ['file' => ''] (empty string)
 //   /downloads/report.pdf    -> ['file' => 'report.pdf']
@@ -148,7 +149,7 @@ $router->add('GET', '/downloads/:file*', 'DownloadController@show');
 
 ### Route Listing
 
-Use `list()` to retrieve all registered routes and their associated handlers. Optionally pass a request path to filter results to routes matching that path.
+Retrieve registered routes and their associated handlers. Optionally pass a request path to filter results to routes matching that path.
 
 ```php
 // Print a formatted table of all routes
@@ -173,33 +174,30 @@ Example Output:
 ```
 METHOD    PATTERN                   HANDLER
 ------------------------------------------------------------
-GET       /about                    AboutController@show
-GET       /archive/:year?/:month?   ArchiveController@list
-GET       /assets/:resource+        AssetController@show
-GET       /blog/:slug?              BlogController@view
-GET       /contact                  ContactController@submit
-POST      /contact                  ContactController@submit
-GET       /downloads/:file*         DownloadController@show
-*         /maintenance              MaintenanceController@handle
-GET       /users/:id                UserController@profile
+GET       /about                    about
+GET       /archive/:year?/:month?   list_archive
+GET       /assets/:resource+        serve_asset
+GET       /blog/:slug?              view_blog
+GET       /contact                  contact
+POST      /contact                  contact
+GET       /downloads/:file*         serve_download
+*         /maintenance              maintenance
+GET       /users/:id                get_user
 
 METHOD    PATTERN                   HANDLER
 ------------------------------------------------------------
-GET       /contact                  ContactController@submit
-POST      /contact                  ContactController@submit
+GET       /contact                  contact
+POST      /contact                  contact
 ```
 
-### Listing Allowed Methods
+### Allowed Methods
 
-Use `methods()` to retrieve the allowed HTTP methods for a given request path.
-
->[!NOTE]    
-> If the fallback method (`*`) is registered for that path, `methods()` returns `$router->allowedMethods`.
+Retrieve the allowed HTTP methods for a given request path.
 
 ```php
 if ($method === 'OPTIONS') {
     $allowedMethods = $router->methods($path);
-    header('Allow: ' . implode(', ', $allowedMethods));
+    header('Allow: ' . implode(',', $allowedMethods));
 }
 ```
 
@@ -207,18 +205,17 @@ if ($method === 'OPTIONS') {
 
 Route caching can be beneficial for classic PHP deployments where scripts are reloaded on every request. In these environments, caching routes in a PHP file allows OPcache to keep them in shared memory, significantly reducing script startup time by eliminating the need to recompile route definitions on each request.
 
-An additional benefit of storing routes in PHP files is that PHP’s engine automatically interns identical string literals at compile time. This means that when multiple routes share the same pattern, method or handler name, only a single instance of each unique string is stored in memory, reducing memory usage and access latency.
+An additional benefit is that PHP’s engine automatically interns identical string literals at compile time. This means that when multiple routes share the same pattern, method or handler name, only a single instance of each unique string is stored in memory, reducing memory usage and access latency.
 
-For persistent environments such as Swoole or FrankenPHP in worker mode, where the application and its routes remain in memory between requests, route caching is generally unnecessary. However you may still gain some performance uplift from the aforementioned interning, which you may also notice in the [benchmark](#benchmarks) results.
+For persistent environments such as Swoole, where the application and its routes remain in memory between requests, route caching is generally unnecessary. However you may still gain some performance uplift from the aforementioned interning.
 
 > [!NOTE]  
 > You must only provide serializable handlers such as strings or arrays. Closures and anonymous functions are not supported for route caching.
-
-> [!WARNING]  
-> Care should be taken to avoid race conditions when rebuilding the cache file. Ensure that the cache is written atomically so that each request can always fully load a valid cache file without errors or partial data.
+>   
+> Care should be taken to avoid race conditions, ensure that the cache is written atomically so that each request can always fully load a valid cache file.
 
 ```php
-$cache = __DIR__ . '/radixrouter.cache.php';
+$cache = __DIR__ . '/radix-router.cache.php';
 
 if (!file_exists($cache)) {
     $router->add('GET', '/', 'handler');
@@ -239,7 +236,7 @@ $router->static = $routes['static'];
 
 ### Custom HTTP methods
 
-You can easily add custom HTTP methods to the router, just make sure the method names are uppercase. This is only used for when adding routes and any method you pass to the `add()` method will be automatically converted to uppercase.
+You can add custom HTTP methods to the router, just make sure the method names are uppercase.
 
 ```php
 $customMethods = ['PURGE', 'REPORT'];
@@ -252,7 +249,7 @@ If you want a route to match any HTTP method (including custom ones), use the fa
 $router->add('*', '/somewhere', 'handler');
 ```
 
-### Canonical URLs
+### Trailing Slashes in URLs
 
 The router does not perform any automatic trailing slash redirects. Trailing slashes at the end of the request path are automatically trimmed before route matching, so both `/about` and `/about/` will match the same route.
 
