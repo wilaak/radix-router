@@ -16,13 +16,11 @@ class RadixRouter
 {
     /**
      * Dynamic routes are stored in a radix tree structure.
-     * Each node can have static child segments, a parameter child, and a wildcard child.
      */
     public array $tree = [];
 
     /**
      * Static routes are stored in a separate map for O(1) lookups.
-     * The keys are normalized paths (without trailing slashes),
      */
     public array $static = [];
 
