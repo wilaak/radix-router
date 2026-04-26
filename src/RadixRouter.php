@@ -279,6 +279,8 @@ class RadixRouter
             $path = "/{$path}";
         }
 
+        $params = [];
+
         $routes = $this->static[$path] ?? null;
         if (isset($routes)) {
             $result = $routes[$method] ?? $routes['*'] ?? null;
@@ -293,7 +295,6 @@ class RadixRouter
         $NODE_ROUTES = '/r';
 
         $segments = \explode('/', $path);
-        $params = [];
         $currentNode = $this->tree;
 
         foreach ($segments as $i => $segment) {
@@ -330,9 +331,9 @@ class RadixRouter
 
         $routes = $lastStaticNode[$NODE_PARAMETER][$NODE_ROUTES] ?? null;
         if (isset($routes)) {
+            $params[] = $lastStaticSegment;
             $result = $routes[$method] ?? $routes['*'] ?? null;
             if (isset($result) && $method !== '*') {
-                $params[] = $lastStaticSegment;
                 $result['params'] = \array_combine($result['params'], $params);
                 return $result;
             }
@@ -361,18 +362,20 @@ class RadixRouter
 
             if ($optionalWildcards) {
                 $routes = $optionalWildcards;
+                $params[] = '';
                 goto HANDLE_405;
             }
 
             NO_MATCH:
             $routes = $wildcardNode[$NODE_ROUTES] ?? null;
             if (isset($routes)) {
+                $wildcardParams[] = \implode('/', \array_slice($segments, $wildcardOffset));
                 $result = $routes[$method] ?? $routes['*'] ?? null;
                 if (isset($result) && $method !== '*') {
-                    $wildcardParams[] = \implode('/', \array_slice($segments, $wildcardOffset));
                     $result['params'] = \array_combine($result['params'], $wildcardParams);
                     return $result;
                 }
+                $params = $wildcardParams;
                 goto HANDLE_405;
             }
         }
@@ -383,7 +386,9 @@ class RadixRouter
         $allowedMethods = \array_keys($routes);
         if (isset($routes['GET']) && !isset($routes['HEAD'])) {
             if ($method === 'HEAD') {
-                return $routes['GET'];
+                $result = $routes['GET'];
+                $result['params'] = \array_combine($result['params'], $params);
+                return $result;
             }
             $allowedMethods[] = 'HEAD';
         }

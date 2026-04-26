@@ -850,6 +850,44 @@ class RadixRouterTest extends TestCase
         }
     }
 
+    public function testLookupResultShapeAcrossPatternTypes()
+    {
+        foreach (self::patternTypes() as $type) {
+            $router = new RadixRouter();
+            $router->add('GET', $type['pattern'], 'get_handler');
+
+            $expected = [
+                'code'    => 200,
+                'handler' => 'get_handler',
+                'params'  => $type['params'],
+                'pattern' => $type['pattern'],
+            ];
+
+            // Direct GET match
+            $this->assertSame(
+                $expected,
+                $router->lookup('GET', $type['lookup']),
+                $type['desc'] . ': GET shape'
+            );
+
+            // HEAD-fallback (no explicit HEAD) returns the GET entry with the
+            // same shape, including a fully combined params map.
+            $this->assertSame(
+                $expected,
+                $router->lookup('HEAD', $type['lookup']),
+                $type['desc'] . ': HEAD fallback shape'
+            );
+
+            // Explicit HEAD wins over the fallback but keeps the same shape.
+            $router->add('HEAD', $type['pattern'], 'head_handler');
+            $this->assertSame(
+                ['code' => 200, 'handler' => 'head_handler', 'params' => $type['params'], 'pattern' => $type['pattern']],
+                $router->lookup('HEAD', $type['lookup']),
+                $type['desc'] . ': explicit HEAD shape'
+            );
+        }
+    }
+
     public function testHeadMethodFallback()
     {
         foreach (self::patternTypes() as $type) {
@@ -859,6 +897,7 @@ class RadixRouterTest extends TestCase
             $info = $router->lookup('HEAD', $type['lookup']);
             $this->assertEquals(200, $info['code'], $type['desc'] . ': HEAD fallback code');
             $this->assertEquals('get_handler', $info['handler'], $type['desc'] . ': HEAD fallback handler');
+            $this->assertEquals($type['params'], $info['params'], $type['desc'] . ': HEAD fallback params');
 
             $methods = $router->methods($type['lookup']);
             $this->assertEqualsCanonicalizing(['GET', 'HEAD'], $methods, $type['desc'] . ': methods before explicit HEAD');
@@ -867,6 +906,7 @@ class RadixRouterTest extends TestCase
             $info = $router->lookup('HEAD', $type['lookup']);
             $this->assertEquals(200, $info['code'], $type['desc'] . ': explicit HEAD code');
             $this->assertEquals('head_handler', $info['handler'], $type['desc'] . ': explicit HEAD handler');
+            $this->assertEquals($type['params'], $info['params'], $type['desc'] . ': explicit HEAD params');
 
             $methods = $router->methods($type['lookup']);
             $this->assertEqualsCanonicalizing(['GET', 'HEAD'], $methods, $type['desc'] . ': methods after explicit HEAD');

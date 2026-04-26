@@ -2,6 +2,10 @@
 
 Notable changes to this project goes here
 
+## [v3.6.4] - unreleased
+
+- Fix HEAD fallback returning unbound params on dynamic routes ([#9](https://github.com/wilaak/radix-router/issues/9))
+
 ## [v3.6.3] - 28.03.2026
 
 - Empty path input no longer triggers a PHP warning in `lookup()`, `methods()`, and `list()`. (introduced v3.6.2)
