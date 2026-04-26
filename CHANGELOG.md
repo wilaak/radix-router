@@ -2,7 +2,7 @@
 
 Notable changes to this project goes here
 
-## [v3.6.4] - unreleased
+## [v3.6.4] - 26.04.2026
 
 - Fix HEAD fallback returning unbound params on dynamic routes ([#9](https://github.com/wilaak/radix-router/issues/9))
 
