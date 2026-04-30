@@ -2,6 +2,13 @@
 
 Notable changes to this project goes here
 
+## [v3.6.5] - unreleased
+
+- Performance: Improved internal tree structure for faster lookups and lower memory usage (+15-25%@JIT=tracing).
+
+**Upgrade note:**  
+Regenerate router cache files after upgrading.
+
 ## [v3.6.4] - 26.04.2026
 
 - Fix HEAD fallback returning unbound params on dynamic routes ([#9](https://github.com/wilaak/radix-router/issues/9))
