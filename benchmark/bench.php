@@ -1,6 +1,7 @@
 <?php
 
 require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/svg_chart.php';
 
 use Wilaak\Http\RadixRouter\Benchmark\Routers\RouterInterface;
 
@@ -305,8 +306,9 @@ function print_results_table(array $results): void
 
 function save_results_as_markdown(array $results, int $seed): string
 {
-    $directory = __DIR__ . '/results';
+    $directory = __DIR__ . '/results/benchmark_' . date('Y-m-d_H-i-s');
     if (!is_dir($directory)) mkdir($directory, 0755, true);
+    $path = "$directory/README.md";
 
     $cpu = null;
     if (is_readable('/proc/cpuinfo') && preg_match('/^model name\s*:\s*(.+)$/m', file_get_contents('/proc/cpuinfo'), $m)) {
@@ -320,69 +322,54 @@ function save_results_as_markdown(array $results, int $seed): string
 
     array_push(
         $lines,
-        "Each suite provides a set of URL paths. For each path, 1-3 HTTP methods are assigned",
-        "using a weighted distribution (GET 60%, POST 25%, PUT 10%, DELETE 5%) to reflect typical API traffic patterns.",
+        "Each path gets 1-3 HTTP methods (GET 60% / POST 25% / PUT 10% / DELETE 5%); lookups follow a Zipf-like distribution (exponent 0.9), so a few hot routes dominate traffic.",
         "",
-        "Lookups are drawn from a pre-generated lookup list with a Zipf-like frequency distribution (exponent 0.9),",
-        "where a small number of routes receive the majority of traffic, simulating real-world hot-path behavior.",
+        "> Don't sweat router perf, it won't be your bottleneck.",
         "",
     );
 
-    array_push($lines, "### Setup", "");
-    $setup_rows = array_filter([
-        ['Date',        date('Y-m-d H:i:s')],
-        ['CPU',         $cpu],
-        ['PHP',         PHP_VERSION],
-        ['Suites',      implode(', ', array_unique(array_column($results, 'suite')))],
-        ['Routers',     implode(', ', array_unique(array_column($results, 'router')))],
-        ['Modes',       implode(', ', array_unique(array_column($results, 'mode')))],
-        ['Seed',        $seed],
-    ], fn($row) => $row[1] !== null || $row[0] !== null);
+    $setup = array_filter([
+        'PHP ' . PHP_VERSION,
+        $cpu,
+        "seed $seed",
+    ]);
+    array_push($lines, '*' . implode(' · ', $setup) . '*', "");
 
-    foreach ($setup_rows as [$key, $value]) {
-        if ($value !== null) $lines[] = "- **$key:** $value";
+    array_push($lines, "### Results", "");
+
+    foreach (array_unique(array_column($results, 'suite')) as $suite) {
+        array_push($lines,
+            "#### $suite (" . get_route_count($suite) . " routes)", "",
+            "![$suite]({$suite}.svg)", "",
+        );
     }
 
-    array_push($lines,
-        "### Column Reference", "",
-        "| Column | Description |",
-        "|:-------|:------------|",
-        "| **Lookups/sec** | Steady state lookup speed in a persistent process. |",
-        "| **Peak (KB)** | Peak memory during the steady state lookup benchmark. |",
-        "| **Boot (KB)** | Memory consumed after the boot process. |",
-        "| **Boot (ms)** | Time to load routes and make the first lookup, including autoload overhead. |",
-        "",
-        "### Results", "",
-    );
+    file_put_contents($path, implode("\n", $lines) . "\n");
+    return $path;
+}
 
+function save_results_as_svg(array $results, string $base_path): array
+{
+    $directory = dirname($base_path);
     $by_suite = [];
     foreach ($results as $row) $by_suite[$row['suite']][] = $row;
 
+    $paths = [];
     foreach ($by_suite as $suite => $rows) {
-        usort($rows, fn($a, $b) => $b['lookups_per_second'] <=> $a['lookups_per_second']);
-        array_push($lines,
-            "#### $suite (" . get_route_count($suite) . " routes)", "",
-            "| Rank | Router | Mode | Lookups/sec | Peak (KB) | Boot (KB) | Boot (ms) |",
-            "|-----:|:-------|:-----|------------:|--------------:|--------------:|----------:|",
-        );
-        foreach ($rows as $rank => $row) {
-            $reg_ms = $row['register_time_ms'] ?? 0;
-            $lines[] = sprintf("| %d | **%s** | %s | %s | %s | %s | %s |",
-                $rank + 1,
-                $row['router'],
-                $row['mode'],
-                number_format($row['lookups_per_second']),
-                number_format($row['peak_memory_kb'], 1),
-                number_format($row['register_memory_kb'] ?? 0, 1),
-                number_format($reg_ms, 3)
-            );
+        $by_router = [];
+        foreach ($rows as $row) $by_router[$row['router']][] = $row;
+        foreach ($by_router as &$group) {
+            usort($group, fn($a, $b) => $b['lookups_per_second'] <=> $a['lookups_per_second']);
         }
-        $lines[] = "";
-    }
+        unset($group);
+        uasort($by_router, fn($a, $b) => $b[0]['lookups_per_second'] <=> $a[0]['lookups_per_second']);
+        $sorted = array_merge(...array_values($by_router));
 
-    $path = "$directory/benchmark_" . date('Y-m-d_H-i-s') . ".md";
-    file_put_contents($path, implode("\n", $lines) . "\n");
-    return $path;
+        $path = "$directory/$suite.svg";
+        file_put_contents($path, render_results_svg($sorted));
+        $paths[] = $path;
+    }
+    return $paths;
 }
 
 //
@@ -465,7 +452,7 @@ if (!isset($options['all']) && !isset($options['suite']) && !isset($options['rou
 
 $suites  = resolve_option('suite',  $options['suite']  ?? null, $available_suites);
 $routers = resolve_option('router', $options['router'] ?? null, $available_routers);
-$modes   = resolve_option('mode',   $options['mode']   ?? null, [$available_modes['JIT=tracing'], $available_modes['OPcache']]);
+$modes   = resolve_option('mode',   $options['mode']   ?? null, array_intersect_key($available_modes, array_flip(['JIT=tracing', 'OPcache'])));
 
 $benchmark_duration = (float) ($options['duration']     ?? 1.0);
 $warmup_duration    = (float) ($options['warmup']       ?? 1.0);
@@ -514,4 +501,6 @@ benchmark_registration($results, $servers, $reg_samples, $reg_duration, $seed);
 
 print_results_table($results);
 $markdown_path = save_results_as_markdown($results, $seed);
+$svg_paths     = save_results_as_svg($results, $markdown_path);
 echo "\nResults saved to: $markdown_path\n";
+foreach ($svg_paths as $svg_path) echo "Chart saved to:   $svg_path\n";
