@@ -8,6 +8,10 @@ if (\PHP_INT_SIZE !== 8) {
     throw new \RuntimeException('DartRouter requires 64-bit PHP; PHP_INT_SIZE is ' . \PHP_INT_SIZE . '.');
 }
 
+// NOTE: THIS IS OVERCOMPLICATED SHIT, DO NOT USE THIS AS A REFERENCE FOR HOW TO WRITE A ROUTER.
+
+// TODO: There is a bug hiding beneath something here.... fix it... one day maybe
+
 // Row-displacement-compressed radix trie router
 //
 // The trie is flattened into two parallel arrays indexed by (node_displacement + path_byte):
@@ -53,7 +57,6 @@ final readonly class Slot
     public const CHILD_MASK           = 0xFFFF;
 
     public const FLAG_TERMINAL        = 1 << 32;
-    public const FLAG_TRAILING_SLASH  = 1 << 33;
 
     public const ROUTE_ID_SHIFT       = 40;
     public const ROUTE_ID_MASK        = 0xFFFF;
@@ -62,7 +65,6 @@ final readonly class Slot
     public const SEGMENT_OFFSET_MASK  = 0xFF;
 }
 
-// Runtime data: built tables, registered patterns, and per-route handlers.
 final class Router
 {
     /** @var array<int, int> */
@@ -81,15 +83,15 @@ final class _Node
     public array $children = [];
     /** child node id, or -1 */
     public int $param_child_id = -1;
-    public bool $terminal = false;
-    public bool $trailing_slash_allowed = false;
-    /** route_id at terminal nodes, or -1 */
+    /** route_id at terminal nodes, or -1; >= 0 also means "this node is terminal" */
     public int $route_id = -1;
 
     public function __construct(
-        /** sits just past a '/' (or at root) */
-        public bool $at_segment_boundary,
-        /** bytes consumed past the last '/' boundary on the path to this node */
+        /**
+         * Bytes consumed past the last '/' boundary on the path to this node.
+         * 0 implies this node sits just past a '/' (or at root) - i.e., a
+         * segment boundary. Non-zero implies a mid-segment intermediate.
+         */
         public int $segment_offset = 0,
     ) {}
 }
@@ -101,6 +103,11 @@ function lookup(Router $router, string $path): ?array
     $handlers = $router->handlers;
 
     $length = \strlen($path);
+    // Trailing '/' tolerance: strip one and let the matcher reach the same
+    // terminal node as the un-slashed path. Skipped for '/' itself.
+    if ($length > 1 && $path[$length - 1] === '/') {
+        $length--;
+    }
     $base   = 0;
     $cursor = 1;
     $params = [];
@@ -130,16 +137,15 @@ function lookup(Router $router, string $path): ?array
         $sentinel = $slots[$base];
         if (($sentinel & Slot::LENGTH_FIELD_MASK) === (Slot::LENGTH_PARAM << Slot::LENGTH_SHIFT)) {
             $end = \strpos($path, '/', $cursor);
-            if ($end === false) {
+            if ($end === false || $end >= $length) {
                 $end = $length;
             }
             if ($end === $cursor) {
                 return null;
             }
-            // Mid-segment intermediates inherit a param target via
-            // _compile_propagate_params; rewind by the segment offset so the
-            // emitted param covers the static prefix already consumed, not
-            // just the trailing bytes after this node.
+            // Mid-segment intermediates inherit a param target via the
+            // param-propagation pass; rewind by the segment offset so the
+            // emitted param covers the static prefix already consumed.
             $segment_offset = ($sentinel >> Slot::SEGMENT_OFFSET_SHIFT) & Slot::SEGMENT_OFFSET_MASK;
             $segment_start  = $cursor - $segment_offset;
             $params[]       = \substr($path, $segment_start, $end - $segment_start);
@@ -148,23 +154,11 @@ function lookup(Router $router, string $path): ?array
             continue;
         }
 
-        if (
-            $cursor === $length - 1
-            && $byte === 0x2F
-            && ($sentinel & Slot::FLAG_TRAILING_SLASH) !== 0
-        ) {
-            $route_id = ($sentinel >> Slot::ROUTE_ID_SHIFT) & Slot::ROUTE_ID_MASK;
-            return [$handlers[$route_id], $params];
-        }
-
         return null;
     }
 
-    $sentinel        = $slots[$base];
-    $is_own_sentinel = ($sentinel & Slot::OWNER_MASK)    === 0;
-    $is_terminal     = ($sentinel & Slot::FLAG_TERMINAL) !== 0;
-
-    if (!$is_own_sentinel || !$is_terminal) {
+    $sentinel = $slots[$base];
+    if (($sentinel & Slot::OWNER_MASK) !== 0 || ($sentinel & Slot::FLAG_TERMINAL) === 0) {
         return null;
     }
     $route_id = ($sentinel >> Slot::ROUTE_ID_SHIFT) & Slot::ROUTE_ID_MASK;
@@ -182,13 +176,14 @@ function add(Router $router, string $pattern, mixed $handler = null): int
 function compile(Router $router): void
 {
     /** @var _Node[] $nodes */
-    $nodes = [new _Node(true)];
+    $nodes = [new _Node()];
     foreach ($router->patterns as $route_id => $pattern) {
         _compile_insert($nodes, $pattern, $route_id);
     }
-    _compile_propagate_params($nodes, 0, -1);
-    _compile_propagate_slash_terminals($nodes);
-    [$router->slots, $router->edges] = _compile_emit_packed($nodes);
+    $order = [];
+    $seen  = [0 => true];
+    _compile_walk($nodes, 0, -1, $order, $seen);
+    [$router->slots, $router->edges] = _compile_emit_packed($nodes, $order);
 }
 
 function _compile_insert(array &$nodes, string $pattern, int $route_id): void
@@ -205,7 +200,7 @@ function _compile_insert(array &$nodes, string $pattern, int $route_id): void
                 $static_buffer = '';
             }
             if ($nodes[$node_id]->param_child_id < 0) {
-                $nodes[$node_id]->param_child_id = _compile_new_node($nodes, true);
+                $nodes[$node_id]->param_child_id = _compile_new_node($nodes);
             }
             $node_id = $nodes[$node_id]->param_child_id;
         } else {
@@ -213,12 +208,10 @@ function _compile_insert(array &$nodes, string $pattern, int $route_id): void
         }
     }
     if ($static_buffer !== '') {
-        // Drop trailing '/'; trailing-slash tolerance is encoded as
-        // Slot::FLAG_TRAILING_SLASH on the sentinel rather than a duplicate edge.
+        // Drop trailing '/'; the matcher's lookup-time strip handles the
+        // tolerated trailing slash, so we don't store a duplicate edge.
         $node_id = _compile_insert_static($nodes, $node_id, \substr($static_buffer, 0, -1));
-        $nodes[$node_id]->trailing_slash_allowed = true;
     }
-    $nodes[$node_id]->terminal = true;
     $nodes[$node_id]->route_id = $route_id;
 }
 
@@ -227,7 +220,7 @@ function _compile_insert_static(array &$nodes, int $node_id, string $edge): int
     while (true) {
         $first_byte = \ord($edge[0]);
         if (!isset($nodes[$node_id]->children[$first_byte])) {
-            $new_node_id = _compile_new_node($nodes, true);
+            $new_node_id = _compile_new_node($nodes, $nodes[$node_id]->segment_offset, $edge);
             $nodes[$node_id]->children[$first_byte] = [$edge, $new_node_id];
             return $new_node_id;
         }
@@ -250,52 +243,47 @@ function _compile_insert_static(array &$nodes, int $node_id, string $edge): int
             continue;
         }
 
-        $existing_suffix     = \substr($existing_edge, $prefix_length);
-        $is_boundary         = $existing_edge[$prefix_length - 1] === '/';
-        $intermediate_offset = $is_boundary
-            ? 0
-            : _compile_advance_offset($nodes[$node_id]->segment_offset, \substr($existing_edge, 0, $prefix_length));
-        $intermediate        = _compile_new_node($nodes, $is_boundary, $intermediate_offset);
+        $consumed_prefix = \substr($existing_edge, 0, $prefix_length);
+        $intermediate    = _compile_new_node($nodes, $nodes[$node_id]->segment_offset, $consumed_prefix);
+        $existing_suffix = \substr($existing_edge, $prefix_length);
         $nodes[$intermediate]->children[\ord($existing_suffix[0])] = [$existing_suffix, $child_node_id];
-        $nodes[$node_id]->children[$first_byte] = [\substr($existing_edge, 0, $prefix_length), $intermediate];
+        $nodes[$node_id]->children[$first_byte] = [$consumed_prefix, $intermediate];
 
         if ($prefix_length === $new_length) {
             return $intermediate;
         }
 
         $new_suffix  = \substr($edge, $prefix_length);
-        $new_node_id = _compile_new_node($nodes, true);
+        $new_node_id = _compile_new_node($nodes, $nodes[$intermediate]->segment_offset, $new_suffix);
         $nodes[$intermediate]->children[\ord($new_suffix[0])] = [$new_suffix, $new_node_id];
         return $new_node_id;
     }
 }
 
-function _compile_new_node(array &$nodes, bool $at_segment_boundary, int $segment_offset = 0): int
+// Bytes past the last '/' on the path from root to the new node. 0 means the
+// node sits on a '/' boundary; non-zero is a mid-segment intermediate, used
+// by the matcher to rewind the cursor when falling back to a param transition.
+function _compile_new_node(array &$nodes, int $parent_offset = 0, string $edge_from_parent = ''): int
 {
-    $id = \count($nodes);
-    $nodes[$id] = new _Node($at_segment_boundary, $segment_offset);
+    $last_slash = \strrpos($edge_from_parent, '/');
+    $offset     = $last_slash === false
+        ? $parent_offset + \strlen($edge_from_parent)
+        : \strlen($edge_from_parent) - $last_slash - 1;
+    $id         = \count($nodes);
+    $nodes[$id] = new _Node($offset);
     return $id;
 }
 
-// Bytes consumed past the last '/' after walking $consumed from a node at
-// $parent_offset. Used to label split-intermediates with how far into the
-// current segment they sit, so the matcher can rewind on a param fallback.
-function _compile_advance_offset(int $parent_offset, string $consumed): int
+// Single DFS that (1) propagates each boundary node's param child down to its
+// non-boundary descendants - so partial static matches can fall through to a
+// param transition - and (2) emits the placement order for row-displacement
+// packing. The param subtree is walked only from its boundary owner so it is
+// placed once even though intermediates now share the same pointer.
+function _compile_walk(array &$nodes, int $node_id, int $inherited, array &$order, array &$seen): void
 {
-    $last_slash = \strrpos($consumed, '/');
-    if ($last_slash === false) {
-        return $parent_offset + \strlen($consumed);
-    }
-    return \strlen($consumed) - $last_slash - 1;
-}
-
-// Mid-segment intermediates (created by edge splits at non-'/' boundaries)
-// inherit the param-child of their nearest segment-boundary ancestor, so
-// partial static matches can still fall through to a param transition.
-function _compile_propagate_params(array &$nodes, int $node_id, int $inherited): void
-{
-    $node = $nodes[$node_id];
-    if ($node->at_segment_boundary) {
+    $node       = $nodes[$node_id];
+    $is_boundary = $node->segment_offset === 0;
+    if ($is_boundary) {
         $next = $node->param_child_id;
     } else {
         if ($node->param_child_id < 0 && $inherited >= 0) {
@@ -303,36 +291,28 @@ function _compile_propagate_params(array &$nodes, int $node_id, int $inherited):
         }
         $next = $inherited;
     }
+
+    $order[] = $node_id;
+
+    $static_children = [];
     foreach ($node->children as [, $child_id]) {
-        _compile_propagate_params($nodes, $child_id, $next);
+        $static_children[] = $child_id;
     }
-    if ($node->at_segment_boundary && $node->param_child_id >= 0) {
-        _compile_propagate_params($nodes, $node->param_child_id, -1);
+    \sort($static_children);
+    foreach ($static_children as $child_id) {
+        if (!isset($seen[$child_id])) {
+            $seen[$child_id] = true;
+            _compile_walk($nodes, $child_id, $next, $order, $seen);
+        }
+    }
+
+    if ($is_boundary && $node->param_child_id >= 0 && !isset($seen[$node->param_child_id])) {
+        $seen[$node->param_child_id] = true;
+        _compile_walk($nodes, $node->param_child_id, -1, $order, $seen);
     }
 }
 
-// When a sibling forces a single-byte '/' edge out of a terminal node
-// (e.g. '/foo' alongside '/foo/bar'), the matcher succeeds the '/'
-// transition into a non-terminal intermediate. Mark it terminal so '/foo/'
-// still matches via the static path rather than Slot::FLAG_TRAILING_SLASH.
-function _compile_propagate_slash_terminals(array &$nodes): void
-{
-    foreach ($nodes as $node) {
-        if (!$node->terminal || !$node->trailing_slash_allowed) {
-            continue;
-        }
-        if (!isset($node->children[0x2F])) {
-            continue;
-        }
-        [$edge, $child_node_id] = $node->children[0x2F];
-        if ($edge === '/') {
-            $nodes[$child_node_id]->terminal = true;
-            $nodes[$child_node_id]->route_id = $node->route_id;
-        }
-    }
-}
-
-function _compile_emit_packed(array $nodes): array
+function _compile_emit_packed(array $nodes, array $order): array
 {
     // Byte 0 is always included so a row's displacement is reserved in
     // used_slots without a separate used_displacements set.
@@ -343,77 +323,14 @@ function _compile_emit_packed(array $nodes): array
         $occupied_bytes[$node_id] = $bytes;
     }
 
-    $node_displacement = _compile_place_nodes($nodes, $occupied_bytes);
-    $size              = \max($node_displacement) + 256;
-
-    $slots       = \array_fill(0, $size, 0);
-    $edge_labels = \array_fill(0, $size, null);
-
-    foreach ($nodes as $node_id => $node) {
-        $displacement = $node_displacement[$node_id];
-
-        foreach ($node->children as $byte => [$edge, $child_id]) {
-            $edge_length = \strlen($edge);
-            if ($edge_length > Slot::LENGTH_EDGE_MAX) {
-                throw new \LengthException("Edge label too long ($edge_length bytes); max " . Slot::LENGTH_EDGE_MAX . '.');
-            }
-            $index = $displacement + $byte;
-            $slots[$index] = $byte
-                | ($edge_length                  << Slot::LENGTH_SHIFT)
-                | ($node_displacement[$child_id] << Slot::CHILD_SHIFT);
-            // Single-byte edges are reconstructable from the dispatched
-            // byte; matcher never reads edge_labels[$index] for them.
-            if ($edge_length === Slot::LENGTH_SINGLE_BYTE) {
-                continue;
-            }
-            $edge_labels[$index] = $edge;
-        }
-
-        $has_handler   = $node->terminal;
-        $param_node_id = $node->param_child_id;
-        if ($has_handler || $param_node_id >= 0) {
-            $has_param          = $param_node_id >= 0;
-            $child_displacement = $has_param ? $node_displacement[$param_node_id] : 0;
-            $route_id = $has_handler ? $node->route_id : 0;
-            if ($route_id > Slot::ROUTE_ID_MASK) {
-                throw new \LengthException("Too many routes ($route_id); max " . Slot::ROUTE_ID_MASK . '.');
-            }
-            $segment_offset = $node->segment_offset;
-            if ($segment_offset > Slot::SEGMENT_OFFSET_MASK) {
-                throw new \LengthException("Segment offset too large ($segment_offset bytes); max " . Slot::SEGMENT_OFFSET_MASK . '.');
-            }
-            $slots[$displacement] = (($has_param ? Slot::LENGTH_PARAM : Slot::LENGTH_SENTINEL_ONLY) << Slot::LENGTH_SHIFT)
-                | ($child_displacement << Slot::CHILD_SHIFT)
-                | ($has_handler ? Slot::FLAG_TERMINAL : 0)
-                | ($has_handler && $node->trailing_slash_allowed ? Slot::FLAG_TRAILING_SLASH : 0)
-                | ($route_id << Slot::ROUTE_ID_SHIFT)
-                | ($segment_offset << Slot::SEGMENT_OFFSET_SHIFT);
-        }
-    }
-
-    return [$slots, $edge_labels];
-}
-
-// First-fit displacement assignment. Root is fixed at 0; remaining nodes
-// are placed in DFS order so a node and its descendants stay close in the
-// packed table.
-function _compile_place_nodes(array $nodes, array $occupied_bytes): array
-{
+    // First-fit displacement assignment. Root is fixed at 0; remaining nodes
+    // are placed in DFS order so a node and its descendants stay close.
     $displacement = [0 => 0];
     $used_slots   = [];
     foreach ($occupied_bytes[0] as $byte) {
         $used_slots[$byte] = true;
     }
-
-    $order = [];
-    $seen  = [0 => true];
-    _compile_place_nodes_visit($nodes, 0, $order, $seen);
-
-    // Frontier cursor: smallest displacement not yet reserved. Most placements
-    // land at or just past it, so resuming from the frontier instead of 1
-    // skips the densely-packed region near the root.
     $frontier = 1;
-
     foreach ($order as $node_id) {
         if ($node_id === 0) {
             continue;
@@ -444,34 +361,47 @@ function _compile_place_nodes(array $nodes, array $occupied_bytes): array
         }
     }
 
-    return $displacement;
-}
+    $size        = \max($displacement) + 256;
+    $slots       = \array_fill(0, $size, 0);
+    $edge_labels = \array_fill(0, $size, null);
 
-// DFS traversal that produces the order _compile_place_nodes() uses.
-//
-// After _compile_propagate_params(), intermediate non-boundary nodes share a
-// param_child_id pointer with their boundary ancestor, so the param subtree
-// is reachable along multiple DFS paths - $seen prevents double-placement.
-function _compile_place_nodes_visit(array $nodes, int $node_id, array &$order, array &$seen): void
-{
-    $order[] = $node_id;
+    foreach ($nodes as $node_id => $node) {
+        $row = $displacement[$node_id];
 
-    $static_children = [];
-    foreach ($nodes[$node_id]->children as $entry) {
-        $static_children[] = $entry[1];
-    }
-
-    \sort($static_children);
-    foreach ($static_children as $child_id) {
-        if (!isset($seen[$child_id])) {
-            $seen[$child_id] = true;
-            _compile_place_nodes_visit($nodes, $child_id, $order, $seen);
+        foreach ($node->children as $byte => [$edge, $child_id]) {
+            $edge_length = \strlen($edge);
+            if ($edge_length > Slot::LENGTH_EDGE_MAX) {
+                throw new \LengthException("Edge label too long ($edge_length bytes); max " . Slot::LENGTH_EDGE_MAX . '.');
+            }
+            $index = $row + $byte;
+            $slots[$index] = $byte
+                | ($edge_length              << Slot::LENGTH_SHIFT)
+                | ($displacement[$child_id]  << Slot::CHILD_SHIFT);
+            // Single-byte edges are reconstructable from the dispatched
+            // byte; matcher never reads edge_labels[$index] for them.
+            if ($edge_length !== Slot::LENGTH_SINGLE_BYTE) {
+                $edge_labels[$index] = $edge;
+            }
         }
+
+        $has_handler   = $node->route_id >= 0;
+        $param_node_id = $node->param_child_id;
+        if (!$has_handler && $param_node_id < 0) {
+            continue;
+        }
+        $route_id = $has_handler ? $node->route_id : 0;
+        if ($route_id > Slot::ROUTE_ID_MASK) {
+            throw new \LengthException("Too many routes ($route_id); max " . Slot::ROUTE_ID_MASK . '.');
+        }
+        if ($node->segment_offset > Slot::SEGMENT_OFFSET_MASK) {
+            throw new \LengthException("Segment offset too large ({$node->segment_offset} bytes); max " . Slot::SEGMENT_OFFSET_MASK . '.');
+        }
+        $slots[$row] = (($param_node_id >= 0 ? Slot::LENGTH_PARAM : Slot::LENGTH_SENTINEL_ONLY) << Slot::LENGTH_SHIFT)
+            | (($param_node_id >= 0 ? $displacement[$param_node_id] : 0) << Slot::CHILD_SHIFT)
+            | ($has_handler ? Slot::FLAG_TERMINAL : 0)
+            | ($route_id             << Slot::ROUTE_ID_SHIFT)
+            | ($node->segment_offset << Slot::SEGMENT_OFFSET_SHIFT);
     }
 
-    $param_child_id = $nodes[$node_id]->param_child_id;
-    if ($param_child_id >= 0 && !isset($seen[$param_child_id])) {
-        $seen[$param_child_id] = true;
-        _compile_place_nodes_visit($nodes, $param_child_id, $order, $seen);
-    }
+    return [$slots, $edge_labels];
 }
