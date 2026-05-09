@@ -1,13 +1,18 @@
 # <img alt="RadixRouter" width="200" src="./assets/radx.svg">
 
-![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)
-![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)
+[![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
+[![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
 
-RadixRouter (or RadXRouter) is a lightweight HTTP routing library focused on providing the essentials while being fast and small. It makes an excellent choice for simple applications or as the foundation for building your own custom more featureful router (see third-party [integrations](#integrations)).
 
-It features fast $O(k)$ dynamic route matching ($k$ = segments in path), path parameters (optional, wildcard; one per segment), simple API for listing routes/methods (for OPTIONS support), 405 method not allowed handling and it's all in a package weighing in at only 378 lines of code with no external dependencies.
+A simple HTTP router for PHP. Use it directly, or as a base for your own router (see [integrations](#integrations)).
 
-RadixRouter consistently ranks as being one of the fastest (if not *the* fastest) PHP routers out there. To see how this router compares to other implementations in routing performance see the [benchmarks](#benchmarks) section.
+- $O(k)$ dynamic route matching ($k$ = segments in path)
+- Path parameters: optional and wildcard (one per segment)
+- API for listing routes/methods (useful for OPTIONS)
+- 405 Method Not Allowed handling
+- 403 lines, no dependencies
+
+See [benchmarks](#benchmarks) for how it compares to other PHP routers.
 
 ## Install
 
