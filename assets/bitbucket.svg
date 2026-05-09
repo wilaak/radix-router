@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 386" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<style>.bg{fill:#FFFFFF}.fg{fill:#000000}.bar{shape-rendering:crispEdges}@media(prefers-color-scheme:dark){.bg{fill:#1E1E1E}.fg{fill:#E6E6E6}}</style>
+<rect class="bg" width="830" height="386"/>
+<rect x="20" y="20" width="14" height="14" fill="#474A8A"/>
+<text class="fg" x="40" y="32" font-size="12">JIT=tracing</text>
+<rect x="160" y="20" width="14" height="14" fill="#787CB5"/>
+<text class="fg" x="180" y="32" font-size="12">OPcache</text>
+<text class="fg" x="140.00" y="344" text-anchor="middle" font-size="11">0</text>
+<text class="fg" x="290.00" y="344" text-anchor="middle" font-size="11">1M</text>
+<text class="fg" x="440.00" y="344" text-anchor="middle" font-size="11">2M</text>
+<text class="fg" x="590.00" y="344" text-anchor="middle" font-size="11">3M</text>
+<text class="fg" x="740.00" y="344" text-anchor="middle" font-size="11">4M</text>
+<text class="fg" x="440.00" y="366" text-anchor="middle" font-size="12" font-weight="600">Lookups / second</text>
+<text class="fg" x="132" y="82.5" text-anchor="end" font-size="12" font-weight="600">RadixRouter (cached)</text>
+<rect class="bar" x="140" y="60.0" width="517.97" height="18" fill="#474A8A"/>
+<text class="fg" x="663.97" y="73.0" font-size="11">3,453,156</text>
+<rect class="bar" x="140" y="78.0" width="338.25" height="18" fill="#787CB5"/>
+<text class="fg" x="484.25" y="91.0" font-size="11">2,255,020</text>
+<text class="fg" x="132" y="126.5" text-anchor="end" font-size="12" font-weight="600">RadixRouter</text>
+<rect class="bar" x="140" y="104.0" width="497.99" height="18" fill="#474A8A"/>
+<text class="fg" x="643.99" y="117.0" font-size="11">3,319,929</text>
+<rect class="bar" x="140" y="122.0" width="326.34" height="18" fill="#787CB5"/>
+<text class="fg" x="472.34" y="135.0" font-size="11">2,175,590</text>
+<text class="fg" x="132" y="170.5" text-anchor="end" font-size="12" font-weight="600">Symfony (cached)</text>
+<rect class="bar" x="140" y="148.0" width="214.59" height="18" fill="#474A8A"/>
+<text class="fg" x="360.59" y="161.0" font-size="11">1,430,605</text>
+<rect class="bar" x="140" y="166.0" width="156.30" height="18" fill="#787CB5"/>
+<text class="fg" x="302.30" y="179.0" font-size="11">1,041,973</text>
+<text class="fg" x="132" y="214.5" text-anchor="end" font-size="12" font-weight="600">Symfony</text>
+<rect class="bar" x="140" y="192.0" width="203.21" height="18" fill="#474A8A"/>
+<text class="fg" x="349.21" y="205.0" font-size="11">1,354,705</text>
+<rect class="bar" x="140" y="210.0" width="151.48" height="18" fill="#787CB5"/>
+<text class="fg" x="297.48" y="223.0" font-size="11">1,009,860</text>
+<text class="fg" x="132" y="258.5" text-anchor="end" font-size="12" font-weight="600">FastRoute (cached)</text>
+<rect class="bar" x="140" y="236.0" width="80.74" height="18" fill="#474A8A"/>
+<text class="fg" x="226.74" y="249.0" font-size="11">538,267</text>
+<rect class="bar" x="140" y="254.0" width="74.16" height="18" fill="#787CB5"/>
+<text class="fg" x="220.16" y="267.0" font-size="11">494,382</text>
+<text class="fg" x="132" y="302.5" text-anchor="end" font-size="12" font-weight="600">FastRoute</text>
+<rect class="bar" x="140" y="280.0" width="80.18" height="18" fill="#474A8A"/>
+<text class="fg" x="226.18" y="293.0" font-size="11">534,530</text>
+<rect class="bar" x="140" y="298.0" width="73.48" height="18" fill="#787CB5"/>
+<text class="fg" x="219.48" y="311.0" font-size="11">489,861</text>
+</svg>
