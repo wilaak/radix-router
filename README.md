@@ -3,14 +3,13 @@
 [![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
 [![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
 
-
 A simple HTTP router for PHP. Use it directly, or as a base for your own router (see [integrations](#integrations)).
 
 - $O(k)$ dynamic route matching ($k$ = segments in path)
 - Path parameters: optional and wildcard (one per segment)
 - API for listing routes/methods (useful for OPTIONS)
 - 405 Method Not Allowed handling
-- 403 lines, no dependencies
+- Zero dependencies and only 403 lines of code
 
 See [benchmarks](#benchmarks) for how it compares to other PHP routers.
 
@@ -268,8 +267,9 @@ If you’re using PHP’s built-in web SAPI, the entity body is removed for HEAD
 
 ## Benchmarks
 
-Each path gets 1-3 HTTP methods (GET 60% / POST 25% / PUT 10% / DELETE 5%); lookups follow a Zipf-like distribution (exponent 0.9), so a few hot routes dominate traffic.
+Each path gets 1-3 HTTP methods, lookups follow a Zipf-like distribution (exponent 0.9), so a few hot routes dominate traffic.
 
+> [!NOTE]  
 > Don't sweat router perf, it won't be your bottleneck.
 
 *PHP 8.5.5 · AMD Ryzen AI 7 PRO 350 w/ Radeon 860M · seed 42*
