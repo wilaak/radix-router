@@ -418,9 +418,6 @@ class RadixRouter
 
         HANDLE_405:
         $allowedMethods = \array_keys($routes);
-        // Advertise HEAD as allowed whenever GET is — the lookup sites
-        // above already resolve HEAD requests via the GET handler when no
-        // explicit HEAD is registered, so we only need the advertisement.
         if (isset($routes['GET']) && !isset($routes['HEAD'])) {
             $allowedMethods[] = 'HEAD';
         }
