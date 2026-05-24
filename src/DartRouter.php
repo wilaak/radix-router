@@ -75,6 +75,8 @@ final class Router
     public array $patterns = [];
     /** @var array<int, mixed> indexed by route_id (parallel to $patterns) */
     public array $handlers = [];
+    /** @var array<string, int> normalized static path => route_id */
+    public array $static_routes = [];
 }
 
 final class _Node
@@ -103,39 +105,36 @@ function lookup(Router $router, string $path): ?array
     $handlers = $router->handlers;
 
     $length = \strlen($path);
-    // Trailing '/' tolerance: strip one and let the matcher reach the same
-    // terminal node as the un-slashed path. Skipped for '/' itself.
     if ($length > 1 && $path[$length - 1] === '/') {
         $length--;
+        $key = \substr($path, 0, $length);
+    } else {
+        $key = $path;
+    }
+    if (isset($router->static_routes[$key])) {
+        return [$handlers[$router->static_routes[$key]], null];
     }
     $base   = 0;
     $cursor = 1;
-    $params = [];
+    $params = null;
 
     while ($cursor < $length) {
         $byte  = \ord($path[$cursor]);
-        $index = $base + $byte;
-        $slot  = $slots[$index];
+        $index = ($base + $byte) | 0;
+        $slot  = (int) $slots[$index];
 
         if (($slot & Slot::OWNER_MASK) === $byte) {
-            $child_base  = ($slot >> Slot::CHILD_SHIFT)  & Slot::CHILD_MASK;
             $edge_length = ($slot >> Slot::LENGTH_SHIFT) & Slot::LENGTH_MASK;
-
-            if ($edge_length === Slot::LENGTH_SINGLE_BYTE) {
-                $base = $child_base;
-                $cursor++;
-                continue;
-            }
-
-            if (\substr_compare($path, $edges[$index], $cursor, $edge_length) === 0) {
-                $base    = $child_base;
-                $cursor += $edge_length;
+            if ($edge_length === Slot::LENGTH_SINGLE_BYTE
+                || \substr_compare($path, $edges[$index], $cursor + 1, $edge_length - 1) === 0) {
+                $base   = ($slot >> Slot::CHILD_SHIFT) & Slot::CHILD_MASK;
+                $cursor = ($cursor + $edge_length) | 0;
                 continue;
             }
         }
 
-        $sentinel = $slots[$base];
-        if (($sentinel & Slot::LENGTH_FIELD_MASK) === (Slot::LENGTH_PARAM << Slot::LENGTH_SHIFT)) {
+        $base_sentinel = (int) $slots[$base];
+        if (($base_sentinel & Slot::LENGTH_FIELD_MASK) === (Slot::LENGTH_PARAM << Slot::LENGTH_SHIFT)) {
             $end = \strpos($path, '/', $cursor);
             if ($end === false || $end >= $length) {
                 $end = $length;
@@ -143,26 +142,21 @@ function lookup(Router $router, string $path): ?array
             if ($end === $cursor) {
                 return null;
             }
-            // Mid-segment intermediates inherit a param target via the
-            // param-propagation pass; rewind by the segment offset so the
-            // emitted param covers the static prefix already consumed.
-            $segment_offset = ($sentinel >> Slot::SEGMENT_OFFSET_SHIFT) & Slot::SEGMENT_OFFSET_MASK;
-            $segment_start  = $cursor - $segment_offset;
+            $segment_start  = ($cursor - (($base_sentinel >> Slot::SEGMENT_OFFSET_SHIFT) & Slot::SEGMENT_OFFSET_MASK)) | 0;
             $params[]       = \substr($path, $segment_start, $end - $segment_start);
-            $base   = ($sentinel >> Slot::CHILD_SHIFT) & Slot::CHILD_MASK;
-            $cursor = $end + 1;
+            $base           = ($base_sentinel >> Slot::CHILD_SHIFT) & Slot::CHILD_MASK;
+            $cursor         = ($end + 1) | 0;
             continue;
         }
 
         return null;
     }
 
-    $sentinel = $slots[$base];
-    if (($sentinel & Slot::OWNER_MASK) !== 0 || ($sentinel & Slot::FLAG_TERMINAL) === 0) {
+    $base_sentinel = (int) $slots[$base];
+    if (($base_sentinel & Slot::OWNER_MASK) !== 0 || ($base_sentinel & Slot::FLAG_TERMINAL) === 0) {
         return null;
     }
-    $route_id = ($sentinel >> Slot::ROUTE_ID_SHIFT) & Slot::ROUTE_ID_MASK;
-    return [$handlers[$route_id], $params];
+    return [$handlers[($base_sentinel >> Slot::ROUTE_ID_SHIFT) & Slot::ROUTE_ID_MASK], $params];
 }
 
 function add(Router $router, string $pattern, mixed $handler = null): int
@@ -177,7 +171,13 @@ function compile(Router $router): void
 {
     /** @var _Node[] $nodes */
     $nodes = [new _Node()];
+    $router->static_routes = [];
     foreach ($router->patterns as $route_id => $pattern) {
+        if (!\str_contains($pattern, '/:')) {
+            $key = \strlen($pattern) > 1 ? \rtrim($pattern, '/') : $pattern;
+            $router->static_routes[$key] = $route_id;
+            continue;
+        }
         _compile_insert($nodes, $pattern, $route_id);
     }
     $order = [];
@@ -377,10 +377,9 @@ function _compile_emit_packed(array $nodes, array $order): array
             $slots[$index] = $byte
                 | ($edge_length              << Slot::LENGTH_SHIFT)
                 | ($displacement[$child_id]  << Slot::CHILD_SHIFT);
-            // Single-byte edges are reconstructable from the dispatched
-            // byte; matcher never reads edge_labels[$index] for them.
+
             if ($edge_length !== Slot::LENGTH_SINGLE_BYTE) {
-                $edge_labels[$index] = $edge;
+                $edge_labels[$index] = \substr($edge, 1);
             }
         }
 

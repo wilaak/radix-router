@@ -49,6 +49,7 @@ class DartRouterCachedAdapter implements RouterInterface
                 $router->edges,
                 $router->patterns,
                 $router->handlers,
+                $router->static_routes,
             ];
 
             $export = '<?php return ' . var_export($data, true) . ';';
@@ -59,10 +60,11 @@ class DartRouterCachedAdapter implements RouterInterface
         }
 
         $data = require $cacheFile;
-        $router->slots    = $data[0];
-        $router->edges    = $data[1];
-        $router->patterns = $data[2];
-        $router->handlers = $data[3];
+        $router->slots         = $data[0];
+        $router->edges         = $data[1];
+        $router->patterns      = $data[2];
+        $router->handlers      = $data[3];
+        $router->static_routes = $data[4];
     }
 
     public function lookup(string $method, string $path): void

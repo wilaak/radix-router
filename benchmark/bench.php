@@ -397,7 +397,7 @@ function print_usage(array $suites, array $routers, array $modes): void
     foreach ([
         '--suite'        => 'Comma-separated list of test suites (default: all)',
         '--router'       => 'Comma-separated list of routers (default: all)',
-        '--mode'         => 'Comma-separated list of benchmark modes (default: JIT=tracing, OPcache)',
+        '--mode'         => 'Comma-separated list of benchmark modes (default: JIT=tracing, JIT=function, JIT=off)',
         '--all'          => 'Run all suites, routers, and modes',
         '--duration'     => 'Seconds per benchmark combination (default: 1.0)',
         '--warmup'       => 'Seconds for warmup per combination, 0 to skip (default: 1.0)',
@@ -428,10 +428,14 @@ foreach (glob(__DIR__ . '/Routers/*.php') as $file) {
     }
 }
 
+$jit_base = '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit_buffer_size=100M -d opcache.jit=';
 $available_modes = [
-    'JIT=tracing' => ['JIT=tracing', '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit_buffer_size=100M -d opcache.jit=tracing'],
-    'OPcache'     => ['OPcache',     '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1'],
-    'No OPcache'  => ['No OPcache',  '-d opcache.enable=0'],
+    'JIT=tracing'  => ['JIT=tracing',  $jit_base . 'tracing'],
+    'JIT=function' => ['JIT=function', $jit_base . 'function'],
+    'JIT=1235'     => ['JIT=1235',     $jit_base . '1235'],
+    'JIT=1255'     => ['JIT=1255',     $jit_base . '1255'],
+    'JIT=off'      => ['JIT=off',      '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1'],
+    'No OPcache'   => ['No OPcache',   '-d opcache.enable=0'],
 ];
 
 //
@@ -452,7 +456,10 @@ if (!isset($options['all']) && !isset($options['suite']) && !isset($options['rou
 
 $suites  = resolve_option('suite',  $options['suite']  ?? null, $available_suites);
 $routers = resolve_option('router', $options['router'] ?? null, $available_routers);
-$modes   = resolve_option('mode',   $options['mode']   ?? null, array_intersect_key($available_modes, array_flip(['JIT=tracing', 'OPcache'])));
+$default_modes = array_intersect_key($available_modes, array_flip(['JIT=tracing', 'JIT=off']));
+$modes   = isset($options['mode'])
+    ? resolve_option('mode', $options['mode'], $available_modes)
+    : array_values($default_modes);
 
 $benchmark_duration = (float) ($options['duration']     ?? 1.0);
 $warmup_duration    = (float) ($options['warmup']       ?? 1.0);
