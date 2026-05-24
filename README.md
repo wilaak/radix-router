@@ -1,4 +1,4 @@
-# <img alt="RadixRouter" width="200" src="./assets/radx.svg">
+# <img alt="RadixRouter" width="150" src="./assets/radx.svg">
 
 [![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
 [![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
@@ -62,9 +62,9 @@ switch ($result['code']) {
 
 ## Route Configuration
 
-Routes are matched in a predictable order, always favoring the most specific pattern. Handlers can be any value you choose. In these examples, we use strings for simplicity, but you’re free to use arrays with extra details like middleware or other metadata. Just remember: if you plan to use [route caching](#route-caching), your handlers must be serializable.
+Routes are matched in a predictable order, always favoring the most specific pattern. Handlers can be any value you choose. In these examples, we use strings for simplicity, but you’re free to use arrays with extra details like middleware or other metadata.
 
-The router does not support regex patterns and it's recommended that you do this validation in your handlers. Regular expressions allow for highly flexible matching which can make route resolution order less predictable. If you absolutely need this you can use a more suitable router of which there are plenty (e.g., [FastRoute](https://github.com/nikic/FastRoute)).
+If you plan to use [route caching](#route-caching) your handlers must be serializable. The router does not support regex patterns and it's recommended that you do this validation in your handlers instead.
 
 ```php
 // Simple GET route
