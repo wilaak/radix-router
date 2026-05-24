@@ -305,7 +305,9 @@ class RadixRouter
 
         $routes = $this->static[$path] ?? null;
         if (isset($routes)) {
-            $result = $routes[$method] ?? $routes['*'] ?? null;
+            $result = $routes[$method]
+                ?? ($method === 'HEAD' ? $routes['GET'] ?? null : null)
+                ?? $routes['*'] ?? null;
             if (isset($result) && $method !== '*') {
                 return $result;
             }
@@ -345,7 +347,9 @@ class RadixRouter
 
         $routes = $currentNode[self::NODE_ROUTES];
         if (isset($routes)) {
-            $result = $routes[$method] ?? $routes['*'] ?? null;
+            $result = $routes[$method]
+                ?? ($method === 'HEAD' ? $routes['GET'] ?? null : null)
+                ?? $routes['*'] ?? null;
             if (isset($result) && $method !== '*') {
                 $result['params'] = \array_combine($result['params'], $params);
                 return $result;
@@ -356,7 +360,9 @@ class RadixRouter
         $routes = $lastStaticNode[self::NODE_PARAM][self::NODE_ROUTES] ?? null;
         if (isset($routes)) {
             $params[] = $lastStaticSegment;
-            $result = $routes[$method] ?? $routes['*'] ?? null;
+            $result = $routes[$method]
+                ?? ($method === 'HEAD' ? $routes['GET'] ?? null : null)
+                ?? $routes['*'] ?? null;
             if (isset($result) && $method !== '*') {
                 $result['params'] = \array_combine($result['params'], $params);
                 return $result;
@@ -366,7 +372,9 @@ class RadixRouter
 
         $routes = $currentNode[self::NODE_WILDCARD][self::NODE_ROUTES] ?? null;
         if (isset($routes)) {
-            $result = $routes[$method] ?? $routes['*'] ?? null;
+            $result = $routes[$method]
+                ?? ($method === 'HEAD' ? $routes['GET'] ?? null : null)
+                ?? $routes['*'] ?? null;
             if (isset($result) && $method !== '*') {
                 $pattern = $result['pattern'];
                 if (\str_ends_with($pattern, '*') || \str_ends_with($pattern, '/*')) {
@@ -394,7 +402,9 @@ class RadixRouter
             $routes = $wildcardNode[self::NODE_ROUTES] ?? null;
             if (isset($routes)) {
                 $wildcardParams[] = \implode('/', \array_slice($segments, $wildcardSegIdx));
-                $result = $routes[$method] ?? $routes['*'] ?? null;
+                $result = $routes[$method]
+                ?? ($method === 'HEAD' ? $routes['GET'] ?? null : null)
+                ?? $routes['*'] ?? null;
                 if (isset($result) && $method !== '*') {
                     $result['params'] = \array_combine($result['params'], $wildcardParams);
                     return $result;
@@ -408,12 +418,10 @@ class RadixRouter
 
         HANDLE_405:
         $allowedMethods = \array_keys($routes);
+        // Advertise HEAD as allowed whenever GET is — the lookup sites
+        // above already resolve HEAD requests via the GET handler when no
+        // explicit HEAD is registered, so we only need the advertisement.
         if (isset($routes['GET']) && !isset($routes['HEAD'])) {
-            if ($method === 'HEAD') {
-                $result = $routes['GET'];
-                $result['params'] = \array_combine($result['params'], $params);
-                return $result;
-            }
             $allowedMethods[] = 'HEAD';
         }
         return ['code' => 405, 'allowed_methods' => $allowedMethods, '_routes' => $routes];
