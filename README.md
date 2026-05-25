@@ -10,7 +10,7 @@ A simple HTTP router for PHP. Use it directly, or as a base for your own router 
 - Automatic 405 Method Not Allowed handling
 - Zero dependencies, only 403 lines of code
 
-see [benchmarks](#benchmarks) for how it compares to others.
+See [benchmarks](#benchmarks) for how it compares to other routers.
 
 ## Install
 
