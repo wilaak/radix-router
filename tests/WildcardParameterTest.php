@@ -360,6 +360,15 @@ class WildcardParameterTest extends RadixRouterTestCase
         $router->add('GET', '/:rest*/', 'second');
     }
 
+    public function testRequiredWildcardAloneCannotMatchZeroSegments()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/:rest+', 'handler');
+
+        $info = $router->lookup('GET', '/');
+        $this->assertSame(404, $info['code']);
+    }
+
     public function testWildcard405MethodListExcludesUnsatisfiableRequired()
     {
         $router = new RadixRouter();

@@ -158,4 +158,16 @@ class HttpMethodTest extends RadixRouterTestCase
         $this->assertSame(200, $router->lookup('GET', '/x')['code']);
         $this->assertSame(405, $router->lookup('get', '/x')['code']);
     }
+
+    public function testCustomHttpMethodViaAllowedMethodsExtension()
+    {
+        $router = new RadixRouter();
+        $router->allowedMethods[] = 'PURGE';
+        $router->add('PURGE', '/cache/:key', 'purge_handler');
+
+        $info = $router->lookup('PURGE', '/cache/foo');
+        $this->assertSame(200, $info['code']);
+        $this->assertSame('purge_handler', $info['handler']);
+        $this->assertSame(['key' => 'foo'], $info['params']);
+    }
 }

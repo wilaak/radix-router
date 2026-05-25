@@ -160,6 +160,16 @@ class ValidationTest extends RadixRouterTestCase
         }
     }
 
+    public function testOptionalExpansionConflictsWithExplicitStaticRegistration()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/foo/:bar?', 'optional_handler');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Route Conflict: [GET] '/foo': Path is already registered (conflicts with '/foo/:bar?')");
+        $router->add('GET', '/foo', 'static_handler');
+    }
+
     public function testPublicMethodParameterNamesAreStableApi()
     {
         $router = new RadixRouter();

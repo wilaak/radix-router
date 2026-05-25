@@ -112,4 +112,13 @@ class IntrospectionTest extends RadixRouterTestCase
             );
         }
     }
+
+    public function testEmptyRouterIntrospection()
+    {
+        $router = new RadixRouter();
+
+        $this->assertSame([], $router->methods('/anything'));
+        $this->assertSame([], $router->list());
+        $this->assertSame([], $router->list('/anything'));
+    }
 }
