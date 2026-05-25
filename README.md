@@ -8,7 +8,7 @@ A simple HTTP router for PHP. Use it directly, or as a base for your own router 
 - Path parameters: optional and wildcard (one per segment)
 - API for listing routes/methods (useful for OPTIONS)
 - Automatic 405 Method Not Allowed handling
-- Zero dependencies, only 403 lines of code
+- Zero dependencies and only 370 lines of code
 
 See [benchmarks](#benchmarks) for how it compares to other routers.
 
@@ -18,7 +18,7 @@ See [benchmarks](#benchmarks) for how it compares to other routers.
 composer require wilaak/radix-router
 ```
 
-Requires PHP 8.0
+Requires PHP 8.0 or newer.
 
 ## Usage
 
@@ -300,25 +300,42 @@ If this router is a bit too minimalistic, you might try one of the following mor
 
 Each path gets 1-3 HTTP methods, lookups follow a Zipf-like distribution, so a few hot routes dominate traffic.
 
-_Benchmarked on: PHP 8.5.5 · AMD Ryzen AI 7 PRO 350 w/ Radeon 860M · Seed: 42_
+_Benchmarked on: PHP 8.5.6 - AMD Ryzen 5 5600X 6-Core Processor - Seed: 42_
 
 ### Results
 
 #### avatax (256 routes)
 
-![avatax](/assets/avatax.svg)
+![avatax](./assets/avatax.svg)
+
+#### aws (3052 routes)
+
+![aws](./assets/aws.svg)
 
 #### bitbucket (177 routes)
 
-![bitbucket](/assets/bitbucket.svg)
+![bitbucket](./assets/bitbucket.svg)
 
-#### huge (500 routes)
+#### discord (135 routes)
 
-![huge](/assets/huge.svg)
+![discord](./assets/discord.svg)
+
+#### github (782 routes)
+
+![github](./assets/github.svg)
+
+#### kubernetes (562 routes)
+
+![kubernetes](./assets/kubernetes.svg)
 
 #### simple (33 routes)
 
-![simple](/assets/simple.svg)
+![simple](./assets/simple.svg)
+
+#### stripe (414 routes)
+
+![stripe](./assets/stripe.svg)
+
 
 ## License
 
