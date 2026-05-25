@@ -18,7 +18,7 @@ see [benchmarks](#benchmarks) for how it compares to others.
 composer require wilaak/radix-router
 ```
 
-Requires PHP 8.4 or newer and a 64-bit PHP version and operating system (PHP_INT_SIZE = 8)
+Requires PHP 8.0
 
 ## Usage
 
