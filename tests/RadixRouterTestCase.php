@@ -11,7 +11,7 @@ abstract class RadixRouterTestCase extends TestCase
      */
     protected static function patternTypes(): array
     {
-        return [
+        $shapes = [
             [
                 'pattern' => '/resource',
                 'lookup'  => '/resource',
@@ -85,5 +85,17 @@ abstract class RadixRouterTestCase extends TestCase
                 'desc'    => 'required + required wildcard (+)',
             ],
         ];
+
+        $withTrailingSlash = [];
+        foreach ($shapes as $shape) {
+            $withTrailingSlash[] = [
+                'pattern' => $shape['pattern'] . '/',
+                'lookup'  => $shape['lookup'],
+                'params'  => $shape['params'],
+                'desc'    => $shape['desc'] . ' (trailing slash)',
+            ];
+        }
+
+        return \array_merge($shapes, $withTrailingSlash);
     }
 }

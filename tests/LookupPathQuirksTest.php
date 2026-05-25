@@ -17,8 +17,6 @@ class LookupPathQuirksTest extends RadixRouterTestCase
         $router = new RadixRouter();
         $router->add('GET', '/foo/bar', 'h');
 
-        // /foo//bar explodes into ['foo', '', 'bar']. The empty segment
-        // cannot satisfy a static or parameter node, so the lookup 404s.
         $info = $router->lookup('GET', '/foo//bar');
         $this->assertSame(404, $info['code']);
     }
@@ -28,7 +26,6 @@ class LookupPathQuirksTest extends RadixRouterTestCase
         $router = new RadixRouter();
         $router->add('GET', '/foo/:bar/baz', 'h');
 
-        // :bar must consume a non-empty segment.
         $info = $router->lookup('GET', '/foo//baz');
         $this->assertSame(404, $info['code']);
     }
@@ -38,9 +35,9 @@ class LookupPathQuirksTest extends RadixRouterTestCase
         $router = new RadixRouter();
         $router->add('GET', '/users/:name', 'h');
 
+        // Router does not URL-decode. Callers are responsible for that.
         $info = $router->lookup('GET', '/users/john%20doe');
         $this->assertSame(200, $info['code']);
-        // Router does not URL-decode. Callers are responsible for that.
         $this->assertSame(['name' => 'john%20doe'], $info['params']);
     }
 
@@ -59,9 +56,6 @@ class LookupPathQuirksTest extends RadixRouterTestCase
         $router = new RadixRouter();
         $router->add('GET', '/files/:path*', 'h');
 
-        // Slashes, dots, encoded chars, and even colon-prefixed segments
-        // that look like parameters must be returned exactly as they
-        // appeared in the request path.
         $info = $router->lookup('GET', '/files/a/b.c/:fake/d%2Fe');
         $this->assertSame(200, $info['code']);
         $this->assertSame(['path' => 'a/b.c/:fake/d%2Fe'], $info['params']);

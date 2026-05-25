@@ -9,11 +9,10 @@ use Wilaak\Http\RadixRouter;
  */
 class ValidationTest extends RadixRouterTestCase
 {
-    // Route conflicts
-
     public function testDuplicateStaticRouteThrows()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Route Conflict: [GET] '/conflict': Path is already registered");
         $router = new RadixRouter();
         $router->add('GET', '/conflict', 'handler1');
         $router->add('GET', '/conflict', 'handler2');
@@ -22,6 +21,7 @@ class ValidationTest extends RadixRouterTestCase
     public function testTwoParameterRoutesAtSamePositionThrow()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Route Conflict: [GET] '/foo/:asd': Path is already registered (conflicts with '/foo/:id')");
         $router = new RadixRouter();
         $router->add('GET', '/foo/:id',  'handler1');
         $router->add('GET', '/foo/:asd', 'handler2');
@@ -30,16 +30,16 @@ class ValidationTest extends RadixRouterTestCase
     public function testTwoWildcardCardinalitiesAtSamePositionThrow()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Route Conflict: [GET] '/bar/:rest+': Path is already registered (conflicts with '/bar/:rest*')");
         $router = new RadixRouter();
         $router->add('GET', '/bar/:rest*', 'handler1');
         $router->add('GET', '/bar/:rest+', 'handler2');
     }
 
-    // Pattern shape
-
     public function testWildcardMustBeLastSegment()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid Pattern: [GET] '/foo/:bar*/baz': Wildcard parameters are only allowed as the last segment");
         $router = new RadixRouter();
         $router->add('GET', '/foo/:bar*/baz', 'bad_handler');
     }
@@ -47,6 +47,7 @@ class ValidationTest extends RadixRouterTestCase
     public function testRequiredWildcardMustBeLastSegment()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid Pattern: [GET] '/foo/:bar+/baz': Wildcard parameters are only allowed as the last segment");
         $router = new RadixRouter();
         $router->add('GET', '/foo/:bar+/baz', 'bad_handler');
     }
@@ -54,13 +55,17 @@ class ValidationTest extends RadixRouterTestCase
     public function testOptionalParameterMustBeTrailing()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid Pattern: [GET] '/foo/:bar?/baz': Optional parameters are only allowed in the last trailing segments");
         $router = new RadixRouter();
         $router->add('GET', '/foo/:bar?/baz', 'bad_handler');
     }
 
+    // ':bar*?' parses as suffix '?' (optional marker) with name 'bar*'.
+    // The name regex then rejects '*' as an invalid name character.
     public function testCannotCombineWildcardAndOptionalMarker()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Parameter name 'bar*' must start with a letter or underscore");
         $router = new RadixRouter();
         $router->add('GET', '/foo/:bar*?', 'bad_handler');
     }
@@ -68,6 +73,7 @@ class ValidationTest extends RadixRouterTestCase
     public function testCannotCombineRequiredWildcardAndOptionalMarker()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Parameter name 'bar+' must start with a letter or underscore");
         $router = new RadixRouter();
         $router->add('GET', '/foo/:bar+?', 'bad_handler');
     }
@@ -75,6 +81,7 @@ class ValidationTest extends RadixRouterTestCase
     public function testDuplicateParameterNameInPatternThrows()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Parameter name 'id' cannot be used more than once");
         $router = new RadixRouter();
         $router->add('GET', '/foo/:id/bar/:id', 'handler');
     }
@@ -82,15 +89,15 @@ class ValidationTest extends RadixRouterTestCase
     public function testDoubleSlashInPatternThrows()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid Pattern: [GET] '//foo': Empty segments are not allowed (e.g., '//')");
         $router = new RadixRouter();
         $router->add('GET', '//foo', 'handler');
     }
 
-    // Methods
-
     public function testUnknownHttpMethodThrows()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid HTTP Method: [FOOBAR] '/bad': Allowed methods:");
         $router = new RadixRouter();
         $router->add('FOOBAR', '/bad', 'handler');
     }
@@ -98,6 +105,7 @@ class ValidationTest extends RadixRouterTestCase
     public function testEmptyMethodStringThrows()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid HTTP Method: [] '/bad': Allowed methods:");
         $router = new RadixRouter();
         $router->add('', '/bad', 'handler');
     }
@@ -105,29 +113,32 @@ class ValidationTest extends RadixRouterTestCase
     public function testEmptyMethodArrayThrows()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid HTTP Method: Got empty array for pattern '/bad'");
         $router = new RadixRouter();
         $router->add([], '/bad', 'handler');
     }
 
-    // Parameter names
-
     public function testInvalidParameterNamesThrow()
     {
         $invalidPatterns = [
-            'empty name'        => '/foo/:',
-            'starts with digit' => '/foo/:1bar',
-            'contains dash'     => '/foo/:bar-baz',
-            'contains space'    => '/foo/:bar baz',
-            'special character' => '/foo/:bar$',
+            'empty name'        => ['/foo/:',         ''],
+            'starts with digit' => ['/foo/:1bar',     '1bar'],
+            'contains dash'     => ['/foo/:bar-baz',  'bar-baz'],
+            'contains space'    => ['/foo/:bar baz',  'bar baz'],
+            'special character' => ['/foo/:bar$',     'bar$'],
         ];
 
-        foreach ($invalidPatterns as $label => $pattern) {
+        foreach ($invalidPatterns as $label => [$pattern, $expectedName]) {
             $router = new RadixRouter();
             try {
                 $router->add('GET', $pattern, 'handler');
                 $this->fail("Pattern '$pattern' ($label) should have thrown");
-            } catch (\InvalidArgumentException) {
-                $this->assertTrue(true, $label);
+            } catch (\InvalidArgumentException $e) {
+                $this->assertStringContainsString(
+                    "Parameter name '{$expectedName}' must start with a letter or underscore",
+                    $e->getMessage(),
+                    $label
+                );
             }
         }
     }
@@ -147,5 +158,18 @@ class ValidationTest extends RadixRouterTestCase
             $info = $router->lookup('GET', $lookupPath);
             $this->assertEquals($expectedParams, $info['params'], $label);
         }
+    }
+
+    public function testPublicMethodParameterNamesAreStableApi()
+    {
+        $router = new RadixRouter();
+        $router->add(methods: 'GET', pattern: '/users/:id', handler: 'user_handler');
+
+        $info = $router->lookup(method: 'GET', path: '/users/42');
+        $this->assertSame('user_handler', $info['handler']);
+        $this->assertSame(['id' => '42'], $info['params']);
+
+        $this->assertContains('GET', $router->methods(path: '/users/42'));
+        $this->assertNotEmpty($router->list(path: '/users/42'));
     }
 }

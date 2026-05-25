@@ -40,8 +40,6 @@ class WildcardParameterTest extends RadixRouterTestCase
 
         $info1 = $router->lookup('GET', '/files/required/a');
         $info2 = $router->lookup('GET', '/files/required/a/b/c');
-        // /files/required has no further segments, so the + wildcard does
-        // not match and lookup falls through to the * wildcard.
         $info3 = $router->lookup('GET', '/files/required');
 
         $this->assertEquals('required_wildcard_handler', $info1['handler']);
@@ -89,8 +87,6 @@ class WildcardParameterTest extends RadixRouterTestCase
         $this->assertEquals('specific', $info['handler']);
         $this->assertEquals(['id' => '123', 'rest' => 'abc/def'], $info['params']);
 
-        // /bar/123 does not satisfy the + wildcard so the root catch-all
-        // takes over.
         $info = $router->lookup('GET', '/bar/123');
         $this->assertEquals('fallback', $info['handler']);
     }
@@ -126,8 +122,6 @@ class WildcardParameterTest extends RadixRouterTestCase
         $this->assertEquals('handler4', $info['handler']);
         $this->assertEquals(['rest' => 'foo/bar/baz'], $info['params']);
 
-        // /required alone does not satisfy the + wildcard so the root
-        // catch-all takes over.
         $info = $router->lookup('GET', '/required');
         $this->assertEquals('handler3', $info['handler']);
     }
@@ -146,13 +140,10 @@ class WildcardParameterTest extends RadixRouterTestCase
         $this->assertEquals('param_handler', $info['handler']);
         $this->assertEquals(['param' => 'baz'], $info['params']);
 
-        // Too many segments for the parameter route, so the wildcard wins.
         $info = $router->lookup('GET', '/foo/bar/baz/qux');
         $this->assertEquals('wildcard_handler', $info['handler']);
         $this->assertEquals(['rest' => 'bar/baz/qux'], $info['params']);
 
-        // Zero segments after /foo. The parameter route requires a segment,
-        // so the wildcard handles it.
         $info = $router->lookup('GET', '/foo');
         $this->assertEquals('wildcard_handler', $info['handler']);
         $this->assertEquals(['rest' => ''], $info['params']);
@@ -177,8 +168,6 @@ class WildcardParameterTest extends RadixRouterTestCase
         $this->assertEquals(['version' => 'v2', 'rest' => ''], $info['params']);
     }
 
-    // When a more specific dynamic route fails to fully match, the wildcard
-    // fallback must not leak the unmatched route's parameters.
     public function testFallbackWildcardDoesNotLeakDynamicParams()
     {
         $router = new RadixRouter();
@@ -199,64 +188,45 @@ class WildcardParameterTest extends RadixRouterTestCase
         $router->add('POST',   '/:test*', 'optional');
         $router->add('GET',    '/demo/:test+', 'demo_required');
 
-        // / cannot satisfy +, so DELETE is not allowed. POST (with *) is.
         $this->assertEquals(['POST'], $router->lookup('DELETE', '/')['allowed_methods']);
 
-        // /demo: GET requires a + segment after /demo (none), so not allowed.
-        // DELETE matches the root + with test=demo. POST matches the root *.
         $this->assertEquals(['DELETE', 'POST'], $router->lookup('GET', '/demo')['allowed_methods']);
 
         $this->assertEquals('optional', $router->lookup('POST', '/demo')['handler']);
         $this->assertEquals('required', $router->lookup('DELETE', '/demo')['handler']);
     }
 
-    // Optional params and wildcards at the same prefix. The :name? route
-    // expands into static /foo plus parametric /foo/:name; the :rest*
-    // route lives on a separate wildcard child of /foo. Because routing
-    // commits to the first matching node (static or param) and only falls
-    // back to the wildcard when no node matches at all, POST is only
-    // reachable at depths the :name? expansion does not cover. Pin this
-    // so the behavior does not change silently.
+    // The :name? route expands into static /foo + parametric /foo/:name,
+    // while :rest* lives on a separate wildcard child of /foo. Routing
+    // commits to the first matching node (static or param) and only
+    // falls back to the wildcard when no node matches at all, so POST is
+    // only reachable at depths the :name? expansion does not cover.
     public function testOptionalParameterAndWildcardAtSamePrefixDifferentMethods()
     {
         $router = new RadixRouter();
         $router->add('GET',  '/foo/:name?', 'g');
         $router->add('POST', '/foo/:rest*', 'p');
 
-        // /foo: matches the static /foo node from the :name? expansion,
-        // which only has GET. POST 405s here rather than falling back to
-        // the wildcard sibling.
         $this->assertSame('g',  $router->lookup('GET',  '/foo')['handler']);
         $this->assertSame([],   $router->lookup('GET',  '/foo')['params']);
         $this->assertSame(405,  $router->lookup('POST', '/foo')['code']);
 
-        // /foo/abc: matches the :name parametric node, which only has GET.
-        // POST 405s for the same reason.
         $this->assertSame('g', $router->lookup('GET',  '/foo/abc')['handler']);
         $this->assertSame(405, $router->lookup('POST', '/foo/abc')['code']);
 
-        // /foo/a/b/c: too deep for :name?. GET 405s here, POST matches the
-        // wildcard.
         $this->assertSame(405, $router->lookup('GET',  '/foo/a/b/c')['code']);
         $this->assertSame('p', $router->lookup('POST', '/foo/a/b/c')['handler']);
         $this->assertSame(['rest' => 'a/b/c'], $router->lookup('POST', '/foo/a/b/c')['params']);
     }
 
-    // Optional params must be the trailing segments of a pattern, so an
-    // optional followed by a wildcard is rejected at registration time.
-    // The documented workaround is to register the expanded variants
-    // manually (see the next test).
     public function testOptionalParameterFollowedByWildcardIsRejected()
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid Pattern: [GET] '/foo/:opt?/:rest*': Optional parameters are only allowed in the last trailing segments");
         $router = new RadixRouter();
         $router->add('GET', '/foo/:opt?/:rest*', 'h');
     }
 
-    // The workaround for the rejection above: register the two variants
-    // by hand. An optional param is sugar for "register both with and
-    // without the segment as a normal param", which composes cleanly with
-    // a trailing wildcard.
     public function testManualVariantsAreEquivalentToOptionalPlusWildcard()
     {
         $router = new RadixRouter();
@@ -282,8 +252,122 @@ class WildcardParameterTest extends RadixRouterTestCase
         $router->add('GET',  '/:test*', 'optional');
         $router->add('POST', '/:test+', 'required');
 
-        // Only the * wildcard actually matches /; + cannot.
         $routes = $router->list('/');
         $this->assertCount(1, $routes);
+    }
+
+    public function testOptionalWildcardWithTrailingSlashInPatternMatchesEmpty()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/:param*/', 'handler');
+
+        $info = $router->lookup('GET', '/');
+        $this->assertSame('handler', $info['handler']);
+        $this->assertSame(['param' => ''], $info['params']);
+
+        $info = $router->lookup('GET', '/abc');
+        $this->assertSame('handler', $info['handler']);
+        $this->assertSame(['param' => 'abc'], $info['params']);
+
+        $info = $router->lookup('GET', '/abc/def');
+        $this->assertSame('handler', $info['handler']);
+        $this->assertSame(['param' => 'abc/def'], $info['params']);
+    }
+
+    public function testWildcardPatternMatchesRequestEndingInSlash()
+    {
+        $router = new RadixRouter();
+        $router->add('GET',    '/files/:path*', 'optional');
+        $router->add('DELETE', '/files/:path+', 'required');
+
+        $info = $router->lookup('GET', '/files/');
+        $this->assertSame('optional', $info['handler']);
+        $this->assertSame(['path' => ''], $info['params']);
+
+        $info = $router->lookup('DELETE', '/files/');
+        $this->assertSame(405, $info['code']);
+        $this->assertSame(['GET', 'HEAD'], $info['allowed_methods']);
+    }
+
+    public function testRequiredWildcardWithTrailingSlashInPatternDoesNotMatchEmpty()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/:param+/', 'handler');
+
+        $info = $router->lookup('GET', '/');
+        $this->assertSame(404, $info['code']);
+
+        $info = $router->lookup('GET', '/abc');
+        $this->assertSame('handler', $info['handler']);
+        $this->assertSame(['param' => 'abc'], $info['params']);
+
+        $info = $router->lookup('GET', '/abc/def');
+        $this->assertSame('handler', $info['handler']);
+        $this->assertSame(['param' => 'abc/def'], $info['params']);
+    }
+
+    public function testWildcardCapturesUrlEncodedBytesVerbatim()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/files/:path*', 'handler');
+
+        $info = $router->lookup('GET', '/files/hello%2Fworld%20space');
+        $this->assertSame('handler', $info['handler']);
+        $this->assertSame(['path' => 'hello%2Fworld%20space'], $info['params']);
+    }
+
+    public function testWildcardCapturesConsecutiveSlashesInRequestPath()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/files/:path*', 'handler');
+
+        $info = $router->lookup('GET', '/files//a//b');
+        $this->assertSame('handler', $info['handler']);
+        $this->assertSame(['path' => '/a//b'], $info['params']);
+    }
+
+    public function testWildcardCapturesDotSegmentsVerbatim()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/files/:path*', 'handler');
+
+        $info = $router->lookup('GET', '/files/../etc');
+        $this->assertSame('handler', $info['handler']);
+        $this->assertSame(['path' => '../etc'], $info['params']);
+
+        $info = $router->lookup('GET', '/files/./a/./b');
+        $this->assertSame('handler', $info['handler']);
+        $this->assertSame(['path' => './a/./b'], $info['params']);
+    }
+
+    public function testHeadFallsBackToGetThroughWildcardBranch()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/:rest*', 'handler');
+
+        $info = $router->lookup('HEAD', '/anything/here');
+        $this->assertSame('handler', $info['handler']);
+        $this->assertSame(['rest' => 'anything/here'], $info['params']);
+    }
+
+    public function testWildcardPatternsDifferingOnlyByTrailingSlashConflict()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/:rest*', 'first');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Route Conflict: [GET] '/:rest*/': Path is already registered (conflicts with '/:rest*')");
+        $router->add('GET', '/:rest*/', 'second');
+    }
+
+    public function testWildcard405MethodListExcludesUnsatisfiableRequired()
+    {
+        $router = new RadixRouter();
+        $router->add('GET',  '/:rest*', 'optional');
+        $router->add('POST', '/:rest+', 'required');
+
+        $info = $router->lookup('DELETE', '/');
+        $this->assertSame(405, $info['code']);
+        $this->assertSame(['GET', 'HEAD'], $info['allowed_methods']);
     }
 }

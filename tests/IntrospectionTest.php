@@ -48,9 +48,6 @@ class IntrospectionTest extends RadixRouterTestCase
         $this->assertEquals($expected, $router->list('/users/123'));
     }
 
-    // Filtering by a path that matches an optional wildcard returns that
-    // route. Filtering by a path that matches only the optional wildcard
-    // (not the required one) excludes the required variant.
     public function testListFilteredByPathReturnsMatchingWildcardRoutes()
     {
         $router = new RadixRouter();
@@ -58,14 +55,12 @@ class IntrospectionTest extends RadixRouterTestCase
         $router->add('GET',  '/files/:path*', 'FileController@show');
         $router->add('POST', '/files/:path+', 'FileController@upload');
 
-        // Both wildcards match a non-empty trailing path.
         $expected = [
             ['method' => 'GET',  'pattern' => '/files/:path*', 'handler' => 'FileController@show'],
             ['method' => 'POST', 'pattern' => '/files/:path+', 'handler' => 'FileController@upload'],
         ];
         $this->assertEquals($expected, $router->list('/files/a/b/c'));
 
-        // Only the optional wildcard matches /files with no further segments.
         $expectedRootOnly = [
             ['method' => 'GET', 'pattern' => '/files/:path*', 'handler' => 'FileController@show'],
         ];
@@ -88,8 +83,6 @@ class IntrospectionTest extends RadixRouterTestCase
         $this->assertEqualsCanonicalizing(['PUT', 'PATCH'], $router->methods('/something'));
     }
 
-    // /archive/:year?/:month? is expanded internally into three pattern
-    // variants. list() must collapse them back into a single logical route.
     public function testListDedupesOptionalParameterExpansions()
     {
         $router = new RadixRouter();

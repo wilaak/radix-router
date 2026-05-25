@@ -72,13 +72,11 @@ class ApiContractTest extends RadixRouterTestCase
         $router = new RadixRouter();
         $router->add('GET', '/users/', 'handler');
 
-        // Same handler is reachable with and without the trailing slash.
         $this->assertSame('handler', $router->lookup('GET', '/users')['handler']);
         $this->assertSame('handler', $router->lookup('GET', '/users/')['handler']);
 
-        // And conflicts with the non-slashed version, proving they
-        // normalize to the same internal route.
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Route Conflict: [GET] '/users': Path is already registered (conflicts with '/users/')");
         $router->add('GET', '/users', 'other');
     }
 }

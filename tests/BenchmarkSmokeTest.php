@@ -2,15 +2,11 @@
 
 use Wilaak\Http\RadixRouter;
 
-/**
- * Correctness smoke test against the project's benchmark route fixtures.
- * Catches registration and lookup regressions on realistic route tables.
- */
 class BenchmarkSmokeTest extends RadixRouterTestCase
 {
     public function testBenchmarkRoutesRegisterAndResolve()
     {
-        $benchmarks = ['avatax', 'simple', 'bitbucket', 'huge'];
+        $benchmarks = ['avatax', 'simple', 'bitbucket', 'huge', 'aws', 'discord', 'stripe', 'kubernetes', 'github'];
 
         foreach ($benchmarks as $benchmark) {
             $routes = self::loadBenchmarkRoutes($benchmark);

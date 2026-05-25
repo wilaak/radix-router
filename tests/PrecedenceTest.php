@@ -23,9 +23,6 @@ class PrecedenceTest extends RadixRouterTestCase
         $this->assertEquals(['rest' => 'foo/bar/baz'], $info['params']);
     }
 
-    // If matching a static node finds no terminal handler at the requested
-    // depth, the router must fall back to a sibling parameter node at the
-    // same level rather than giving up.
     public function testStaticNodeFallbackToParameterNode()
     {
         $router = new RadixRouter();
@@ -36,9 +33,6 @@ class PrecedenceTest extends RadixRouterTestCase
             return "First: /:test, param = $test";
         });
 
-        // /test traverses to the static /test node but its only child is
-        // the required :test param that needs a non-empty segment. Lookup
-        // must fall back to the sibling /:test parameter node.
         $info = $router->lookup('GET', '/test');
         $this->assertEquals(200, $info['code']);
         $this->assertEquals('First: /:test, param = test', $info['handler'](...$info['params']));
@@ -65,5 +59,49 @@ class PrecedenceTest extends RadixRouterTestCase
 
         $info = $router->lookup('GET', '/bar/foo');
         $this->assertEquals('Bar', $info['handler'](...$info['params']));
+    }
+
+    // Fallback chain after a partial walk:
+    //   1. terminal node's routes
+    //   2. parent's param-sibling (lastStaticNode[PARAM])
+    //   3. terminal node's wildcard child
+    //   4. saved ancestor wildcard
+    // This pins step 2 winning over step 3.
+    public function testParamSiblingFallbackBeatsTerminalWildcardChild()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/:x',         'param_sibling');
+        $router->add('GET', '/foo/:rest*', 'terminal_wildcard');
+
+        $info = $router->lookup('GET', '/foo');
+        $this->assertSame('param_sibling', $info['handler']);
+        $this->assertSame(['x' => 'foo'], $info['params']);
+    }
+
+    // Once a more-specific route is found, a method mismatch produces a
+    // 405 from THAT route. The router does not keep looking for a less
+    // specific route that would have accepted the method.
+    public function testMethodMismatchAtSpecificRouteDoesNotFallThroughToLessSpecific()
+    {
+        $router = new RadixRouter();
+        $router->add('POST', '/foo',  'specific');
+        $router->add('GET',  '/:x',   'catch_all');
+
+        $info = $router->lookup('GET', '/foo');
+        $this->assertSame(405, $info['code']);
+        $this->assertSame(['POST'], $info['allowed_methods']);
+    }
+
+    // The HEAD-to-GET fallback runs inside DISPATCH, which is reached
+    // from every fallback branch including the param-sibling one.
+    public function testHeadFallsBackToGetThroughParamSiblingFallback()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/:x',        'catch_all');
+        $router->add('GET', '/foo/:bar',  'deeper');
+
+        $info = $router->lookup('HEAD', '/foo');
+        $this->assertSame('catch_all', $info['handler']);
+        $this->assertSame(['x' => 'foo'], $info['params']);
     }
 }
