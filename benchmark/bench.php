@@ -322,18 +322,16 @@ function save_results_as_markdown(array $results, int $seed): string
 
     array_push(
         $lines,
-        "Each path gets 1-3 HTTP methods (GET 60% / POST 25% / PUT 10% / DELETE 5%); lookups follow a Zipf-like distribution (exponent 0.9), so a few hot routes dominate traffic.",
-        "",
-        "> Don't sweat router perf, it won't be your bottleneck.",
+        "Each path gets 1-3 HTTP methods, lookups follow a Zipf-like distribution, so a few hot routes dominate traffic.",
         "",
     );
 
-    $setup = array_filter([
+    $env_parts = array_filter([
         'PHP ' . PHP_VERSION,
         $cpu,
-        "seed $seed",
+        'Seed: ' . $seed,
     ]);
-    array_push($lines, '*' . implode(' · ', $setup) . '*', "");
+    array_push($lines, '_Benchmarked on: ' . implode(' - ', $env_parts) . '_', "");
 
     array_push($lines, "### Results", "");
 
