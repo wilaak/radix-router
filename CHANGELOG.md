@@ -2,9 +2,11 @@
 
 Notable changes to this project goes here
 
-## [v3.6.5] - unreleased
+## [v3.6.5] - 25.05.2026
 
-- Performance: Improved internal tree structure for faster lookups and lower memory usage (+15-25%@JIT=tracing).
+- Performance: Improved internal tree structure for faster lookups and lower memory usage (+15-25%).
+- Fixed HEAD requests resolving via catch-all fallback method `*` when an explicit GET was also registered.
+- Fixed typo causing optional wildcard patterns registered with a trailing slash (e.g. `/:param*/`) to be treated as required (`+`).
 
 **Upgrade note:**  
 Regenerate router cache files after upgrading.

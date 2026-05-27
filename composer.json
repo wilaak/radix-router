@@ -37,10 +37,7 @@
         "source": "https://github.com/wilaak/radix-router"
     },
     "require-dev": {
-        "php": ">=8.3",
-        "phpunit/phpunit": "^11.0",
-        "friendsofphp/php-cs-fixer": "^3.87",
-        "phpstan/phpstan": "^2.1"
+        "phpunit/phpunit": "^11.0"
     },
     "scripts": {
         "test": "phpunit --testdox /tests"

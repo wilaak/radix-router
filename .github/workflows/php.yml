@@ -9,13 +9,35 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.0'
+            phpunit: '^9.6'
+          - php: '8.1'
+            phpunit: '^9.6'
+          - php: '8.2'
+            phpunit: '^11'
+          - php: '8.3'
+            phpunit: '^11'
+          - php: '8.4'
+            phpunit: '^11'
+    name: PHP ${{ matrix.php }} (PHPUnit ${{ matrix.phpunit }})
     steps:
       - uses: actions/checkout@v4
-      - name: Set up PHP
+
+      - name: Set up PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Pin PHPUnit for this row
+        run: composer require --dev --no-update "phpunit/phpunit:${{ matrix.phpunit }}"
+
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer update --no-interaction --prefer-dist
+
       - name: Run tests
         run: vendor/bin/phpunit --testdox tests/
