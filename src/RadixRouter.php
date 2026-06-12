@@ -337,6 +337,7 @@ class RadixRouter
         $wcAt = 0;
         $lastStaticNode = $this->tree;
         $lastStaticSegment = '';
+        $lastStaticParamCount = 0;
 
         $node = $this->tree;
         $segments = $path !== '' ? \explode('/', \substr($path, 1)) : [];
@@ -351,6 +352,7 @@ class RadixRouter
             if (($next = $node[self::NODE_STATIC][$segment] ?? null) !== null) {
                 $lastStaticNode = $node;
                 $lastStaticSegment = $segment;
+                $lastStaticParamCount = \count($params);
                 $node = $next;
                 continue;
             }
@@ -369,7 +371,7 @@ class RadixRouter
         }
 
         $routes = $lastStaticNode[self::NODE_PARAM][self::NODE_ROUTES] ?? null;
-        if (isset($routes)) {
+        if (isset($routes) && \count($params) === $lastStaticParamCount) {
             $params[] = $lastStaticSegment;
             goto DISPATCH;
         }
