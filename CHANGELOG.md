@@ -5,7 +5,7 @@ Notable changes to this project goes here
 ## [v3.6.6] - 12.06.2026
 
 - Fixed uncaught `ValueError` and misleading 405 responses caused by `lookup()`'s parameter fallback firing with leftover captures from deeper routes.
-- Fixed a route conflict thrown during optional parameter (`:name?`) expansion leaving every later registered route stored under the stale pattern.
+- Fixed exceptions during optional parameter (`:name?`) expansion leaving later registered routes stored under the stale pattern.
 
 ## [v3.6.5] - 25.05.2026
 
