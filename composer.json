@@ -2,7 +2,7 @@
     "name": "wilaak/radix-router",
     "description": "High-performance radix tree based HTTP request router",
     "type": "library",
-    "license": "WTFPL",
+    "license": "MIT",
     "authors": [
         {
             "name": "wilaak",

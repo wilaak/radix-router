@@ -1,14 +1,11 @@
 # <img alt="RadixRouter" width="175" src="./assets/radx.svg">
 
-[![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
-[![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
-
 A simple HTTP router for PHP. Use it directly, or as a base for your own router (see [integrations](#integrations)). 
 
 - Path parameters: optional and wildcard (one per segment)
 - API for listing routes/methods (useful for OPTIONS)
 - Automatic 405 Method Not Allowed handling
-- Zero dependencies and only 370 lines of code
+- Zero dependencies and only 375 lines of code
 
 See [benchmarks](#benchmarks) for how it compares to other routers.
 
@@ -339,4 +336,4 @@ _Benchmarked on: PHP 8.5.6 - AMD Ryzen 5 5600X 6-Core Processor - Seed: 42_
 
 ## License
 
-This library is licensed under the WTFPL-2.0 license. Do whatever you want with it.
+This library is licensed under the [MIT License](LICENSE).
