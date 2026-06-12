@@ -98,10 +98,13 @@ class RadixRouter
         if ($isOptional) {
             $variants = $this->addExpandOptionalSegments($pattern);
             $this->optionalPattern = $pattern;
-            foreach ($variants as $variant) {
-                $this->add($method, $variant, $handler);
+            try {
+                foreach ($variants as $variant) {
+                    $this->add($method, $variant, $handler);
+                }
+            } finally {
+                $this->optionalPattern = null;
             }
-            $this->optionalPattern = null;
             return $this;
         }
 
