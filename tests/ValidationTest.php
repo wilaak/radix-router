@@ -170,6 +170,26 @@ class ValidationTest extends RadixRouterTestCase
         $router->add('GET', '/foo', 'static_handler');
     }
 
+    public function testOptionalPatternStateIsResetWhenExpansionConflicts()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/foo', 'a');
+        try {
+            $router->add('GET', '/foo/:bar?', 'b');
+            $this->fail('Expected a route conflict');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertStringContainsString("Route Conflict: [GET] '/foo/:bar?'", $e->getMessage());
+        }
+
+        $router->add('GET', '/unrelated', 'c');
+
+        $this->assertSame('/unrelated', $router->lookup('GET', '/unrelated')['pattern']);
+        $this->assertContains(
+            ['method' => 'GET', 'pattern' => '/unrelated', 'handler' => 'c'],
+            $router->list()
+        );
+    }
+
     public function testPublicMethodParameterNamesAreStableApi()
     {
         $router = new RadixRouter();

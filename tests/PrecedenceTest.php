@@ -104,4 +104,35 @@ class PrecedenceTest extends RadixRouterTestCase
         $this->assertSame('catch_all', $info['handler']);
         $this->assertSame(['x' => 'foo'], $info['params']);
     }
+
+    public function testParamSiblingSkippedWhenParamsCapturedAfterLastStaticMatch()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/:page',               'catch_all');
+        $router->add('GET', '/docs/:section/intro', 'docs');
+
+        $this->assertSame(['code' => 404], $router->lookup('GET',  '/docs/anything'));
+        $this->assertSame(['code' => 404], $router->lookup('POST', '/docs/anything'));
+    }
+
+    public function testParamSiblingSkippedWhenWalkMatchedOnlyParams()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/:top',                'top');
+        $router->add('GET', '/:top/:second/deep',   'deep');
+
+        $this->assertSame(['code' => 404], $router->lookup('GET',  '/x/y'));
+        $this->assertSame(['code' => 404], $router->lookup('POST', '/x/y'));
+    }
+
+    public function testParamSiblingFallbackAtDeeperStaticBoundary()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/a/b/:p', 'deep');
+        $router->add('GET', '/a/:q',   'mid');
+
+        $info = $router->lookup('GET', '/a/b');
+        $this->assertSame('mid', $info['handler']);
+        $this->assertSame(['q' => 'b'], $info['params']);
+    }
 }
