@@ -292,46 +292,33 @@ If this router is a bit too minimalistic, you might try one of the following mor
 | [Mezzio Framework](https://github.com/sirix777/mezzio-radixrouter) | [sirix777](https://github.com/sirix777) |
 | [Yii Framework](https://github.com/sirix777/yii-radixrouter) | [sirix777](https://github.com/sirix777) |
 
-
 ## Benchmarks
 
 Each path gets 1-3 HTTP methods, lookups follow a Zipf-like distribution, so a few hot routes dominate traffic.
 
-_Benchmarked on: PHP 8.5.6 - AMD Ryzen 5 5600X 6-Core Processor - Seed: 42_
+#### Environment
 
-### Results
+- PHP 8.5.6
+- AMD Ryzen 5 5600X 6-Core Processor
+- Seed: 42
 
-#### avatax (256 routes)
+![avatax lookups/sec](./assets/avatax.svg)
 
-![avatax](./assets/avatax.svg)
+![aws lookups/sec](./assets/aws.svg)
 
-#### aws (3052 routes)
+![bitbucket lookups/sec](./assets/bitbucket.svg)
 
-![aws](./assets/aws.svg)
+![discord lookups/sec](./assets/discord.svg)
 
-#### bitbucket (177 routes)
+![github lookups/sec](./assets/github.svg)
 
-![bitbucket](./assets/bitbucket.svg)
+![huge lookups/sec](./assets/huge.svg)
 
-#### discord (135 routes)
+![kubernetes lookups/sec](./assets/kubernetes.svg)
 
-![discord](./assets/discord.svg)
+![simple lookups/sec](./assets/simple.svg)
 
-#### github (782 routes)
-
-![github](./assets/github.svg)
-
-#### kubernetes (562 routes)
-
-![kubernetes](./assets/kubernetes.svg)
-
-#### simple (33 routes)
-
-![simple](./assets/simple.svg)
-
-#### stripe (414 routes)
-
-![stripe](./assets/stripe.svg)
+![stripe lookups/sec](./assets/stripe.svg)
 
 
 ## License

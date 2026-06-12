@@ -8,6 +8,7 @@ $router_class       = $_GET['router'] ?? null;
 $router_name        = $_GET['router_name'] ?? null;
 $iterations         = isset($_GET['iterations']) ? (int) $_GET['iterations'] : null;
 $benchmark_duration = isset($_GET['duration']) ? (float) $_GET['duration']   : null;
+$warmup_duration    = isset($_GET['warmup']) ? (float) $_GET['warmup'] : 0.0;
 $seed               = isset($_GET['seed']) ? (int) $_GET['seed'] : 42;
 
 //
@@ -42,26 +43,33 @@ if (!file_exists($route_list_file)) {
 }
 $routes = require $route_list_file;
 
-$lookup_list_file = __DIR__ . "/../cache/lookup_list_{$suite}_{$seed}.php";
+$lookup_list_file = __DIR__ . "/../cache/lookup_list_{$suite}_{$seed}.json";
 if (!file_exists($lookup_list_file)) {
     echo json_encode(['error' => 'Lookup list not found', 'lookup_list_file' => $lookup_list_file]);
     exit(1);
 }
-['methods' => $list_methods, 'paths' => $list_paths] = require $lookup_list_file;
+
+['methods' => $list_methods, 'paths' => $list_paths]
+    = json_decode(file_get_contents($lookup_list_file), true);
 $list_size = count($list_methods);
 
 if (!is_dir(__DIR__ . "/../cache")) {
     mkdir(__DIR__ . "/../cache", 0777, true);
 }
 
+require __DIR__ . '/../../vendor/autoload.php';
+class_exists($router_class);
+
 //
 // Router Registration (timed)
 //
-
+// What one boot pays to bring the routes up: construct + mount + register +
+// first lookup. The first lookup stays inside so lazily deferred build work
+// cannot escape the measurement.
+//
 
 $memory_before    = memory_get_usage();
 $register_start   = hrtime(true);
-require __DIR__ . '/../../vendor/autoload.php';
 
 $router = new $router_class();
 $router->mount(__DIR__ . "/../cache/{$router_name}_{$suite}_{$seed}.php");
@@ -72,14 +80,30 @@ $register_time_ms   = (hrtime(true) - $register_start) / 1e6;
 $register_memory_kb = (memory_get_usage() - $memory_before) / 1024;
 
 //
-// Warmup
+// Warmup (this process, immediately before timing)
 //
 
-$router->lookup($list_methods[0], $list_paths[0]);
+if ($warmup_duration > 0.0) {
+    $batch_size = 50_000;
+    $list_idx   = 0;
+    $warm_start = hrtime(true);
+    do {
+        for ($i = 0; $i < $batch_size; $i++) {
+            $router->lookup($list_methods[$list_idx], $list_paths[$list_idx]);
+            if (++$list_idx === $list_size) $list_idx = 0;
+        }
+    } while ((hrtime(true) - $warm_start) / 1e9 < $warmup_duration);
+} else {
+    $router->lookup($list_methods[0], $list_paths[0]);
+}
 
 if (function_exists('memory_reset_peak_usage')) {
     memory_reset_peak_usage();
 }
+
+// Lookup results are acyclic (arrays of strings), so the cycle collector only
+// adds scheduling jitter to the timed loop. Disable it for a stable measurement.
+//gc_disable();
 
 //
 // Benchmark

@@ -14,7 +14,13 @@ function format_eta(float $seconds): string
 
 function normalize_router_name(string $name): string
 {
-    return preg_replace('/[ (]+/', '-', strtolower(rtrim($name, ')')));
+    $name = str_replace([' (', ')'], [':', ''], strtolower($name));
+    return str_replace(' ', '-', $name);
+}
+
+function is_cached_router(string $router): bool
+{
+    return str_contains(strtolower($router), 'cached');
 }
 
 function get_route_count(string $suite): int
@@ -58,19 +64,35 @@ function start_web_server(int $port, string $php_options = ''): int
     if ($pid) {
         register_shutdown_function(fn() => exec("kill $pid > /dev/null 2>&1"));
     }
-    for ($i = 0; $i < 20; $i++) {
+    for ($i = 0; $i < 80; $i++) {
         if (@file_get_contents("http://127.0.0.1:$port/") !== false) return $pid;
-        usleep(100_000);
+        usleep(25_000);
     }
     if ($pid) exec("kill $pid > /dev/null 2>&1");
     throw new RuntimeException("Failed to start PHP server on port $port");
+}
+
+// Each measurement runs in its own short-lived server process so opcache, the
+// JIT buffer, and the heap start clean every time.
+function start_fresh_server(string $php_options): array
+{
+    $port = get_unused_port();
+    $pid  = start_web_server($port, $php_options);
+    return ['port' => $port, 'pid' => $pid];
+}
+
+function stop_server(array $server): void
+{
+    if (!empty($server['pid'])) {
+        exec("kill {$server['pid']} > /dev/null 2>&1");
+    }
 }
 
 //
 // Benchmark HTTP call
 //
 
-function fetch_benchmark(int $port, string $suite, string $router_class, string $router_name, ?int $iterations, float $duration, int $seed): array
+function fetch_benchmark(int $port, string $suite, string $router_class, string $router_name, ?int $iterations, float $duration, int $seed, float $warmup = 0.0): array
 {
     $params = array_filter([
         'suite'       => $suite,
@@ -78,6 +100,7 @@ function fetch_benchmark(int $port, string $suite, string $router_class, string 
         'router_name' => $router_name,
         'iterations'  => $iterations,
         'duration'    => $duration,
+        'warmup'      => $warmup,
         'seed'        => $seed,
     ], fn($value) => $value !== null);
     $url = "http://127.0.0.1:$port/?" . http_build_query($params);
@@ -124,7 +147,11 @@ function generate_routes_for_router(string $router_name, string $suite, int $see
 function generate_lookup_list(string $suite, int $seed, string $sample_router_name): void
 {
     $cache_dir = __DIR__ . '/cache';
-    $output_file = "$cache_dir/lookup_list_{$suite}_{$seed}.php";
+    // JSON, not a PHP file: strings decoded at runtime are fresh, non-interned,
+    // non-deduplicated heap allocations — like real request paths from $_SERVER.
+    // A var_export'd PHP file would be opcache-interned and pointer-shared with
+    // the route data, giving hash lookups an unrealistic identity fast path.
+    $output_file = "$cache_dir/lookup_list_{$suite}_{$seed}.json";
     if (file_exists($output_file)) return;
 
     $routes = require "$cache_dir/{$sample_router_name}_{$suite}_{$seed}_routes.php";
@@ -174,7 +201,7 @@ function generate_lookup_list(string $suite, int $seed, string $sample_router_na
     $list_methods = array_map(fn($i) => $list_methods[$i], $order);
     $list_paths   = array_map(fn($i) => $list_paths[$i], $order);
 
-    file_put_contents($output_file, '<?php return ' . var_export(['methods' => $list_methods, 'paths' => $list_paths], true) . ";\n");
+    file_put_contents($output_file, json_encode(['methods' => $list_methods, 'paths' => $list_paths]));
 }
 
 function select_method_weighted(array $registered, array $weights): string
@@ -214,25 +241,42 @@ function adapt_router_routes(string $router_class, string $router_name, string $
 // Benchmark execution
 //
 
-function run_benchmarks(string $heading, array $suites, array $routers, array $modes, array $servers, ?int $iterations, float $duration, int $seed, bool $store_results): array
+function run_benchmarks(string $heading, array $suites, array $routers, array $modes, ?int $iterations, float $duration, float $warmup, int $runs, int $seed, bool $store_results): array
 {
     $results = [];
     $total = count($suites) * count($routers) * count($modes);
     $done = 0;
     $start = hrtime(true);
-    echo "\n$heading ($total combinations, {$duration}s each)\n";
+    echo "\n$heading ($total combinations, {$runs} runs x {$duration}s + {$warmup}s warmup each)\n";
 
     foreach ($suites as $suite) {
         foreach ($routers as $router_class) {
             $router_real_name = $router_class::details()['name'];
             $router_name = normalize_router_name($router_real_name);
-            foreach ($modes as [$mode_label]) {
+            foreach ($modes as [$mode_label, $php_options]) {
                 $label = sprintf('%-22s  %-10s  %-12s', $router_name, $suite, $mode_label);
-                $result = fetch_benchmark($servers[$mode_label]['port'], $suite, $router_class, $router_name, $iterations, $duration, $seed);
-                $done++;
+                $width  = strlen((string) $total);
+                $indent = str_repeat(' ', strlen($prefix_base = sprintf('  [%s/%d]  ', str_pad((string) ($done + 1), $width, ' ', STR_PAD_LEFT), $total)));
                 $elapsed = (hrtime(true) - $start) / 1e9;
-                $eta = $done < $total ? ($elapsed / $done) * ($total - $done) : null;
-                print_progress($done, $total, $label, number_format($result['lookups_per_second'] ?? 0) . '/s', $eta);
+                $eta     = $done > 0 ? ($elapsed / $done) * ($total - $done) : null;
+                $eta_str = ($eta !== null && $eta > 0) ? '   ETA ' . format_eta($eta) : '';
+                printf("%s%s%s\n", $prefix_base, $label, $eta_str);
+                printf("%s%-6s  %.1fs\n", $indent, 'warmup', $warmup);
+                $samples = [];
+                for ($run = 0; $run < $runs; $run++) {
+                    $server = start_fresh_server($php_options);
+                    $sample = fetch_benchmark($server['port'], $suite, $router_class, $router_name, $iterations, $duration, $seed, $warmup);
+                    stop_server($server);
+                    $samples[] = $sample;
+                    printf("%s%-6s  %s/s\n", $indent, 'run ' . ($run + 1), number_format($sample['lookups_per_second'] ?? 0));
+                }
+                usort($samples, fn($a, $b) => ($a['lookups_per_second'] ?? 0) <=> ($b['lookups_per_second'] ?? 0));
+                $result = $samples[intdiv(count($samples) - 1, 2)];
+                $reg_times = array_column($samples, 'register_time_ms');
+                sort($reg_times);
+                $median_reg_ms = $reg_times ? $reg_times[intdiv(count($reg_times) - 1, 2)] : null;
+                $done++;
+                printf("%s%-6s  %s/s\n", $indent, 'median', number_format($result['lookups_per_second'] ?? 0));
                 if ($store_results) {
                     $results[] = [
                         'suite'               => $suite,
@@ -242,7 +286,7 @@ function run_benchmarks(string $heading, array $suites, array $routers, array $m
                         'lookups_per_second'  => $result['lookups_per_second'] ?? 0,
                         'peak_memory_kb'      => $result['peak_memory_kb'] ?? 0,
                         'register_memory_kb'  => $result['register_memory_kb'] ?? 0,
-                        'register_time_ms'    => null,
+                        'register_time_ms'    => $median_reg_ms,
                         'router_class'        => $router_class,
                     ];
                 }
@@ -250,29 +294,6 @@ function run_benchmarks(string $heading, array $suites, array $routers, array $m
         }
     }
     return $results;
-}
-
-function benchmark_registration(array &$results, array $servers, int $samples, float $duration, int $seed): void
-{
-    $total = count($results);
-    $done = 0;
-    $start = hrtime(true);
-    echo "\nBenchmarking registration times (averaged over $samples samples)\n";
-
-    foreach ($results as &$row) {
-        $label = sprintf('%-22s  %-10s  %-12s', $row['router_name'], $row['suite'], $row['mode']);
-        $times = [];
-        for ($i = 0; $i < $samples; $i++) {
-            $result = fetch_benchmark($servers[$row['mode']]['port'], $row['suite'], $row['router_class'], $row['router_name'], 1, $duration, $seed);
-            if (isset($result['register_time_ms'])) $times[] = $result['register_time_ms'];
-        }
-        $row['register_time_ms'] = $times ? array_sum($times) / count($times) : null;
-        $done++;
-        $elapsed = (hrtime(true) - $start) / 1e9;
-        $eta = $done < $total ? ($elapsed / $done) * ($total - $done) : null;
-        print_progress($done, $total, $label, number_format($row['register_time_ms'] ?? 0, 3) . ' ms', $eta);
-    }
-    unset($row);
 }
 
 //
@@ -284,9 +305,9 @@ function print_results_table(array $results): void
     $by_suite = [];
     foreach ($results as $row) $by_suite[$row['suite']][] = $row;
 
-    $format    = '| %2s | %-22s | %-12s | %14s | %14s | %13s | %10s |';
-    $separator = '+' . implode('+', array_map(fn($w) => str_repeat('-', $w + 2), [2, 22, 12, 14, 14, 13, 10])) . '+';
-    $header    = sprintf($format, '#', 'Router', 'Mode', 'Lookups/sec', 'Peak (KB)', 'Boot (KB)', 'Boot (ms)');
+    $format    = '| %2s | %-22s | %-12s | %14s | %14s | %13s | %13s |';
+    $separator = '+' . implode('+', array_map(fn($w) => str_repeat('-', $w + 2), [2, 22, 12, 14, 14, 13, 13])) . '+';
+    $header    = sprintf($format, '#', 'Router', 'Mode', 'Lookups/sec', 'Peak (KB)', 'Register (KB)', 'Register (ms)');
 
     foreach ($by_suite as $suite => $rows) {
         usort($rows, fn($a, $b) => $b['lookups_per_second'] <=> $a['lookups_per_second']);
@@ -331,15 +352,14 @@ function save_results_as_markdown(array $results, int $seed): string
         $cpu,
         'Seed: ' . $seed,
     ]);
-    array_push($lines, '_Benchmarked on: ' . implode(' - ', $env_parts) . '_', "");
-
-    array_push($lines, "### Results", "");
+    array_push($lines, '#### Environment', '');
+    foreach ($env_parts as $part) {
+        $lines[] = "- $part";
+    }
+    $lines[] = '';
 
     foreach (array_unique(array_column($results, 'suite')) as $suite) {
-        array_push($lines,
-            "#### $suite (" . get_route_count($suite) . " routes)", "",
-            "![$suite]({$suite}.svg)", "",
-        );
+        array_push($lines, "![$suite lookups/sec](./assets/{$suite}.svg)", "");
     }
 
     file_put_contents($path, implode("\n", $lines) . "\n");
@@ -348,23 +368,19 @@ function save_results_as_markdown(array $results, int $seed): string
 
 function save_results_as_svg(array $results, string $base_path): array
 {
-    $directory = dirname($base_path);
+    // Same assets/ layout as the repo root, so results can be copied straight
+    // over the root README.md images.
+    $directory = dirname($base_path) . '/assets';
+    if (!is_dir($directory)) mkdir($directory, 0755, true);
     $by_suite = [];
     foreach ($results as $row) $by_suite[$row['suite']][] = $row;
 
     $paths = [];
     foreach ($by_suite as $suite => $rows) {
-        $by_router = [];
-        foreach ($rows as $row) $by_router[$row['router']][] = $row;
-        foreach ($by_router as &$group) {
-            usort($group, fn($a, $b) => $b['lookups_per_second'] <=> $a['lookups_per_second']);
-        }
-        unset($group);
-        uasort($by_router, fn($a, $b) => $b[0]['lookups_per_second'] <=> $a[0]['lookups_per_second']);
-        $sorted = array_merge(...array_values($by_router));
+        $title = sprintf('Route list: %s (%s routes)', $suite, number_format(get_route_count($suite)));
 
         $path = "$directory/$suite.svg";
-        file_put_contents($path, render_results_svg($sorted));
+        file_put_contents($path, render_throughput_svg($rows, $title));
         $paths[] = $path;
     }
     return $paths;
@@ -395,12 +411,11 @@ function print_usage(array $suites, array $routers, array $modes): void
     foreach ([
         '--suite'        => 'Comma-separated list of test suites (default: all)',
         '--router'       => 'Comma-separated list of routers (default: all)',
-        '--mode'         => 'Comma-separated list of benchmark modes (default: JIT=tracing, OPcache)',
+        '--mode'         => 'Comma-separated list of benchmark modes (default: JIT=tracing, JIT=function, JIT=off)',
         '--all'          => 'Run all suites, routers, and modes',
-        '--duration'     => 'Seconds per benchmark combination (default: 1.0)',
-        '--warmup'       => 'Seconds for warmup per combination, 0 to skip (default: 1.0)',
-        '--reg-samples'  => 'Registration time sample count (default: 10)',
-        '--reg-duration' => 'Minimum seconds per registration sample (default: 0.1)',
+        '--duration'     => 'Seconds per benchmark combination (default: 0.5)',
+        '--runs'         => 'Independent runs per combination; the median is reported (default: 3)',
+        '--warmup'       => 'Seconds for warmup per combination, 0 to skip (default: 0.2)',
         '--seed'         => 'Seed for randomized lookup order and method assignment (default: 42)',
         '--help'         => 'Show this help screen',
     ] as $option => $description) {
@@ -426,17 +441,21 @@ foreach (glob(__DIR__ . '/Routers/*.php') as $file) {
     }
 }
 
+$jit_base = '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit_buffer_size=100M -d opcache.jit=';
 $available_modes = [
-    'JIT=tracing' => ['JIT=tracing', '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit_buffer_size=100M -d opcache.jit=tracing'],
-    'OPcache'     => ['OPcache',     '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1'],
-    'No OPcache'  => ['No OPcache',  '-d opcache.enable=0'],
+    'JIT=tracing'  => ['JIT=tracing',  $jit_base . 'tracing'],
+    'JIT=function' => ['JIT=function', $jit_base . 'function'],
+    'JIT=1235'     => ['JIT=1235',     $jit_base . '1235'],
+    'JIT=1255'     => ['JIT=1255',     $jit_base . '1255'],
+    'JIT=off'      => ['JIT=off',      '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1'],
+    'No OPcache'   => ['No OPcache',   '-d opcache.enable=0'],
 ];
 
 //
 // Argument parsing
 //
 
-$options = getopt('', ['suite::', 'router::', 'mode::', 'all', 'help', 'duration::', 'warmup::', 'reg-samples::', 'reg-duration::', 'seed::']);
+$options = getopt('', ['suite::', 'router::', 'mode::', 'all', 'help', 'duration::', 'runs::', 'warmup::', 'seed::']);
 
 if (isset($options['help'])) {
     print_usage($available_suites, $available_routers, $available_modes);
@@ -450,17 +469,23 @@ if (!isset($options['all']) && !isset($options['suite']) && !isset($options['rou
 
 $suites  = resolve_option('suite',  $options['suite']  ?? null, $available_suites);
 $routers = resolve_option('router', $options['router'] ?? null, $available_routers);
-$modes   = resolve_option('mode',   $options['mode']   ?? null, array_intersect_key($available_modes, array_flip(['JIT=tracing', 'OPcache'])));
+$default_modes = array_intersect_key($available_modes, array_flip(['JIT=tracing', 'JIT=off']));
+$modes   = isset($options['mode'])
+    ? resolve_option('mode', $options['mode'], $available_modes)
+    : array_values($default_modes);
 
-$benchmark_duration = (float) ($options['duration']     ?? 1.0);
-$warmup_duration    = (float) ($options['warmup']       ?? 1.0);
-$reg_samples        = (int)   ($options['reg-samples']  ?? 10);
-$reg_duration       = (float) ($options['reg-duration'] ?? 0.1);
+$benchmark_duration = (float) ($options['duration']     ?? 0.5);
+$runs               = max(1, (int) ($options['runs']    ?? 3));
+$warmup_duration    = (float) ($options['warmup']       ?? 0.2);
 $seed               = (int)   ($options['seed']         ?? 42);
 
 //
 // Pre-generate and cache route data
 //
+
+foreach (glob(__DIR__ . '/cache/*') as $cache_file) {
+    if (is_file($cache_file)) unlink($cache_file);
+}
 
 $router_names = array_map(fn($class) => normalize_router_name($class::details()['name']), $routers);
 
@@ -481,21 +506,11 @@ foreach ($suites as $suite) {
 echo "Suites:  " . implode(', ', $suites) . "\n";
 echo "Routers: " . implode(', ', $router_names) . "\n";
 echo "Modes:   " . implode(', ', array_column($modes, 0)) . "\n";
+echo "Runs:    $runs (median reported)\n";
 echo "Seed:    $seed\n";
+echo "  Fresh server process per measurement; {$warmup_duration}s in-process warmup before each\n";
 
-$servers = [];
-foreach ($modes as [$mode_label, $php_options]) {
-    $port = get_unused_port();
-    $servers[$mode_label] = ['port' => $port, 'pid' => start_web_server($port, $php_options)];
-    echo "  Server started: $mode_label -> port $port\n";
-}
-
-if ($warmup_duration > 0.0) {
-    run_benchmarks("Warming up", $suites, $routers, $modes, $servers, null, $warmup_duration, $seed, false);
-}
-
-$results = run_benchmarks("Running benchmarks", $suites, $routers, $modes, $servers, null, $benchmark_duration, $seed, true);
-benchmark_registration($results, $servers, $reg_samples, $reg_duration, $seed);
+$results = run_benchmarks("Running benchmarks", $suites, $routers, $modes, null, $benchmark_duration, $warmup_duration, $runs, $seed, true);
 
 print_results_table($results);
 $markdown_path = save_results_as_markdown($results, $seed);
