@@ -1,16 +1,16 @@
-# <img alt="RadixRouter" width="400" src="./assets/radix-router.svg">
+# <img alt="RadixRouter" width="300" src="./assets/radix-router.svg">
 
 [![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
 [![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
 
-A very simple yet high-performance radix tree based HTTP router for PHP. Use it directly, or as a base for your own router (see [integrations](#integrations)). 
+A very simple radix tree based HTTP router for PHP. Use it directly, or as a base for your own router (see [integrations](#integrations)).
 
 - Path parameters: optional and wildcard (one per segment)
 - API for listing routes/methods (useful for OPTIONS)
 - Automatic 405 Method Not Allowed handling
-- Zero dependencies and only 375 lines of code
+- Zero dependencies and only 377 lines of code
 
-The router consistently ranks as being one of the fastest out there, see [benchmarks](#benchmarks) for how it compares to others.
+See [benchmarks](#benchmarks) for how it compares to others.
 
 ## Install
 
