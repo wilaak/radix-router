@@ -1,4 +1,4 @@
-# <img alt="RadixRouter" width="300" src="./assets/radix-router.svg">
+# <img alt="RadixRouter" width="400" src="./assets/radix-router.svg">
 
 [![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
 [![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
