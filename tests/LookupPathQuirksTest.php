@@ -51,6 +51,44 @@ class LookupPathQuirksTest extends RadixRouterTestCase
         $this->assertSame(['name' => 'café'], $info['params']);
     }
 
+    public function testRootLevelRequiredParamDoesNotMatchRootPath()
+    {
+        // Regression: a required param `:a` must not match `/` (or '') with an
+        // empty value. Required params reject empty segments everywhere else,
+        // and the root path has no segment to bind.
+        $router = new RadixRouter();
+        $router->add('GET', '/:a', 'h');
+
+        $this->assertSame(404, $router->lookup('GET', '/')['code']);
+        $this->assertSame(404, $router->lookup('GET', '')['code']);
+
+        // A real segment still matches.
+        $info = $router->lookup('GET', '/foo');
+        $this->assertSame(200, $info['code']);
+        $this->assertSame(['a' => 'foo'], $info['params']);
+    }
+
+    public function testRootLevelRequiredWildcardDoesNotMatchRootPath()
+    {
+        // The `+` wildcard requires at least one segment, so `/` must 404.
+        $router = new RadixRouter();
+        $router->add('GET', '/:rest+', 'h');
+
+        $this->assertSame(404, $router->lookup('GET', '/')['code']);
+        $this->assertSame(['rest' => 'a/b'], $router->lookup('GET', '/a/b')['params']);
+    }
+
+    public function testStaticRootStillWinsAlongsideRootParam()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/', 'root');
+        $router->add('GET', '/:a', 'param');
+
+        $root = $router->lookup('GET', '/');
+        $this->assertSame(200, $root['code']);
+        $this->assertSame('root', $root['handler']);
+    }
+
     public function testWildcardCapturesRemainderVerbatimIncludingSlashesAndColons()
     {
         $router = new RadixRouter();

@@ -339,7 +339,7 @@ class RadixRouter
         $wildcardParams = [];
         $wcAt = 0;
         $lastStaticNode = $this->tree;
-        $lastStaticSegment = '';
+        $lastStaticSegment = null;
         $lastStaticParamCount = 0;
 
         $node = $this->tree;
@@ -374,7 +374,7 @@ class RadixRouter
         }
 
         $routes = $lastStaticNode[self::NODE_PARAM][self::NODE_ROUTES] ?? null;
-        if (isset($routes) && \count($params) === $lastStaticParamCount) {
+        if (isset($routes) && $lastStaticSegment !== null && \count($params) === $lastStaticParamCount) {
             $params[] = $lastStaticSegment;
             goto DISPATCH;
         }
@@ -406,9 +406,11 @@ class RadixRouter
         return ['code' => 404];
 
         DISPATCH:
-        $result = $routes[$method]
-            ?? ($method === 'HEAD' ? $routes['GET'] ?? null : null)
-            ?? $routes['*'] ?? null;
+        $result = $routes[$method] ?? null;
+        if ($result === null && $method === 'HEAD') {
+            $result = $routes['GET'] ?? null;
+        }
+        $result ??= $routes['*'] ?? null;
 
         if (isset($result) && $method !== '*') {
             $paramNames = $result['params'];
