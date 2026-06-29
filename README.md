@@ -299,11 +299,11 @@ If this router is a bit too minimalistic, you might try one of the following mor
 
 Each path gets 1-3 HTTP methods, lookups follow a Zipf-like distribution, so a few hot routes dominate traffic.
 
-#### Environment
-
-- PHP 8.5.6
-- AMD Ryzen 5 5600X 6-Core Processor
+- PHP 8.5.4
+- AMD Ryzen AI 7 PRO 350 w/ Radeon 860M
 - Seed: 42
+
+---
 
 ![avatax lookups/sec](./assets/avatax.svg)
 

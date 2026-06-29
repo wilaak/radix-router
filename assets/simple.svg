@@ -16,18 +16,18 @@
 <text class="tick" x="710.00" y="86.0" text-anchor="middle" font-size="11">8M</text>
 <line class="div" x1="150" y1="91.0" x2="150" y2="264.0"/>
 <text class="fg" x="138" y="123.5" text-anchor="end" font-size="12">radixrouter</text>
-<rect class="bar" x="150" y="98.0" width="424.59" height="18" fill="#474A8A"/>
-<text class="fg" x="722" y="111.0" font-size="11">6.07M/s  (165 ns/op)</text>
-<rect class="bar" x="150" y="122.0" width="245.04" height="18" fill="#787CB5"/>
-<text class="fg" x="722" y="135.0" font-size="11">3.50M/s  (286 ns/op)</text>
+<rect class="bar" x="150" y="98.0" width="476.86" height="18" fill="#474A8A"/>
+<text class="fg" x="722" y="111.0" font-size="11">6.81M/s  (147 ns/op)</text>
+<rect class="bar" x="150" y="122.0" width="272.86" height="18" fill="#787CB5"/>
+<text class="fg" x="722" y="135.0" font-size="11">3.90M/s  (257 ns/op)</text>
 <text class="fg" x="138" y="185.5" text-anchor="end" font-size="12">fastroute</text>
-<rect class="bar" x="150" y="160.0" width="353.40" height="18" fill="#474A8A"/>
-<text class="fg" x="722" y="173.0" font-size="11">5.05M/s  (198 ns/op)</text>
-<rect class="bar" x="150" y="184.0" width="243.92" height="18" fill="#787CB5"/>
-<text class="fg" x="722" y="197.0" font-size="11">3.48M/s  (287 ns/op)</text>
+<rect class="bar" x="150" y="160.0" width="419.39" height="18" fill="#474A8A"/>
+<text class="fg" x="722" y="173.0" font-size="11">5.99M/s  (167 ns/op)</text>
+<rect class="bar" x="150" y="184.0" width="276.81" height="18" fill="#787CB5"/>
+<text class="fg" x="722" y="197.0" font-size="11">3.95M/s  (253 ns/op)</text>
 <text class="fg" x="138" y="247.5" text-anchor="end" font-size="12">symfony</text>
-<rect class="bar" x="150" y="222.0" width="182.80" height="18" fill="#474A8A"/>
-<text class="fg" x="722" y="235.0" font-size="11">2.61M/s  (383 ns/op)</text>
-<rect class="bar" x="150" y="246.0" width="101.63" height="18" fill="#787CB5"/>
-<text class="fg" x="722" y="259.0" font-size="11">1.45M/s  (689 ns/op)</text>
+<rect class="bar" x="150" y="222.0" width="210.40" height="18" fill="#474A8A"/>
+<text class="fg" x="722" y="235.0" font-size="11">3.01M/s  (333 ns/op)</text>
+<rect class="bar" x="150" y="246.0" width="120.70" height="18" fill="#787CB5"/>
+<text class="fg" x="722" y="259.0" font-size="11">1.72M/s  (580 ns/op)</text>
 </svg>

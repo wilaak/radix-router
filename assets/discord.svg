@@ -6,32 +6,28 @@
 <rect x="160" y="44" width="14" height="14" fill="#787CB5"/>
 <text class="fg" x="180" y="56" font-size="12">JIT=off</text>
 <text class="tick" x="150.00" y="86.0" text-anchor="middle" font-size="11">0</text>
-<line class="div" x1="243.33" y1="91.0" x2="243.33" y2="264.0"/>
-<text class="tick" x="243.33" y="86.0" text-anchor="middle" font-size="11">500K</text>
-<line class="div" x1="336.67" y1="91.0" x2="336.67" y2="264.0"/>
-<text class="tick" x="336.67" y="86.0" text-anchor="middle" font-size="11">1M</text>
+<line class="div" x1="290.00" y1="91.0" x2="290.00" y2="264.0"/>
+<text class="tick" x="290.00" y="86.0" text-anchor="middle" font-size="11">1M</text>
 <line class="div" x1="430.00" y1="91.0" x2="430.00" y2="264.0"/>
-<text class="tick" x="430.00" y="86.0" text-anchor="middle" font-size="11">1.5M</text>
-<line class="div" x1="523.33" y1="91.0" x2="523.33" y2="264.0"/>
-<text class="tick" x="523.33" y="86.0" text-anchor="middle" font-size="11">2M</text>
-<line class="div" x1="616.67" y1="91.0" x2="616.67" y2="264.0"/>
-<text class="tick" x="616.67" y="86.0" text-anchor="middle" font-size="11">2.5M</text>
+<text class="tick" x="430.00" y="86.0" text-anchor="middle" font-size="11">2M</text>
+<line class="div" x1="570.00" y1="91.0" x2="570.00" y2="264.0"/>
+<text class="tick" x="570.00" y="86.0" text-anchor="middle" font-size="11">3M</text>
 <line class="div" x1="710.00" y1="91.0" x2="710.00" y2="264.0"/>
-<text class="tick" x="710.00" y="86.0" text-anchor="middle" font-size="11">3M</text>
+<text class="tick" x="710.00" y="86.0" text-anchor="middle" font-size="11">4M</text>
 <line class="div" x1="150" y1="91.0" x2="150" y2="264.0"/>
 <text class="fg" x="138" y="123.5" text-anchor="end" font-size="12">radixrouter</text>
-<rect class="bar" x="150" y="98.0" width="555.46" height="18" fill="#474A8A"/>
-<text class="fg" x="722" y="111.0" font-size="11">2.98M/s  (336 ns/op)</text>
-<rect class="bar" x="150" y="122.0" width="358.45" height="18" fill="#787CB5"/>
-<text class="fg" x="722" y="135.0" font-size="11">1.92M/s  (521 ns/op)</text>
-<text class="fg" x="138" y="185.5" text-anchor="end" font-size="12">symfony</text>
-<rect class="bar" x="150" y="160.0" width="271.87" height="18" fill="#474A8A"/>
-<text class="fg" x="722" y="173.0" font-size="11">1.46M/s  (687 ns/op)</text>
-<rect class="bar" x="150" y="184.0" width="176.87" height="18" fill="#787CB5"/>
-<text class="fg" x="722" y="197.0" font-size="11">948K/s  (1,055 ns/op)</text>
-<text class="fg" x="138" y="247.5" text-anchor="end" font-size="12">fastroute</text>
-<rect class="bar" x="150" y="222.0" width="216.47" height="18" fill="#474A8A"/>
-<text class="fg" x="722" y="235.0" font-size="11">1.16M/s  (862 ns/op)</text>
-<rect class="bar" x="150" y="246.0" width="176.84" height="18" fill="#787CB5"/>
-<text class="fg" x="722" y="259.0" font-size="11">947K/s  (1,056 ns/op)</text>
+<rect class="bar" x="150" y="98.0" width="516.28" height="18" fill="#474A8A"/>
+<text class="fg" x="722" y="111.0" font-size="11">3.69M/s  (271 ns/op)</text>
+<rect class="bar" x="150" y="122.0" width="269.44" height="18" fill="#787CB5"/>
+<text class="fg" x="722" y="135.0" font-size="11">1.92M/s  (520 ns/op)</text>
+<text class="fg" x="138" y="185.5" text-anchor="end" font-size="12">fastroute</text>
+<rect class="bar" x="150" y="160.0" width="189.01" height="18" fill="#474A8A"/>
+<text class="fg" x="722" y="173.0" font-size="11">1.35M/s  (741 ns/op)</text>
+<rect class="bar" x="150" y="184.0" width="121.35" height="18" fill="#787CB5"/>
+<text class="fg" x="722" y="197.0" font-size="11">867K/s  (1,154 ns/op)</text>
+<text class="fg" x="138" y="247.5" text-anchor="end" font-size="12">symfony</text>
+<rect class="bar" x="150" y="222.0" width="188.18" height="18" fill="#474A8A"/>
+<text class="fg" x="722" y="235.0" font-size="11">1.34M/s  (744 ns/op)</text>
+<rect class="bar" x="150" y="246.0" width="136.28" height="18" fill="#787CB5"/>
+<text class="fg" x="722" y="259.0" font-size="11">973K/s  (1,027 ns/op)</text>
 </svg>
