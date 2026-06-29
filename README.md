@@ -1,13 +1,16 @@
-# <img alt="RadixRouter" width="175" src="./assets/radx.svg">
+# <img alt="RadixRouter" width="300" src="./assets/radix-router.svg">
 
-A simple HTTP router for PHP. Use it directly, or as a base for your own router (see [integrations](#integrations)). 
+[![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
+[![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
+
+A very simple yet high-performance radix tree based HTTP router for PHP. Use it directly, or as a base for your own router (see [integrations](#integrations)). 
 
 - Path parameters: optional and wildcard (one per segment)
 - API for listing routes/methods (useful for OPTIONS)
 - Automatic 405 Method Not Allowed handling
 - Zero dependencies and only 375 lines of code
 
-See [benchmarks](#benchmarks) for how it compares to other routers.
+The router consistently ranks as being one of the fastest out there, see [benchmarks](#benchmarks) for how it compares to others.
 
 ## Install
 
@@ -57,7 +60,7 @@ switch ($result['code']) {
 
 Routes are matched in a predictable order, always favoring the most specific pattern. Handlers can be any value you choose. In these examples, we use strings for simplicity, but you’re free to use arrays with extra details like middleware or other metadata.
 
-If you plan to cache your routes your handlers must be exportable, see [route caching](#route-caching) for more. This router does not support regex patterns and it's recommended that you handle this logic in your handlers instead.
+If you plan to cache your routes your handlers must be exportable (see [route caching](#route-caching)). This router does not support regex patterns and it's recommended that you handle this logic in your handlers instead.
 
 ```php
 // Simple GET route
