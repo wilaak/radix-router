@@ -4,7 +4,7 @@ Notable changes to this project goes here
 
 ## [v.3.6.7] - 29.06.2026
 
-- Fixed a not so obvious truthiness check causing a required param route (e.g. `/:id`) to match the root path with an empty value.
+- Fixed a not so obvious truthiness check causing a required param route (e.g. `/:id`) to match with an empty value if the root path was not present.
 
 ## [v3.6.6] - 12.06.2026
 
