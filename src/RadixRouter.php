@@ -9,7 +9,7 @@ use InvalidArgumentException;
 /**
  * RadixRouter (or RadXRouter) HTTP request router for PHP.
  *
- * @license WTFPL-2
+ * @license MIT
  * @link https://github.com/wilaak/radix-router
  */
 class RadixRouter
