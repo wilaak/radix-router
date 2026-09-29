@@ -15,19 +15,25 @@ use InvalidArgumentException;
 class RadixRouter
 {
     /**
-     * Warning: Structure might change in future, do not rely on the internal format of this property.
+     * Dynamic routes
+     * 
+     * WARNING: Structure might change in a future stable release.
+     * Do not rely on the internal format of this property without locking your version first.
      */
     public array $tree = self::NODE_STRUCT;
 
     /**
-     * Warning: Structure might change in future, do not rely on the internal format of this property.
+     * Static routes
+     * 
+     * WARNING: Structure might change in a future stable release.
+     * Do not rely on the internal format of this property without locking your version first.
      */
     public array $static = [];
 
     /**
      * List of allowed HTTP methods during registration.
      */
-    public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
+    public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD', 'QUERY'];
 
     /**
      * Used to track the original pattern during registration of optional parameter variants.
