@@ -2,6 +2,10 @@
 
 Notable changes to this project goes here
 
+## [v3.7.0] - 29.09.2026
+
+- Add HTTP QUERY Method ([RFC 10008](https://www.rfc-editor.org/rfc/rfc10008.html)) ([#12](https://github.com/wilaak/radix-router/issues/12))
+
 ## [v.3.6.7] - 29.06.2026
 
 - Fixed a not so obvious truthiness check causing a required param route (e.g. `/:id`) to match with an empty value if the root path was not present.
