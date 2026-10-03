@@ -5,7 +5,7 @@ Just a fast and simple HTTP request router for PHP. No regex!
 - Path parameters: optional and wildcard (one per segment)
 - API for listing routes/methods (useful for OPTIONS)
 - Automatic 405 Method Not Allowed handling
-- Zero dependencies and only 377 lines of code
+- Zero dependencies and only 386 lines of code
 
 ## Install
 
@@ -49,7 +49,7 @@ switch ($result['code']) {
 
 ## Route Configuration
 
-Routes are matched in a predictable order, always favoring the most specific pattern. Handlers can be any value you choose. In these examples, we use strings for simplicity, but you’re free to use arrays with extra details like middleware or other metadata.
+Routes are matched in a predictable order, always favoring the most specific pattern. The method is only checked after the path has been matched. Handlers can be any value you choose. In these examples, we use strings for simplicity, but you’re free to use arrays with extra details like middleware or other metadata.
 
 If you plan to cache your routes your handlers must be exportable (see [route caching](#route-caching)). This router does not support regex patterns and it's recommended that you handle this logic in your handlers instead.
 
@@ -289,12 +289,15 @@ $router->add('*', '/somewhere', 'handler');
 
 ## Trailing Slashes in URLs
 
-Trailing slashes are ignored when matching so nothing is redirected. The returned `pattern` keeps the canonical pattern.
+This router does not perform any automatic trailing slash redirects. Trailing slashes at the end of the request path are automatically trimmed before route matching, so both `/about` and `/about/` will match the same route.
+
+When a route is successfully matched, the lookup method returns the canonical pattern of the matched route.
 
 ```php
 $router->add('GET', '/docs/', 'docs');
+
 $result = $router->lookup('GET', '/docs');
-$result['pattern']; // /docs/ -> redirect with 308
+$result['pattern']; // '/docs/'
 ```
 
 ## Important note on HEAD requests
