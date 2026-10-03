@@ -190,6 +190,42 @@ class ValidationTest extends RadixRouterTestCase
         );
     }
 
+    public function testConflictingOptionalExpansionRegistersNothing()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/:a/:b?', 'x');
+        try {
+            $router->add('GET', '/:a?', 'y');
+            $this->fail('Expected a route conflict');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertSame(
+                "Route Conflict: [GET] '/:a?': Path is already registered (conflicts with '/:a/:b?')",
+                $e->getMessage()
+            );
+        }
+
+        $this->assertSame(404, $router->lookup('GET', '/')['code']);
+        $this->assertSame(
+            [['method' => 'GET', 'pattern' => '/:a/:b?', 'handler' => 'x']],
+            $router->list()
+        );
+
+        $router = new RadixRouter();
+        $router->add('GET', '/foo/:bar', 'z');
+        try {
+            $router->add('GET', '/foo/:bar?/:baz?', 'w');
+            $this->fail('Expected a route conflict');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertSame(
+                "Route Conflict: [GET] '/foo/:bar?/:baz?': Path is already registered (conflicts with '/foo/:bar')",
+                $e->getMessage()
+            );
+        }
+        $this->assertSame(404, $router->lookup('GET', '/foo')['code']);
+        $this->assertSame(404, $router->lookup('GET', '/foo/x/y')['code']);
+        $this->assertSame('z', $router->lookup('GET', '/foo/x')['handler']);
+    }
+
     public function testPublicMethodParameterNamesAreStableApi()
     {
         $router = new RadixRouter();

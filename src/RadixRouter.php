@@ -102,12 +102,15 @@ class RadixRouter
         [$steps, $params, $isOptional] = $this->addCompileSegments($method, $pattern, $key);
 
         if ($isOptional) {
-            $variants = $this->addExpandOptionalSegments($pattern);
+            [$staticSnapshot, $treeSnapshot] = [$this->static, $this->tree];
             $this->optionalPattern = $pattern;
             try {
-                foreach ($variants as $variant) {
+                foreach ($this->addExpandOptionalSegments($pattern) as $variant) {
                     $this->add($method, $variant, $handler);
                 }
+            } catch (InvalidArgumentException $e) {
+                [$this->static, $this->tree] = [$staticSnapshot, $treeSnapshot];
+                throw $e;
             } finally {
                 $this->optionalPattern = null;
             }

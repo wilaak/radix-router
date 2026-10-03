@@ -2,9 +2,10 @@
 
 Notable changes to this project goes here
 
-## [v3.7.0] - 29.09.2026
+## [v3.7.0] - 04.10.2026
 
 - Add HTTP QUERY Method ([RFC 10008](https://www.rfc-editor.org/rfc/rfc10008.html)) ([#12](https://github.com/wilaak/radix-router/issues/12))
+- Fix route conflict during optional parameter expansion leaving earlier variants registered.
 
 ## [v.3.6.7] - 29.06.2026
 
