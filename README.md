@@ -1,16 +1,11 @@
-# <img alt="RadixRouter" width="175" src="./assets/radx.svg">
+# <img alt="RadixRouter" width="150" src="./assets/radx.svg">
 
-[![License](https://img.shields.io/packagist/l/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
-[![Downloads](https://img.shields.io/packagist/dt/wilaak/radix-router.svg?style=flat-square)](https://packagist.org/packages/wilaak/radix-router)
-
-A very simple radix tree based HTTP router for PHP. Use it directly, or as a base for your own router (see [integrations](#integrations)).
+Just a fast and simple HTTP request router for PHP. No regex!
 
 - Path parameters: optional and wildcard (one per segment)
 - API for listing routes/methods (useful for OPTIONS)
 - Automatic 405 Method Not Allowed handling
 - Zero dependencies and only 377 lines of code
-
-See [benchmarks](#benchmarks) for how it compares to others.
 
 ## Install
 
@@ -20,15 +15,11 @@ composer require wilaak/radix-router
 
 Requires PHP 8.0 or newer.
 
-## Usage
+## Example
 
 Below is an example to get you started using the PHP SAPI.
 
 ```PHP
-<?php
-
-require __DIR__ . '/../vendor/autoload.php';
-
 $router = new Wilaak\Http\RadixRouter();
 
 $router->add('GET', '/:name?', function ($name = 'World') {
@@ -56,7 +47,7 @@ switch ($result['code']) {
 }
 ```
 
-### Route Configuration
+## Route Configuration
 
 Routes are matched in a predictable order, always favoring the most specific pattern. Handlers can be any value you choose. In these examples, we use strings for simplicity, but you’re free to use arrays with extra details like middleware or other metadata.
 
@@ -76,11 +67,11 @@ $router->add($router->allowedMethods, '/maintenance', 'maintenance');
 $router->add('*', '/maintenance', 'maintenance');
 ```
 
-### Path Parameters
+## Path Parameters
 
-Path parameters let you capture segments of the request path by specifying named placeholders in your route pattern. The router extracts these values and returns them as a map, with each value bound to its corresponding parameter name.
+Extract segments from the request path by specifying named placeholders in your route pattern.
 
-#### Required Parameters
+### Required
 
 Matches only when the segment is present and not empty.
 
@@ -95,13 +86,12 @@ $router->add('GET', '/users/:id', 'get_user');
 $router->add('GET', '/users/:id/orders/:order_id', 'get_order');
 ```
 
-#### Optional Parameters
+### Optional
 
-These match regardless of whether the segment is present, and are only allowed at the end of the path.
+Match regardless of whether the segment is present. Only allowed in the trailing segments of a pattern.
 
 > [!TIP]   
 > Use sparingly! In most cases you’re probably better off using query parameters instead of restricting yourself to a single filtering option in the path.
-
 
 ```php
 // Single optional parameter
@@ -124,12 +114,15 @@ $router->add('GET', '/shop/:category/:item?', 'view_shop');
 //   /shop/books/novel -> ['category' => 'books', 'item' => 'novel']
 ```
 
-#### Wildcard Parameters
+### Wildcard
 
 Also known as catch-all, splat, greedy, rest, or path remainder parameters; wildcards capture everything after their position in the path, including slashes. Because of this they must be used as the final segment.
 
 > [!CAUTION]    
 > Never use captured path segments directly in filesystem operations. Path traversal attacks can expose sensitive files or directories. Use functions like `realpath()` and restrict access to a safe base directory.
+
+> [!NOTE]   
+> Wildcards don't capture a trailing slash, it's trimmed before matching. Restore it from the request path if you need it, e.g. when proxying. See [trailing slashes](#trailing-slashes-in-urls).
 
 ```php
 // Required wildcard parameter (one or more segments)
@@ -147,7 +140,27 @@ $router->add('GET', '/downloads/:file*', 'serve_download');
 //   /downloads/docs/guide.md -> ['file' => 'docs/guide.md']
 ```
 
-### Route Listing
+### Prefix Matching
+
+A wildcard at the end of a pattern matches everything under a prefix.
+
+```php
+$router->add('*', '/api/:rest*', 'legacy');
+$router->add('*', '/api/users/:rest*', 'users');
+// Example requests:
+//   /api          -> legacy, ['rest' => '']
+//   /api/orders   -> legacy, ['rest' => 'orders']
+//   /api/users    -> users,  ['rest' => '']
+//   /api/users/42 -> users,  ['rest' => '42']
+
+$router->add('*', '/tenants/:tenant/files/:path*', 'tenant_files');
+// Example requests:
+//   /tenants/acme                  -> no match
+//   /tenants/acme/files            -> ['tenant' => 'acme', 'path' => '']
+//   /tenants/acme/files/docs/a.pdf -> ['tenant' => 'acme', 'path' => 'docs/a.pdf']
+```
+
+## Route Listing
 
 Retrieve registered routes and their associated handlers. Optionally pass a request path to filter results to routes matching that path.
 
@@ -196,7 +209,7 @@ GET       /contact                  contact
 POST      /contact                  contact
 ```
 
-### Allowed Methods
+## Allowed Methods
 
 Retrieve the allowed HTTP methods for a given request path.
 
@@ -207,7 +220,7 @@ if ($method === 'OPTIONS') {
 }
 ```
 
-### Route Caching
+## Route Caching
 
 Route caching improves performance for traditional PHP deployments where scripts are reloaded on every request. In these environments, caching routes in a PHP file allows OPcache to keep them in shared memory, reducing script startup time by eliminating the need to recompile route definitions on each request.
 
@@ -259,7 +272,7 @@ $router->tree = $routes[0];
 $router->static = $routes[1];
 ```
 
-### Custom HTTP methods
+## Custom HTTP methods
 
 You can add custom HTTP methods to the router, just make sure the method names are uppercase.
 
@@ -274,11 +287,15 @@ If you want a route to match any HTTP method (including custom ones), use the fa
 $router->add('*', '/somewhere', 'handler');
 ```
 
-### Trailing Slashes in URLs
+## Trailing Slashes in URLs
 
-This router does not perform any automatic trailing slash redirects. Trailing slashes at the end of the request path are automatically trimmed before route matching, so both `/about` and `/about/` will match the same route.
+Trailing slashes are ignored when matching so nothing is redirected. The returned `pattern` keeps the canonical pattern.
 
-When a route is successfully matched, the lookup method returns the canonical pattern of the matched route, allowing you to implement your own logic to enforce a specific URL format or redirect as needed.
+```php
+$router->add('GET', '/docs/', 'docs');
+$result = $router->lookup('GET', '/docs');
+$result['pattern']; // /docs/ -> redirect with 308
+```
 
 ## Important note on HEAD requests
 
