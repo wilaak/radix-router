@@ -2,6 +2,10 @@
 
 Notable changes to this project goes here
 
+## [v3.7.2] - 07.10.2026
+
+- Fixed literal segments ending in `?` being treated as optional. (introduced v2.1.0) ([#15](https://github.com/wilaak/radix-router/issues/15))
+
 ## [v3.7.1] - 07.10.2026
 
 This release provides an important bug fix for lookups which could cause ambiguous shadowing under certain conditions, upgrading is strongly recommended.

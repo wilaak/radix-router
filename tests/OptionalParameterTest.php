@@ -68,4 +68,34 @@ class OptionalParameterTest extends RadixRouterTestCase
         $info = $router->lookup('GET', '/mix/');
         $this->assertEquals(404, $info['code']);
     }
+
+    public function testLiteralEndingInQuestionMarkIsNotOptional()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/help?/:topic?', 'handler');
+
+        $this->assertEquals(404, $router->lookup('GET', '/')['code']);
+        $this->assertEquals(404, $router->lookup('GET', '/help')['code']);
+        $this->assertEquals(404, $router->lookup('GET', '/help/x')['code']);
+
+        $info = $router->lookup('GET', '/help?');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals([], $info['params']);
+        $this->assertEquals('/help?/:topic?', $info['pattern']);
+
+        $info = $router->lookup('GET', '/help?/x');
+        $this->assertEquals(200, $info['code']);
+        $this->assertEquals(['topic' => 'x'], $info['params']);
+    }
+
+    public function testOptionalParametersWithTrailingSlashPattern()
+    {
+        $router = new RadixRouter();
+        $router->add('GET', '/:a?/:b?/', 'handler');
+
+        $this->assertEquals([], $router->lookup('GET', '/')['params']);
+        $this->assertEquals(['a' => '1'], $router->lookup('GET', '/1')['params']);
+        $this->assertEquals(['a' => '1', 'b' => '2'], $router->lookup('GET', '/1/2/')['params']);
+        $this->assertEquals('/:a?/:b?/', $router->lookup('GET', '/1')['pattern']);
+    }
 }

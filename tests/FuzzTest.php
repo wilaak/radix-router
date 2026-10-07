@@ -19,7 +19,7 @@ class FuzzTest extends RadixRouterTestCase
     {
         mt_srand($seed);
         for ($t = 0; $t < 60; $t++) {
-            [$router, $variants, $patterns] = $this->randomTable();
+            [$router, $variants, $patterns, $registered] = $this->randomTable();
             for ($q = 0; $q < 150; $q++) {
                 $path = $this->randomPath($variants);
                 $uri = '/' . implode('/', $path);
@@ -40,6 +40,8 @@ class FuzzTest extends RadixRouterTestCase
                 $this->assertSame(200, $got['code'], $context);
                 $this->assertSame($expected['handler'], $got['handler'], $context);
                 $this->assertSame($expected['params'], $got['params'], $context);
+                $this->assertSame($registered[$got['handler']], $got['pattern'], $context);
+                $this->assertParamsValid($got['pattern'], $path, $got['params'], $context);
             }
         }
     }
@@ -54,6 +56,7 @@ class FuzzTest extends RadixRouterTestCase
         $router = new RadixRouter();
         $variants = [];
         $patterns = [];
+        $registered = [];
         $n = mt_rand(2, 14);
         for ($r = 0; $r < $n; $r++) {
             $depth = mt_rand(1, 5);
@@ -85,11 +88,50 @@ class FuzzTest extends RadixRouterTestCase
                 continue;
             }
             $patterns[] = "h$r=$method $pattern";
+            $registered["h$r"] = $pattern;
             foreach ($this->expandOptional($segs) as $v) {
                 $variants[] = ["h$r", $v, $method];
             }
         }
-        return [$router, $variants, $patterns];
+        return [$router, $variants, $patterns, $registered];
+    }
+
+    private function assertParamsValid(string $pattern, array $path, array $params, string $context): void
+    {
+        $bound = [];
+        $i = 0;
+        foreach (explode('/', substr($pattern, 1)) as $seg) {
+            if ($seg === '' || $seg[0] !== ':') {
+                $this->assertSame($seg, $path[$i] ?? null, "literal '$seg' mismatch: $context");
+                $i++;
+                continue;
+            }
+            $mod = substr($seg, -1);
+            $name = in_array($mod, ['?', '*', '+'], true) ? substr($seg, 1, -1) : substr($seg, 1);
+            if ($mod === '*' || $mod === '+') {
+                $rest = implode('/', array_slice($path, $i));
+                if ($mod === '+') {
+                    $this->assertNotSame('', $rest, "required wildcard '$name' empty: $context");
+                }
+                $bound[$name] = $rest;
+                $i = count($path);
+                break;
+            }
+            if (!isset($path[$i])) {
+                $this->assertSame('?', $mod, "required param '$name' missing: $context");
+                break;
+            }
+            $this->assertNotSame('', $path[$i], "param '$name' empty: $context");
+            $bound[$name] = $path[$i++];
+        }
+        $this->assertSame(count($path), $i, "path not fully consumed by pattern: $context");
+        $this->assertSame($bound, $params, "params do not match pattern bindings: $context");
+        foreach ($params as $name => $value) {
+            $this->assertIsString($value, "param '$name' not a string: $context");
+            if (!str_ends_with($pattern, ":$name*") && !str_ends_with($pattern, ":$name+")) {
+                $this->assertStringNotContainsString('/', $value, "segment param '$name' spans segments: $context");
+            }
+        }
     }
 
     private function randomPath(array $variants): array

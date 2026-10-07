@@ -107,7 +107,7 @@ class RadixRouter
             [$staticSnapshot, $treeSnapshot] = [$this->static, $this->tree];
             $this->optionalPattern = $pattern;
             try {
-                foreach ($this->addExpandOptionalSegments($pattern) as $variant) {
+                foreach ($this->addExpandOptionalSegments($key) as $variant) {
                     $this->add($method, $variant, $handler);
                 }
             } catch (\InvalidArgumentException $e) {
@@ -150,7 +150,7 @@ class RadixRouter
         $seenOptional = false;
 
         foreach ($segments as $i => $segment) {
-            if ($seenOptional && !\str_ends_with($segment, '?')) {
+            if ($seenOptional && !(\str_starts_with($segment, ':') && \str_ends_with($segment, '?'))) {
                 throw new \InvalidArgumentException(
                     "Invalid Pattern: [{$method}] '{$pattern}': Optional parameters are only allowed in the last trailing segments"
                 );
@@ -201,24 +201,18 @@ class RadixRouter
         return [$steps, $params, $seenOptional];
     }
 
-    private function addExpandOptionalSegments(string $pattern): array
+    private function addExpandOptionalSegments(string $key): array
     {
-        $segments = \explode('/', \trim($pattern, '/'));
-        $bare = [];
-        foreach ($segments as $segment) {
-            $bare[] = \rtrim($segment, '?');
-        }
-        $required = \count($segments);
-        foreach ($segments as $i => $segment) {
-            if (\str_ends_with($segment, '?')) {
-                $required = $i;
-                break;
-            }
-        }
         $variants = [];
-        for ($len = $required; $len <= \count($segments); $len++) {
-            $variants[] = '/' . \implode('/', \array_slice($bare, 0, $len));
+        $prefix = '';
+        foreach (\explode('/', \substr($key, 1)) as $segment) {
+            if (\str_starts_with($segment, ':') && \str_ends_with($segment, '?')) {
+                $variants[] = $prefix;
+                $segment = \substr($segment, 0, -1);
+            }
+            $prefix .= "{$segment}/";
         }
+        $variants[] = $prefix;
         return $variants;
     }
 

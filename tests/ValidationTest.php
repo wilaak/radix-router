@@ -52,6 +52,14 @@ class ValidationTest extends RadixRouterTestCase
         $router->add('GET', '/foo/:bar+/baz', 'bad_handler');
     }
 
+    public function testLiteralAfterOptionalParameterThrows()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid Pattern: [GET] '/a/:x?/b?': Optional parameters are only allowed in the last trailing segments");
+        $router = new RadixRouter();
+        $router->add('GET', '/a/:x?/b?', 'bad_handler');
+    }
+
     public function testOptionalParameterMustBeTrailing()
     {
         $this->expectException(\InvalidArgumentException::class);
