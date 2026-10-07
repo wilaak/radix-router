@@ -197,10 +197,9 @@ class WildcardParameterTest extends RadixRouterTestCase
     }
 
     // The :name? route expands into static /foo + parametric /foo/:name,
-    // while :rest* lives on a separate wildcard child of /foo. Routing
-    // commits to the first matching node (static or param) and only
-    // falls back to the wildcard when no node matches at all, so POST is
-    // only reachable at depths the :name? expansion does not cover.
+    // while :rest* lives on a separate wildcard child of /foo. A method miss
+    // on the exact routes continues to the wildcard, so POST is reachable at
+    // every depth and GET only where the :name? expansion covers.
     public function testOptionalParameterAndWildcardAtSamePrefixDifferentMethods()
     {
         $router = new RadixRouter();
@@ -209,14 +208,19 @@ class WildcardParameterTest extends RadixRouterTestCase
 
         $this->assertSame('g',  $router->lookup('GET',  '/foo')['handler']);
         $this->assertSame([],   $router->lookup('GET',  '/foo')['params']);
-        $this->assertSame(405,  $router->lookup('POST', '/foo')['code']);
+        $this->assertSame('p',  $router->lookup('POST', '/foo')['handler']);
+        $this->assertSame(['rest' => ''], $router->lookup('POST', '/foo')['params']);
 
         $this->assertSame('g', $router->lookup('GET',  '/foo/abc')['handler']);
-        $this->assertSame(405, $router->lookup('POST', '/foo/abc')['code']);
+        $this->assertSame('p', $router->lookup('POST', '/foo/abc')['handler']);
+        $this->assertSame(['rest' => 'abc'], $router->lookup('POST', '/foo/abc')['params']);
 
         $this->assertSame(405, $router->lookup('GET',  '/foo/a/b/c')['code']);
         $this->assertSame('p', $router->lookup('POST', '/foo/a/b/c')['handler']);
         $this->assertSame(['rest' => 'a/b/c'], $router->lookup('POST', '/foo/a/b/c')['params']);
+
+        $this->assertSame(405, $router->lookup('PUT', '/foo/abc')['code']);
+        $this->assertEqualsCanonicalizing(['GET', 'HEAD', 'POST'], $router->lookup('PUT', '/foo/abc')['allowed_methods']);
     }
 
     public function testOptionalParameterFollowedByWildcardIsRejected()
