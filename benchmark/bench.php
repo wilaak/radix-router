@@ -441,13 +441,14 @@ foreach (glob(__DIR__ . '/Routers/*.php') as $file) {
     }
 }
 
-$jit_base = '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit_buffer_size=100M -d opcache.jit=';
+$opcache_base = '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.file_update_protection=0';
+$jit_base = $opcache_base . ' -d opcache.jit_buffer_size=100M -d opcache.jit=';
 $available_modes = [
     'JIT=tracing'  => ['JIT=tracing',  $jit_base . 'tracing'],
     'JIT=function' => ['JIT=function', $jit_base . 'function'],
     'JIT=1235'     => ['JIT=1235',     $jit_base . '1235'],
     'JIT=1255'     => ['JIT=1255',     $jit_base . '1255'],
-    'JIT=off'      => ['JIT=off',      '-d zend_extension=opcache -d opcache.enable=1 -d opcache.enable_cli=1'],
+    'JIT=off'      => ['JIT=off',      $opcache_base],
     'No OPcache'   => ['No OPcache',   '-d opcache.enable=0'],
 ];
 
