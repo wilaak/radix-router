@@ -2,6 +2,8 @@
 
 Just a fast and simple HTTP request router for PHP. No regex!
 
+## Overview
+
 - Path parameters: optional and wildcard (one per segment)
 - API for listing routes/methods (useful for OPTIONS)
 - Automatic 405 Method Not Allowed handling
@@ -49,7 +51,7 @@ switch ($result['code']) {
 
 ## Route Configuration
 
-Routes are matched in a predictable order, always favoring the most specific pattern. The method is only checked after the path has been matched. Handlers can be any value you choose. In these examples, we use strings for simplicity, but you’re free to use arrays with extra details like middleware or other metadata.
+Routes are matched in a predictable order, always favoring the most specific pattern. Handlers can be any value you choose. In these examples, we use strings for simplicity, but you’re free to use arrays with extra details like middleware or other metadata.
 
 If you plan to cache your routes your handlers must be exportable (see [route caching](#route-caching)). This router does not support regex patterns and it's recommended that you handle this logic in your handlers instead.
 
@@ -65,6 +67,17 @@ $router->add($router->allowedMethods, '/maintenance', 'maintenance');
 
 // Special fallback HTTP method (allowed or not)
 $router->add('*', '/maintenance', 'maintenance');
+
+// Route Precedence
+$router->add('GET',  '/users/me', 'me');
+$router->add('GET',  '/users/:id', 'show');
+$router->add('POST', '/users/:id/posts', 'create');
+$router->add('GET',  '/users/:id/:rest*', 'other');
+// Example requests:
+//   GET  /users/me        -> me
+//   GET  /users/42        -> show,  ['id' => '42']
+//   GET  /users/me/posts  -> other, ['id' => 'me', 'rest' => 'posts']  (no GET on /:id/posts)
+//   PUT  /users/42/posts  -> 405 Method Not Allowed (allowed: POST, GET, HEAD)
 ```
 
 ## Path Parameters

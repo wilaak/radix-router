@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 870 276" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 870 462" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
 <style>.fg{fill:#000000}.accent{fill:#474A8A}.bar{shape-rendering:crispEdges}.div{stroke:#C9CBE6;stroke-width:1}.tick{fill:#787CB5}@media(prefers-color-scheme:dark){.fg{fill:#E6E6E6}.accent{fill:#B0B3D6}.tick{fill:#B0B3D6}}</style>
 <text class="accent" x="20" y="30" font-size="14" font-weight="600">Route list: github (782 routes)</text>
 <rect x="20" y="44" width="14" height="14" fill="#474A8A"/>
@@ -6,30 +6,43 @@
 <rect x="160" y="44" width="14" height="14" fill="#787CB5"/>
 <text class="fg" x="180" y="56" font-size="12">JIT=off</text>
 <text class="tick" x="150.00" y="86.0" text-anchor="middle" font-size="11">0</text>
-<line class="div" x1="262.00" y1="91.0" x2="262.00" y2="264.0"/>
-<text class="tick" x="262.00" y="86.0" text-anchor="middle" font-size="11">500K</text>
-<line class="div" x1="374.00" y1="91.0" x2="374.00" y2="264.0"/>
-<text class="tick" x="374.00" y="86.0" text-anchor="middle" font-size="11">1M</text>
-<line class="div" x1="486.00" y1="91.0" x2="486.00" y2="264.0"/>
-<text class="tick" x="486.00" y="86.0" text-anchor="middle" font-size="11">1.5M</text>
-<line class="div" x1="598.00" y1="91.0" x2="598.00" y2="264.0"/>
-<text class="tick" x="598.00" y="86.0" text-anchor="middle" font-size="11">2M</text>
-<line class="div" x1="710.00" y1="91.0" x2="710.00" y2="264.0"/>
-<text class="tick" x="710.00" y="86.0" text-anchor="middle" font-size="11">2.5M</text>
-<line class="div" x1="150" y1="91.0" x2="150" y2="264.0"/>
-<text class="fg" x="138" y="123.5" text-anchor="end" font-size="12">radixrouter</text>
-<rect class="bar" x="150" y="98.0" width="534.08" height="18" fill="#474A8A"/>
-<text class="fg" x="722" y="111.0" font-size="11">2.38M/s  (419 ns/op)</text>
-<rect class="bar" x="150" y="122.0" width="354.59" height="18" fill="#787CB5"/>
-<text class="fg" x="722" y="135.0" font-size="11">1.58M/s  (632 ns/op)</text>
-<text class="fg" x="138" y="185.5" text-anchor="end" font-size="12">symfony</text>
-<rect class="bar" x="150" y="160.0" width="145.72" height="18" fill="#474A8A"/>
-<text class="fg" x="722" y="173.0" font-size="11">651K/s  (1,537 ns/op)</text>
-<rect class="bar" x="150" y="184.0" width="106.35" height="18" fill="#787CB5"/>
-<text class="fg" x="722" y="197.0" font-size="11">475K/s  (2,106 ns/op)</text>
-<text class="fg" x="138" y="247.5" text-anchor="end" font-size="12">fastroute</text>
-<rect class="bar" x="150" y="222.0" width="41.07" height="18" fill="#474A8A"/>
-<text class="fg" x="722" y="235.0" font-size="11">183K/s  (5,454 ns/op)</text>
-<rect class="bar" x="150" y="246.0" width="36.64" height="18" fill="#787CB5"/>
-<text class="fg" x="722" y="259.0" font-size="11">164K/s  (6,113 ns/op)</text>
+<line class="div" x1="290.00" y1="91.0" x2="290.00" y2="450.0"/>
+<text class="tick" x="290.00" y="86.0" text-anchor="middle" font-size="11">1M</text>
+<line class="div" x1="430.00" y1="91.0" x2="430.00" y2="450.0"/>
+<text class="tick" x="430.00" y="86.0" text-anchor="middle" font-size="11">2M</text>
+<line class="div" x1="570.00" y1="91.0" x2="570.00" y2="450.0"/>
+<text class="tick" x="570.00" y="86.0" text-anchor="middle" font-size="11">3M</text>
+<line class="div" x1="710.00" y1="91.0" x2="710.00" y2="450.0"/>
+<text class="tick" x="710.00" y="86.0" text-anchor="middle" font-size="11">4M</text>
+<line class="div" x1="150" y1="91.0" x2="150" y2="450.0"/>
+<text class="fg" x="138" y="123.5" text-anchor="end" font-size="12">radixrouter (cached)</text>
+<rect class="bar" x="150" y="98.0" width="549.48" height="18" fill="#474A8A"/>
+<text class="fg" x="722" y="111.0" font-size="11">3.92M/s  (255 ns/op)</text>
+<rect class="bar" x="150" y="122.0" width="294.70" height="18" fill="#787CB5"/>
+<text class="fg" x="722" y="135.0" font-size="11">2.11M/s  (475 ns/op)</text>
+<text class="fg" x="138" y="185.5" text-anchor="end" font-size="12">radixrouter</text>
+<rect class="bar" x="150" y="160.0" width="460.60" height="18" fill="#474A8A"/>
+<text class="fg" x="722" y="173.0" font-size="11">3.29M/s  (304 ns/op)</text>
+<rect class="bar" x="150" y="184.0" width="276.33" height="18" fill="#787CB5"/>
+<text class="fg" x="722" y="197.0" font-size="11">1.97M/s  (507 ns/op)</text>
+<text class="fg" x="138" y="247.5" text-anchor="end" font-size="12">symfony (cached)</text>
+<rect class="bar" x="150" y="222.0" width="227.99" height="18" fill="#474A8A"/>
+<text class="fg" x="722" y="235.0" font-size="11">1.63M/s  (614 ns/op)</text>
+<rect class="bar" x="150" y="246.0" width="157.92" height="18" fill="#787CB5"/>
+<text class="fg" x="722" y="259.0" font-size="11">1.13M/s  (887 ns/op)</text>
+<text class="fg" x="138" y="309.5" text-anchor="end" font-size="12">symfony</text>
+<rect class="bar" x="150" y="284.0" width="125.00" height="18" fill="#474A8A"/>
+<text class="fg" x="722" y="297.0" font-size="11">893K/s  (1,120 ns/op)</text>
+<rect class="bar" x="150" y="308.0" width="93.25" height="18" fill="#787CB5"/>
+<text class="fg" x="722" y="321.0" font-size="11">666K/s  (1,501 ns/op)</text>
+<text class="fg" x="138" y="371.5" text-anchor="end" font-size="12">fastroute (cached)</text>
+<rect class="bar" x="150" y="346.0" width="39.07" height="18" fill="#474A8A"/>
+<text class="fg" x="722" y="359.0" font-size="11">279K/s  (3,584 ns/op)</text>
+<rect class="bar" x="150" y="370.0" width="37.40" height="18" fill="#787CB5"/>
+<text class="fg" x="722" y="383.0" font-size="11">267K/s  (3,743 ns/op)</text>
+<text class="fg" x="138" y="433.5" text-anchor="end" font-size="12">fastroute</text>
+<rect class="bar" x="150" y="408.0" width="32.39" height="18" fill="#474A8A"/>
+<text class="fg" x="722" y="421.0" font-size="11">231K/s  (4,322 ns/op)</text>
+<rect class="bar" x="150" y="432.0" width="27.58" height="18" fill="#787CB5"/>
+<text class="fg" x="722" y="445.0" font-size="11">197K/s  (5,077 ns/op)</text>
 </svg>
