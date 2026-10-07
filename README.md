@@ -68,7 +68,7 @@ $router->add($router->allowedMethods, '/maintenance', 'maintenance');
 // Special fallback HTTP method (allowed or not)
 $router->add('*', '/maintenance', 'maintenance');
 
-// Route Precedence
+// Route precedence
 $router->add('GET',  '/users/me', 'me');
 $router->add('GET',  '/users/:id', 'show');
 $router->add('POST', '/users/:id/posts', 'create');
