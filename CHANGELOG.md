@@ -2,6 +2,18 @@
 
 Notable changes to this project goes here
 
+## [v3.7.1] - 07.10.2026
+
+This release provides an important bug fix for lookups which could cause ambiguous shadowing under certain conditions, upgrading is strongly recommended.
+
+- Fixed static segments shadowing parameter routes at the same position; lookup now backtracks ([#13](https://github.com/wilaak/radix-router/issues/13))
+- Fixed 405 being returned when a less specific route matched the method; lookup is now route-first ([#14](https://github.com/wilaak/radix-router/issues/14))
+- Fixed `allowed_methods`, `methods()` and `list()` only reporting the first matching node.
+- Improved lookup performance.
+
+**Upgrade note:**  
+Regenerate router cache files after upgrading.
+
 ## [v3.7.0] - 04.10.2026
 
 - Add HTTP QUERY Method ([RFC 10008](https://www.rfc-editor.org/rfc/rfc10008.html)) ([#12](https://github.com/wilaak/radix-router/issues/12))
