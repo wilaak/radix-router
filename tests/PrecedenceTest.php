@@ -78,18 +78,22 @@ class PrecedenceTest extends RadixRouterTestCase
         $this->assertSame(['x' => 'foo'], $info['params']);
     }
 
-    // Once a more-specific route is found, a method mismatch produces a
-    // 405 from THAT route. The router does not keep looking for a less
-    // specific route that would have accepted the method.
-    public function testMethodMismatchAtSpecificRouteDoesNotFallThroughToLessSpecific()
+    // A method mismatch at the most specific route is not the end of the
+    // search: a less specific route that accepts the method still matches,
+    // and a 405 lists every method any matching route would accept.
+    public function testMethodMismatchFallsThroughToLessSpecificRoute()
     {
         $router = new RadixRouter();
         $router->add('POST', '/foo',  'specific');
         $router->add('GET',  '/:x',   'catch_all');
 
         $info = $router->lookup('GET', '/foo');
+        $this->assertSame('catch_all', $info['handler']);
+        $this->assertSame(['x' => 'foo'], $info['params']);
+
+        $info = $router->lookup('PUT', '/foo');
         $this->assertSame(405, $info['code']);
-        $this->assertSame(['POST'], $info['allowed_methods']);
+        $this->assertEqualsCanonicalizing(['POST', 'GET', 'HEAD'], $info['allowed_methods']);
     }
 
     // The HEAD-to-GET fallback runs inside DISPATCH, which is reached
