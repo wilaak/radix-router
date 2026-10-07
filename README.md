@@ -7,7 +7,7 @@ Just a fast and simple HTTP request router for PHP. No regex!
 - Path parameters: optional and wildcard (one per segment)
 - API for listing routes/methods (useful for OPTIONS)
 - Automatic 405 Method Not Allowed handling
-- Zero dependencies and only 386 lines of code
+- Zero dependencies and only 400 lines of code
 
 ## Install
 
