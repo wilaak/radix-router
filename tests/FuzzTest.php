@@ -1,6 +1,5 @@
 <?php
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use Wilaak\Http\RadixRouter;
 
 class FuzzTest extends RadixRouterTestCase
@@ -9,13 +8,14 @@ class FuzzTest extends RadixRouterTestCase
     private const ROUTE_METHODS = ['GET', 'POST', 'PUT'];
     private const REQUEST_METHODS = ['GET', 'GET', 'POST', 'PUT', 'HEAD', 'DELETE'];
 
-    public static function seeds(): array
+    public function testRandomTablesAgreeWithOracle(): void
     {
-        return [[1], [2], [3], [4], [5]];
+        foreach ([1, 2, 3, 4, 5] as $seed) {
+            $this->runSeed($seed);
+        }
     }
 
-    #[DataProvider('seeds')]
-    public function testRandomTablesAgreeWithOracle(int $seed): void
+    private function runSeed(int $seed): void
     {
         mt_srand($seed);
         for ($t = 0; $t < 60; $t++) {
