@@ -2,8 +2,6 @@
 
 Just a fast and simple HTTP request router for PHP. No regex!
 
-## Overview
-
 - Path parameters: optional and wildcard (one per segment)
 - API for listing routes/methods (useful for OPTIONS)
 - Automatic 405 Method Not Allowed handling
@@ -67,17 +65,6 @@ $router->add($router->allowedMethods, '/maintenance', 'maintenance');
 
 // Special fallback HTTP method (allowed or not)
 $router->add('*', '/maintenance', 'maintenance');
-
-// Route precedence
-$router->add('GET',  '/users/me', 'me');
-$router->add('GET',  '/users/:id', 'show');
-$router->add('POST', '/users/:id/posts', 'create');
-$router->add('GET',  '/users/:id/:rest*', 'other');
-// Example requests:
-//   GET  /users/me        -> me
-//   GET  /users/42        -> show,  ['id' => '42']
-//   GET  /users/me/posts  -> other, ['id' => 'me', 'rest' => 'posts']  (no GET on /:id/posts)
-//   PUT  /users/42/posts  -> 405 Method Not Allowed (allowed: POST, GET, HEAD)
 ```
 
 ## Path Parameters
@@ -134,9 +121,6 @@ Also known as catch-all, splat, greedy, rest, or path remainder parameters; wild
 > [!CAUTION]    
 > Never use captured path segments directly in filesystem operations. Path traversal attacks can expose sensitive files or directories. Use functions like `realpath()` and restrict access to a safe base directory.
 
-> [!NOTE]   
-> Wildcards don't capture a trailing slash, it's trimmed before matching. Restore it from the request path if you need it, e.g. when proxying. See [trailing slashes](#trailing-slashes-in-urls).
-
 ```php
 // Required wildcard parameter (one or more segments)
 $router->add('GET', '/assets/:resource+', 'serve_asset');
@@ -156,6 +140,9 @@ $router->add('GET', '/downloads/:file*', 'serve_download');
 ### Prefix Matching
 
 A wildcard at the end of a pattern matches everything under a prefix.
+
+> [!NOTE]   
+> Wildcards don't capture a trailing slash, it's trimmed before matching. Restore it from the request path if you need it, e.g. when proxying. See [trailing slashes](#trailing-slashes-in-urls).
 
 ```php
 $router->add('*', '/api/:rest*', 'legacy');
