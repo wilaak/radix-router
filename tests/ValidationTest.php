@@ -234,6 +234,99 @@ class ValidationTest extends RadixRouterTestCase
         $this->assertSame('z', $router->lookup('GET', '/foo/x')['handler']);
     }
 
+    public function testFailingMethodInArrayRegistersNothing()
+    {
+        $cases = [
+            'conflict'  => [['GET', 'POST'], \InvalidArgumentException::class, "Route Conflict: [POST] '/x': Path is already registered"],
+            'invalid'   => [['GET', 'BOGUS'], \InvalidArgumentException::class, 'Invalid HTTP Method: [BOGUS]'],
+            'duplicate' => [['GET', 'get'], \InvalidArgumentException::class, "Route Conflict: [GET] '/x'"],
+            'type'      => [['GET', 1], \TypeError::class, ''],
+        ];
+        foreach ($cases as $name => [$methods, $exception, $message]) {
+            $router = new RadixRouter();
+            $router->add('POST', '/x', 'old');
+            $router->add('POST', '/y/:id', 'old');
+            foreach (['/x', '/y/:id'] as $pattern) {
+                try {
+                    $router->add($methods, $pattern, 'new');
+                    $this->fail("$name: expected $exception");
+                } catch (\Throwable $e) {
+                    $this->assertInstanceOf($exception, $e, $name);
+                    if ($pattern === '/x') {
+                        $this->assertStringContainsString($message, $e->getMessage(), $name);
+                    }
+                }
+            }
+            $this->assertSame([
+                ['method' => 'POST', 'pattern' => '/x', 'handler' => 'old'],
+                ['method' => 'POST', 'pattern' => '/y/:id', 'handler' => 'old'],
+            ], $router->list(), $name);
+            $this->assertSame(['POST'], $router->methods('/x'), $name);
+            $this->assertSame(['POST'], $router->methods('/y/1'), $name);
+        }
+    }
+
+    public function testDuplicateMethodOnNewPathRegistersNothing()
+    {
+        foreach (['/fresh', '/fresh/:id', '/fresh/:id/:rest*', '/fresh/:a?/:b?'] as $pattern) {
+            $router = new RadixRouter();
+            $router->add('GET', '/other/:id', 'h');
+            $before = [$router->tree, $router->static];
+            try {
+                $router->add(['GET', 'get'], $pattern, 'dup');
+                $this->fail("$pattern: expected a route conflict");
+            } catch (\InvalidArgumentException $e) {
+                $this->assertSame("Route Conflict: [GET] '{$pattern}': Path is already registered", $e->getMessage());
+            }
+            $this->assertSame($before, [$router->tree, $router->static], $pattern);
+        }
+    }
+
+    public function testDuplicateMethodDoesNotHideOtherErrors()
+    {
+        $router = new RadixRouter();
+        $router->add('POST', '/x/:id', 'old');
+
+        try {
+            $router->add(['GET', 'GET'], '/a/:rest*/b', 'h');
+            $this->fail('Expected an invalid pattern');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertStringContainsString('Wildcard parameters are only allowed as the last segment', $e->getMessage());
+        }
+
+        try {
+            $router->add(['POST', 'GET', 'GET'], '/x/:key', 'h');
+            $this->fail('Expected a route conflict');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertSame("Route Conflict: [POST] '/x/:key': Path is already registered (conflicts with '/x/:id')", $e->getMessage());
+        }
+    }
+
+    public function testFailingMethodInArrayRollsBackOptionalExpansion()
+    {
+        $router = new RadixRouter();
+        $router->add('POST', '/a/:id', 'old');
+        try {
+            $router->add(['GET', 'POST'], '/a/:x?', 'new');
+            $this->fail('Expected a route conflict');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertSame(
+                "Route Conflict: [POST] '/a/:x?': Path is already registered (conflicts with '/a/:id')",
+                $e->getMessage()
+            );
+        }
+
+        $this->assertSame(404, $router->lookup('GET', '/a')['code']);
+        $this->assertSame(405, $router->lookup('GET', '/a/1')['code']);
+        $this->assertSame(
+            [['method' => 'POST', 'pattern' => '/a/:id', 'handler' => 'old']],
+            $router->list()
+        );
+
+        $router->add('GET', '/b', 'c');
+        $this->assertSame('/b', $router->lookup('GET', '/b')['pattern']);
+    }
+
     public function testPublicMethodParameterNamesAreStableApi()
     {
         $router = new RadixRouter();
