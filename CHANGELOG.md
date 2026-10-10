@@ -4,7 +4,7 @@ Notable changes to this project goes here
 
 ## [v3.7.2] - 08.10.2026
 
-- Fix static segments ending in `?` being treated as parameter in optional expansion. (since v2.1.0) ([#15](https://github.com/wilaak/radix-router/issues/15))
+- Fixed literal segments ending in `?` (e.g. `/help?/:topic?`) being treated as optional and having their `?` stripped. (since v2.1.0) ([#15](https://github.com/wilaak/radix-router/issues/15))
 - Made `add()` atomic when registering multiple methods.
 - Fixed an exponential performance degradation in registration of optional routes caused by tree CoW separation (since v3.7.0)
 
