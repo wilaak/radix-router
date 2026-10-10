@@ -11,3 +11,4 @@
 /.php-cs-fixer.dist.php  export-ignore
 /composer.json           !export-ignore
 /src/                    !export-ignore
+/examples/               export-ignore

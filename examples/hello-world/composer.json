@@ -1,0 +1,5 @@
+{
+    "require": {
+        "wilaak/radix-router": "^3.7"
+    }
+}
