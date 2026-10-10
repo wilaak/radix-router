@@ -18,7 +18,7 @@ class RadixRouter
      * WARNING: Structure might change in a future stable release.
      * Do not rely on the internal format of this property without locking your version first.
      */
-    public array $tree = self::NODE_EMPTY;
+    public array $tree = self::TREE_NODE;
 
     /**
      * Static routes
@@ -35,18 +35,18 @@ class RadixRouter
      */
     public array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD', 'QUERY'];
 
-    private const NODE_STATIC = 0; // ('/path')
-    private const NODE_PARAM  = 1; // ('/:path')
-    private const NODE_PLUS   = 2; // ('/:path+')
-    private const NODE_STAR   = 3; // ('/:path*')
-    private const NODE_ROUTES = 4; // method => route
+    private const TREE_LITERAL  = 0; // literal segment => node
+    private const TREE_PARAM    = 1; // /:path
+    private const TREE_WILDCARD = 2; // /:path+, /:path* uses this and TREE_EPSILON
+    private const TREE_ACCEPT   = 3; // method => result, pattern ends here
+    private const TREE_EPSILON  = 4; // method => result, /:path* matched nothing
 
-    private const NODE_EMPTY = [
-        self::NODE_STATIC => null,
-        self::NODE_PARAM  => null,
-        self::NODE_PLUS   => null,
-        self::NODE_STAR   => null,
-        self::NODE_ROUTES => null,
+    private const TREE_NODE = [
+        self::TREE_LITERAL  => null,
+        self::TREE_PARAM    => null,
+        self::TREE_WILDCARD => null,
+        self::TREE_ACCEPT   => null,
+        self::TREE_EPSILON  => null,
     ];
 
     /**
@@ -133,24 +133,24 @@ class RadixRouter
             }
 
             $node = &$this->tree;
-            $targetSlot = self::NODE_ROUTES;
+            $targetSlot = self::TREE_ACCEPT;
             foreach ($routePath as $i => [$kind, $name]) {
-                if ($kind === self::NODE_STATIC) {
-                    $node = &$node[self::NODE_STATIC][$name];
-                    $node ??= self::NODE_EMPTY;
+                if ($kind === self::TREE_LITERAL) {
+                    $node = &$node[self::TREE_LITERAL][$name];
+                    $node ??= self::TREE_NODE;
                     continue;
                 }
 
-                $isWildcard = $kind !== self::NODE_PARAM;
+                $isWildcard = $kind !== self::TREE_PARAM;
                 $route['params'][$name] = $isWildcard ? ~$i : $i;
 
-                $matchesZeroSegments = $kind === self::NODE_STAR;
+                $matchesZeroSegments = $kind === self::TREE_EPSILON;
                 if ($matchesZeroSegments) {
-                    $targetSlot = self::NODE_STAR;
+                    $targetSlot = self::TREE_EPSILON;
                     break;
                 }
                 $node = &$node[$kind];
-                $node ??= self::NODE_EMPTY;
+                $node ??= self::TREE_NODE;
             }
 
             foreach ($validMethods as $method) {
@@ -204,7 +204,7 @@ class RadixRouter
                 }
             }
             if (!$isParam) {
-                $steps[] = [self::NODE_STATIC, $segment];
+                $steps[] = [self::TREE_LITERAL, $segment];
                 continue;
             }
 
@@ -229,9 +229,10 @@ class RadixRouter
             }
             $paramNames[$paramName] = true;
             if ($matchesZeroSegments) {
-                $routePaths[] = [...$steps, [self::NODE_STAR, $paramName]];
+                // Terminal marker, not a descent: the ε half of ':name*' lands in the prefix node.
+                $routePaths[] = [...$steps, [self::TREE_EPSILON, $paramName]];
             }
-            $steps[] = [$isWildcard ? self::NODE_PLUS : self::NODE_PARAM, $paramName];
+            $steps[] = [$isWildcard ? self::TREE_WILDCARD : self::TREE_PARAM, $paramName];
         }
         $routePaths[] = $steps;
         return $routePaths;
@@ -246,13 +247,13 @@ class RadixRouter
 
         $node = $this->tree;
         foreach ($routePath as [$kind, $name]) {
-            $matchesZeroSegments = $kind === self::NODE_STAR;
+            $matchesZeroSegments = $kind === self::TREE_EPSILON;
             if ($matchesZeroSegments) {
-                return $node[self::NODE_STAR] ?? [];
+                return $node[self::TREE_EPSILON] ?? [];
             }
 
-            if ($kind === self::NODE_STATIC) {
-                $node = $node[self::NODE_STATIC][$name] ?? null;
+            if ($kind === self::TREE_LITERAL) {
+                $node = $node[self::TREE_LITERAL][$name] ?? null;
             } else {
                 $node = $node[$kind];
             }
@@ -262,7 +263,7 @@ class RadixRouter
                 return [];
             }
         }
-        return $node[self::NODE_ROUTES] ?? [];
+        return $node[self::TREE_ACCEPT] ?? [];
     }
 
     /**
@@ -294,13 +295,13 @@ class RadixRouter
         $queue = [$this->tree];
         for ($i = 0; $i < \count($queue); $i++) {
             $node = $queue[$i];
-            if ($node[self::NODE_ROUTES] !== null) {
-                $buckets[] = $node[self::NODE_ROUTES];
+            if ($node[self::TREE_ACCEPT] !== null) {
+                $buckets[] = $node[self::TREE_ACCEPT];
             }
-            foreach (($node[self::NODE_STATIC] ?? []) as $child) {
+            foreach (($node[self::TREE_LITERAL] ?? []) as $child) {
                 $queue[] = $child;
             }
-            foreach ([self::NODE_PLUS, self::NODE_PARAM] as $kind) {
+            foreach ([self::TREE_WILDCARD, self::TREE_PARAM] as $kind) {
                 if ($node[$kind] !== null) {
                     $queue[] = $node[$kind];
                 }
@@ -381,11 +382,11 @@ class RadixRouter
         $backtrackDepth = 0;
         for ($i = 0; $i < $segmentCount; $i++) {
             $segment = $segments[$i];
-            $wildcardNode = $wildcardPass ? $node[self::NODE_PLUS] : null;
+            $wildcardNode = $wildcardPass ? $node[self::TREE_WILDCARD] : null;
             $backtrackBranch = 0;
 
-            if (($child = $node[self::NODE_STATIC][$segment] ?? null) !== null) {
-                if ($node[self::NODE_PARAM] === null && $wildcardNode === null) {
+            if (($child = $node[self::TREE_LITERAL][$segment] ?? null) !== null) {
+                if ($node[self::TREE_PARAM] === null && $wildcardNode === null) {
                     $node = $child;
                     continue;
                 }
@@ -394,22 +395,22 @@ class RadixRouter
                     $node = $child;
                     continue;
                 }
-            } elseif ($wildcardNode !== null && $node[self::NODE_PARAM] !== null) {
+            } elseif ($wildcardNode !== null && $node[self::TREE_PARAM] !== null) {
                 $backtrackBranch = (($backtrackMask >> ($backtrackDepth++ << 1)) & 3) + 1;
             }
 
-            if ($backtrackBranch <= 1 && $segment !== '' && ($child = $node[self::NODE_PARAM]) !== null) {
+            if ($backtrackBranch <= 1 && $segment !== '' && ($child = $node[self::TREE_PARAM]) !== null) {
                 $node = $child;
                 continue;
             }
             if ($wildcardNode !== null) {
-                $bucket = $wildcardNode[self::NODE_ROUTES];
+                $bucket = $wildcardNode[self::TREE_ACCEPT];
                 goto DISPATCH;
             }
             goto BACKTRACK;
         }
 
-        $bucket = $node[$wildcardPass ? self::NODE_STAR : self::NODE_ROUTES];
+        $bucket = $node[$wildcardPass ? self::TREE_EPSILON : self::TREE_ACCEPT];
         if ($bucket !== null) {
             goto DISPATCH;
         }
