@@ -1,13 +1,16 @@
-# <img alt="RadixRouter" width="150" src="./assets/radx.svg">
+# <img alt="RadixRouter" width="125" src="./assets/radx.svg">
 
-Just a fast and simple HTTP request router for PHP. No regex!
+*Just a fast and simple HTTP request router for PHP. No regex!*
 
-- Path parameters: optional and wildcard (one per segment)
-- API for listing routes/methods (useful for OPTIONS)
-- Automatic 405 Method Not Allowed handling
-- Zero dependencies and only 400 lines of code
+RadixRouter (or RadXRouter) is a lightweight HTTP routing library focused on providing the essentials while being fast and small. It can make a good choice for simple applications or as the foundation for building your own custom more featureful router (see third-party [integrations](#integrations)).
+
+It features fast $O(k)$ dynamic route matching ($k$ = segments in path), path parameters (optional, wildcard; one per segment), simple API for listing routes/methods (for OPTIONS support), 405 method not allowed handling and it's all in a single file weighing in at around 400 lines of code with no external dependencies.
+
+RadixRouter ranks as one of the fastest PHP routers. To see how this router compares to other common implementations in routing performance see the [benchmarks](#benchmarks) section.
 
 ## Install
+
+It's only a [single file](./src/RadixRouter.php) that you can easily vendor yourself. If you want to user composer:
 
 ```bash
 composer require wilaak/radix-router
@@ -17,14 +20,18 @@ Requires PHP 8.0 or newer.
 
 ## Example
 
-Below is an example to get you started using the PHP SAPI.
+Below is an example to get you started using the classic PHP SAPI.
 
-```PHP
-$router = new Wilaak\Http\RadixRouter();
+```php
+use Wilaak\Http\RadixRouter;
 
-$router->add('GET', '/:name?', function ($name = 'World') {
-    echo "Hello, {$name}!";
-});
+$router = new RadixRouter()
+    ->add('GET', '/', function () {
+        echo 'Welcome home!';
+    })
+    ->add('GET', '/greet/:name?', function ($name = 'World') {
+        echo "Hello, {$name}!"; 
+    });
 
 $result = $router->lookup(
     $_SERVER['REQUEST_METHOD'],
@@ -35,10 +42,12 @@ switch ($result['code']) {
     case 200:
         $result['handler'](...$result['params']);
         break;
+
     case 404:
         http_response_code(404);
         echo '404 Not Found';
         break;
+        
     case 405:
         header('Allow: ' . implode(',', $result['allowed_methods']));
         http_response_code(405);
@@ -165,9 +174,6 @@ $router->add('*', '/tenants/:tenant/files/:path*', 'tenant_files');
 Retrieve registered routes and their associated handlers. Optionally pass a request path to filter results to routes matching that path.
 
 ```php
-//
-// Print a formatted table of all routes
-//
 function print_routes_table($routes) {
     printf("%-8s  %-24s  %s\n", 'METHOD', 'PATTERN', 'HANDLER');
     printf("%s\n", str_repeat('-', 60));
@@ -177,14 +183,10 @@ function print_routes_table($routes) {
     printf("%s\n", str_repeat('-', 60));
 }
 
-//
 // List all routes
-//
 print_routes_table($router->list());
 
-//
-// List routes for a specific path
-//
+// List routes under a specific request path
 print_routes_table($router->list('/contact'));
 ```
 
@@ -308,7 +310,7 @@ If you’re using PHP’s built-in web SAPI, the entity body is removed for HEAD
 
 ## Integrations
 
-If this router is a bit too minimalistic, you might try one of the following more high-level integrations. These are third-party so evaluate and use them at your own discretion.
+These are third-party so evaluate and use them at your own discretion. If you want or don't want your package listed here please create an issue or pull request.
 
 | Package | Maintainer |
 |---------|-------------|
