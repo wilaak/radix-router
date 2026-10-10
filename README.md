@@ -10,7 +10,7 @@ RadixRouter ranks as one of the fastest PHP routers. To see how this router comp
 
 ## Install
 
-It's only a [single file](./src/RadixRouter.php) that you can easily vendor yourself. If you want to user composer:
+It's only a [single file](./src/RadixRouter.php) that you can easily vendor on your own. If you want to user composer:
 
 ```bash
 composer require wilaak/radix-router
