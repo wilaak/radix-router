@@ -229,7 +229,6 @@ class RadixRouter
             }
             $paramNames[$paramName] = true;
             if ($matchesZeroSegments) {
-                // Terminal marker, not a descent: the ε half of ':name*' lands in the prefix node.
                 $routePaths[] = [...$steps, [self::TREE_EPSILON, $paramName]];
             }
             $steps[] = [$isWildcard ? self::TREE_WILDCARD : self::TREE_PARAM, $paramName];
